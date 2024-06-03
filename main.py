@@ -83,21 +83,20 @@ if __name__ == "__main__":
     create_linked_table(conn=connection, clean=True)
     refresh_all_stored_procedures(conn=connection)
 
-    print('...insert circuit')
-    url = 'https://raw.githubusercontent.com/njross/optimizer/master/QFT_and_Adders/Adder128_before'
-    db_tuples, gate_id = markov_file_to_tuples(url, gate_id=0, label='Adder128')
-    insert_in_batches(conn=connection, db_tuples=db_tuples)
+    # print('...insert circuit')
+    # url = 'https://raw.githubusercontent.com/njross/optimizer/master/QFT_and_Adders/Adder128_before'
+    # db_tuples, gate_id = markov_file_to_tuples(url, gate_id=0, label='Adder128')
+    # insert_in_batches(conn=connection, db_tuples=db_tuples)
 
     bloq = Add(QUInt(4))
     circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
     assert_circuit_in_clifford_plus_t(circuit)
 
     db_tuples, _ = cirq2db.cirq_to_db(cirq_circuit=circuit, last_id=0, label='Q-adder', add_margins=True)
-    insert_in_batches(db_tuples=db_tuples, conn=connection, batch_size=100000)
+    insert_in_batches(db_tuples=db_tuples, conn=connection, batch_size=100000, reset_id=100000)
 
     cursor.execute("update stop_condition set stop=False")
     print('...decomposing Toffolis')
-    cursor.execute("ALTER SEQUENCE linked_circuit_id_seq RESTART WITH 1000000")
     cursor.execute("call linked_toffoli_decomp()")
 
     print('...running optimization')
@@ -115,6 +114,6 @@ if __name__ == "__main__":
         (2, f"CALL linked_hhcxhh_to_cx(10, 10000000);"),
         (1, f"CALL linked_cx_to_hhcxhh(10, 10000000);")
     ]
-    subprocess.Popen(["./readout_threadripper.sh"], shell=True, executable="/bin/bash")
-    db_multi_threaded(thread_proc=thread_procedures)
+    # subprocess.Popen(["./readout_threadripper.sh"], shell=True, executable="/bin/bash")
+    # db_multi_threaded(thread_proc=thread_procedures)
     # print(extract_cirq_circuit(conn=connection, circuit_label='Adder128', remove_io_gates=True))

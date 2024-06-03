@@ -53,7 +53,7 @@ def create_batches(db_tuples, batch_size):
         yield db_tuples[i:i + batch_size]
 
 
-def insert_in_batches(db_tuples, conn, batch_size=1000):
+def insert_in_batches(db_tuples, conn, batch_size=1000, reset_id=None):
     assert type(db_tuples) is list
 
     batches = create_batches(db_tuples, batch_size=int(batch_size))
@@ -69,6 +69,9 @@ def insert_in_batches(db_tuples, conn, batch_size=1000):
         # execute the sql statement
         cursor.execute(sql_statement)
         conn.commit()
+
+    if reset_id is not None:
+        cursor.execute(f"ALTER SEQUENCE linked_circuit_id_seq RESTART WITH {reset_id}")
 
 
 def extract_cirq_circuit(conn, circuit_label=None, remove_io_gates=False, with_tags=False):
