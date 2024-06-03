@@ -1,6 +1,4 @@
-import cirq
 import qualtran
-from qualtran import Bloq
 from qualtran.bloqs.arithmetic import Add
 from _connection import *
 import sys
@@ -9,20 +7,18 @@ from qualtran import Bloq, QUInt
 from qualtran.bloqs.arithmetic import Add
 from qualtran.bloqs.data_loading import QROM
 from qualtran._infra.gate_with_registers import get_named_qubits
-from qualtran.bloqs.qubitization_walk_operator import QubitizationWalkOperator
-from qualtran.bloqs.qubitization_walk_operator_test import get_walk_operator_for_1d_ising_model
+from qualtran.bloqs.qubitization import QubitizationWalkOperator
+from qualtran.bloqs.qubitization.qubitization_walk_operator_test import get_walk_operator_for_1d_ising_model
 from qualtran.cirq_interop import cirq_optree_to_cbloq
-from qualtran.bloqs.hubbard_model import get_walk_operator_for_hubbard_model
-
+from qualtran.bloqs.chemistry.hubbard_model.qubitization import get_walk_operator_for_hubbard_model
 import cirq2db
 
 sys.setrecursionlimit(10000)  # Increase recursion limit from default since adder bloq has a recursive implementation.
 
 more_general_gate_set = cirq.Gateset(
     cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel, qualtran.cirq_interop.BloqAsCirqGate,
-    qualtran.bloqs.mod_arithmetic.ModAddK,
     cirq.GlobalPhaseGate, cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.CZPowGate, cirq.CXPowGate,
-    cirq.X, cirq.Y, cirq.Z
+    cirq.X, cirq.Y, cirq.Z, qualtran.bloqs.mod_arithmetic.ModAddK
 )
 
 
@@ -92,7 +88,7 @@ def phase_estimation(walk: QubitizationWalkOperator, m: int) -> cirq.OP_TREE:
     walk_controlled = walk.controlled(control_values=[1])
 
     m_qubits = [cirq.q(f'm_{i}') for i in range(m)]
-    state_prep = cirq.StatePreparationChannel(get_resource_state(m), name='chi_m')
+    # state_prep = cirq.StatePreparationChannel(get_resource_state(m), name='chi_m')
 
     # yield state_prep.on(*m_qubits)
     yield walk_controlled.on_registers(**walk_regs, control=m_qubits[0])
@@ -124,11 +120,12 @@ def qrom_decomposed():
 
 def qpe_decomposed():
     # phase estimation example
-    num_sites: int = 4
+    num_sites: int = 2
     eps: float = 1e-2
     m_bits: int = 4
 
     circuit = cirq.Circuit(phase_estimation(get_walk_operator_for_1d_ising_model(num_sites, eps), m=m_bits))
+    print(circuit)
     context = cirq.DecompositionContext(qubit_manager=cirq.SimpleQubitManager())
     circuit = cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
 
@@ -155,6 +152,11 @@ def qpe_decomposed():
             final_ops.append(op)
 
     decomposed_circuit = cirq.Circuit(final_ops)
+    op_set = set()
+    for op in decomposed_circuit.all_operations():
+        op_set.add(op.gate.__class__.__name__)
+
+    print(op_set)
     return decomposed_circuit
 
 
