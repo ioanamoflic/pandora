@@ -6,7 +6,7 @@ import plotly.express as px
 from dash.dependencies import Output, Input
 import dash_bootstrap_components as dbc
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
+app = dash.Dash(__name__)
 app.title = "Database Optimiser"
 
 app.layout = [
@@ -65,9 +65,8 @@ def update_graph(n_intervals, value):
     fig = px.line(data_frame=df,
                   x=df.index,
                   y=["Total count", "T count", "S count", "CX count", "H count", "X count"],
-                  width=1500,
-                  height=1200,
-                  template="plotly_dark")
+                  width=800,
+                  height=600,)
     return fig
 
 
@@ -76,7 +75,7 @@ def update_graph(n_intervals, value):
     Input('interval-component', 'n_intervals'),
 )
 def update_graph2(n_intervals):
-    columns = ["Total count", "T count", "S count", "H count"]
+    columns = ["Total count", "T count", "H count"]
     df = pd.read_csv(filepath_or_buffer='result.csv')
     for i in range(1, len(df)):
 
@@ -91,9 +90,8 @@ def update_graph2(n_intervals):
     fig = px.line(data_frame=df,
                   x=df.index,
                   y=columns,
-                  width=1500,
-                  height=1200,
-                  template="plotly_dark")
+                  width=800,
+                  height=600)
     return fig
 
 

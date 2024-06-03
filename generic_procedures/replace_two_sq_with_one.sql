@@ -17,7 +17,7 @@ begin
 	    if stop=True then
             exit;
         end if;
-    	select * into first from (select * from linked_circuit lc tablesample bernoulli(sys_range)) as it where it.type=type_1 for update skip locked limit 1;
+    	select * into first from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it where it.type=type_1 for update skip locked limit 1;
 
     	if first.id is not null then
     	    first_next_id :=  div(first.next_q1, 10);

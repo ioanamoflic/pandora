@@ -14,7 +14,7 @@ from qualtran2db import *
 
 connection = psycopg2.connect(
     database="postgres",
-    # user="postgres",
+    user="postgres",
     host="localhost",
     port=5432,
     password="1234")
@@ -37,7 +37,7 @@ def map_hack(aff, proc_call):
 
     connection = psycopg2.connect(
         database="postgres",
-        # user="postgres",
+        user="postgres",
         host="localhost",
         port=5432,
         password="1234")
@@ -88,12 +88,13 @@ if __name__ == "__main__":
     db_tuples, gate_id = markov_file_to_tuples(url, gate_id=0, label='Adder128')
     insert_in_batches(conn=connection, db_tuples=db_tuples)
 
-    # bloq = Add(QUInt(4))
-    # circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
-    # assert_circuit_in_clifford_plus_t(circuit)
-    #
-    # db_tuples, _ = cirq2db.cirq_to_db(cirq_circuit=circuit, last_id=0, label='Q-adder', add_margins=True)
-    # insert_in_batches(db_tuples=db_tuples, conn=connection, batch_size=100000)
+    bloq = Add(QUInt(4))
+    circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
+    assert_circuit_in_clifford_plus_t(circuit)
+
+    db_tuples, _ = cirq2db.cirq_to_db(cirq_circuit=circuit, last_id=0, label='Q-adder', add_margins=True)
+    insert_in_batches(db_tuples=db_tuples, conn=connection, batch_size=100000)
+
     cursor.execute("update stop_condition set stop=False")
     print('...decomposing Toffolis')
     cursor.execute("ALTER SEQUENCE linked_circuit_id_seq RESTART WITH 1000000")

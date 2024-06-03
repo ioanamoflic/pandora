@@ -33,7 +33,7 @@ begin
 	    if stop=True then
             exit;
         end if;
-        select * into cx from (select * from linked_circuit lc tablesample bernoulli(sys_range)) as it where type = 'CNOT' for update skip locked limit 1;
+        select * into cx from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it where type = 'CNOT' for update skip locked limit 1;
         if cx.id is not null then
             -- left gates on qubits 1,2
             cx_prev_q1_id := div(cx.prev_q1, 10);
