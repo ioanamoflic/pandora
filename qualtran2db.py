@@ -18,7 +18,8 @@ sys.setrecursionlimit(10000)  # Increase recursion limit from default since adde
 more_general_gate_set = cirq.Gateset(
     cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel, qualtran.cirq_interop.BloqAsCirqGate,
     cirq.GlobalPhaseGate, cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.CZPowGate, cirq.CXPowGate,
-    cirq.X, cirq.Y, cirq.Z, qualtran.bloqs.mod_arithmetic.ModAddK
+    cirq.X, cirq.Y, cirq.Z,
+    qualtran.bloqs.mod_arithmetic.ModAddK
 )
 
 
@@ -32,7 +33,7 @@ def keep(op: cirq.Operation):
 
 def get_clifford_plus_t_cirq_circuit_for_bloq(bloq: Bloq):
     # Get a cirq circuit containing only this operation.
-    circuit, _ = bloq.decompose_bloq().to_cirq_circuit(**get_named_qubits(bloq.signature.lefts()))
+    circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts()))
     # Decompose the operation until all gates are in the target gate set.
     context = cirq.DecompositionContext(qubit_manager=cirq.GreedyQubitManager(prefix='anc'))
     return cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
@@ -126,11 +127,12 @@ def qpe_decomposed():
 
     circuit = cirq.Circuit(phase_estimation(get_walk_operator_for_1d_ising_model(num_sites, eps), m=m_bits))
     print(circuit)
-    context = cirq.DecompositionContext(qubit_manager=cirq.SimpleQubitManager())
+    context = cirq.DecompositionContext(qubit_manager=cirq.GreedyQubitManager(prefix='anc'))
     circuit = cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
 
     final_ops = []
     for op in circuit.all_operations():
+        op = op.without_classical_controls()
         if isinstance(op.gate, cirq.GlobalPhaseGate):
             continue
         if isinstance(op.gate, qualtran.cirq_interop.BloqAsCirqGate):
@@ -154,6 +156,9 @@ def qpe_decomposed():
     decomposed_circuit = cirq.Circuit(final_ops)
     op_set = set()
     for op in decomposed_circuit.all_operations():
+        if op.gate.__class__.__name__ == 'NoneType':
+            print(op)
+            print(op.gate)
         op_set.add(op.gate.__class__.__name__)
 
     print(op_set)
@@ -170,23 +175,17 @@ def hubbard_2D_decomposed():
     m_bits = int(np.ceil(np.log2(qlambda * np.pi * np.sqrt(2) / delta_E)))
     walk = get_walk_operator_for_hubbard_model(x_dim, y_dim, t, mu)
     circuit = cirq.Circuit(phase_estimation(walk, m=m_bits))
+    print(circuit)
     context = cirq.DecompositionContext(qubit_manager=cirq.SimpleQubitManager())
+    print('Starting to decompose in cirq...')
     circuit = cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
 
+    print('Starting to decompose manually...')
     final_ops = []
     for op in circuit.all_operations():
-        # if op.gate.__class__.__name__ == 'ModAddK':
-        #     print(type(op.gate))
-        # qualtran.bloqs.mod_arithmetic.mod_addition.ModAddK
+        op = op.without_classical_controls()
         if isinstance(op.gate, cirq.GlobalPhaseGate):
             continue
-        # if isinstance(op.gate, qualtran.bloqs.mod_arithmetic.mod_addition.ModAddK):
-        #     circuit, _ = op.gate.decompose_bloq().to_cirq_circuit(**get_named_qubits(op.gate.signature.lefts()))
-        #     # Decompose the operation until all gates are in the target gate set.
-        #     context = cirq.DecompositionContext(qubit_manager=cirq.GreedyQubitManager(prefix='anc'))
-        #     circuit =  cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
-        #     for op in circuit.all_operations():
-        #         final_ops.append(op)
         if isinstance(op.gate, qualtran.cirq_interop.BloqAsCirqGate):
             if isinstance(op.gate.bloq, qualtran.bloqs.basic_gates.swap.TwoBitCSwap):
                 ctrl, x, y = op.qubits
@@ -209,7 +208,6 @@ def hubbard_2D_decomposed():
     op_set = set()
     for op in decomposed_circuit.all_operations():
         op_set.add(op.gate.__class__.__name__)
-
     print(op_set)
 
 
