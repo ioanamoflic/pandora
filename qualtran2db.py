@@ -112,9 +112,9 @@ def adder_decomposed():
 
 def qrom_decomposed():
     # QROM example
-    data = [*range(1, 5)]
-    bloq = QROM.build(data)
-    circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
+    data = np.arange(5)
+    qrom_small = QROM([data], selection_bitsizes=(3,), target_bitsizes=(3,))
+    circuit = get_clifford_plus_t_cirq_circuit_for_bloq(qrom_small)
     assert_circuit_in_clifford_plus_t(circuit)
     print(circuit)
 
@@ -212,5 +212,7 @@ def hubbard_2D_decomposed():
 
 
 if __name__ == "__main__":
+    adder_decomposed()
+    qrom_decomposed()
     qpe_decomposed()
     hubbard_2D_decomposed()
