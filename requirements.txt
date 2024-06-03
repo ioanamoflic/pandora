@@ -1,0 +1,4 @@
+cirq
+psycopg2
+requests
+qualtran
