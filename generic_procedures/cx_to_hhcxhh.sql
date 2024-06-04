@@ -34,7 +34,7 @@ begin
 	    if stop=True then
             exit;
         end if;
-        select * into cx from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it where type = 'CNOT' for update skip locked limit 1;
+        select * into cx from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it where type = 'CXPowGate' for update skip locked limit 1;
         if cx.id is not null then
             cx_prev_q1_id := div(cx.prev_q1, 10);
             cx_prev_q2_id := div(cx.prev_q2, 10);
@@ -52,15 +52,15 @@ begin
             if distinct_count = distinct_existing then
                 cx_id_ctrl := cx.id * 10;
                 cx_id_tgt := cx.id * 10 + 1;
-                insert into linked_circuit values (DEFAULT, cx.prev_q1, null, null, 'H', 0, false, cx_id_tgt, null, null, false, cx.label)
+                insert into linked_circuit values (DEFAULT, cx.prev_q1, null, null, 'HPowGate', 1, false, cx_id_tgt, null, null, false, cx.label, false, null)
                                                               returning id into left_h_q1_id;
-                insert into linked_circuit values (DEFAULT, cx.prev_q2, null, null, 'H', 0, false, cx_id_ctrl, null, null, false, cx.label)
+                insert into linked_circuit values (DEFAULT, cx.prev_q2, null, null, 'HPowGate', 1, false, cx_id_ctrl, null, null, false, cx.label, false, null)
                                                               returning id into left_h_q2_id;
                 left_q1_id := left_h_q1_id * 10;
                 left_q2_id := left_h_q2_id * 10;
-                insert into linked_circuit values (DEFAULT, cx_id_tgt, null, null, 'H', 0, false, cx.next_q1, null, null, false, cx.label)
+                insert into linked_circuit values (DEFAULT, cx_id_tgt, null, null, 'HPowGate', 1, false, cx.next_q1, null, null, false, cx.label, false, null)
                                                               returning id into right_h_q1_id;
-                insert into linked_circuit values (DEFAULT, cx_id_ctrl, null, null, 'H', 0, false, cx.next_q2, null, null, false, cx.label)
+                insert into linked_circuit values (DEFAULT, cx_id_ctrl, null, null, 'HPowGate', 1, false, cx.next_q2, null, null, false, cx.label, false, null)
                                                               returning id into right_h_q2_id;
                 right_q1_id := right_h_q1_id * 10;
                 right_q2_id := right_h_q2_id * 10;

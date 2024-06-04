@@ -33,7 +33,7 @@ begin
 	    if stop=True then
             exit;
         end if;
-        select * into cx from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it where type = 'CNOT' for update skip locked limit 1;
+        select * into cx from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it where type = 'CXPowGate' for update skip locked limit 1;
         if cx.id is not null then
             -- left gates on qubits 1,2
             cx_prev_q1_id := div(cx.prev_q1, 10);
@@ -56,7 +56,7 @@ begin
                                                            (select * from linked_circuit where id in (left_q1_id, left_q2_id, right_q1_id, right_q2_id) for update skip locked) as it;
 
             if distinct_count = distinct_existing then
-                if left_q1.type = 'H' and left_q2.type = 'H' and right_q1.type = 'H' and right_q2.type = 'H' then
+                if left_q1.type = 'HPowGate' and left_q2.type = 'HPowGate' and right_q1.type = 'HPowGate' and right_q2.type = 'HPowGate' then
                     cx_id_ctrl := cx.id * 10;
                     cx_id_tgt := cx.id * 10 + 1;
                     modulus_left_h_q1 := 'next_q' || mod(left_q1.prev_q1, 10) + 1;

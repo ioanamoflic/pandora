@@ -22,7 +22,7 @@ begin
             exit;
         end if;
 
-    	select * into cx from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it where it.type='CNOT' for update skip locked limit 1;
+    	select * into cx from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it where it.type='CXPowGate' for update skip locked limit 1;
     	if cx.id is not null then
     	    cx_next_q1 = cx.next_q1;
     	    cx_prev_q1 = cx.prev_q1;

@@ -18,8 +18,7 @@ sys.setrecursionlimit(10000)  # Increase recursion limit from default since adde
 more_general_gate_set = cirq.Gateset(
     cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel, qualtran.cirq_interop.BloqAsCirqGate,
     cirq.GlobalPhaseGate, cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.CZPowGate, cirq.CXPowGate,
-    cirq.X, cirq.Y, cirq.Z,
-    qualtran.bloqs.mod_arithmetic.ModAddK
+    cirq.X, cirq.Y, cirq.Z, qualtran.bloqs.mod_arithmetic.ModAddK
 )
 
 
@@ -107,14 +106,15 @@ def adder_decomposed():
     bloq = Add(QUInt(2))
     circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
     assert_circuit_in_clifford_plus_t(circuit)
-    return circuit
+    print(circuit)
 
 
 def qrom_decomposed():
     # QROM example
-    data = np.arange(5)
-    qrom_small = QROM([data], selection_bitsizes=(3,), target_bitsizes=(3,))
-    circuit = get_clifford_plus_t_cirq_circuit_for_bloq(qrom_small)
+    data1 = np.arange(9).reshape((3, 3))
+    data2 = (np.arange(9) + 1).reshape((3, 3))
+    qrom_multi_dim = QROM([data1, data2], selection_bitsizes=(2, 2), target_bitsizes=(8, 8))
+    circuit = get_clifford_plus_t_cirq_circuit_for_bloq(qrom_multi_dim)
     assert_circuit_in_clifford_plus_t(circuit)
     print(circuit)
 
@@ -176,7 +176,7 @@ def hubbard_2D_decomposed():
     walk = get_walk_operator_for_hubbard_model(x_dim, y_dim, t, mu)
     circuit = cirq.Circuit(phase_estimation(walk, m=m_bits))
     print(circuit)
-    context = cirq.DecompositionContext(qubit_manager=cirq.SimpleQubitManager())
+    context = cirq.DecompositionContext(qubit_manager=cirq.GreedyQubitManager(prefix='anc'))
     print('Starting to decompose in cirq...')
     circuit = cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
 
@@ -185,6 +185,9 @@ def hubbard_2D_decomposed():
     for op in circuit.all_operations():
         op = op.without_classical_controls()
         if isinstance(op.gate, cirq.GlobalPhaseGate):
+            continue
+        # for now, ignore ModAddK, this might add optimisation logical problems
+        if isinstance(op.gate, qualtran.bloqs.mod_arithmetic.ModAddK):
             continue
         if isinstance(op.gate, qualtran.cirq_interop.BloqAsCirqGate):
             if isinstance(op.gate.bloq, qualtran.bloqs.basic_gates.swap.TwoBitCSwap):
@@ -204,15 +207,17 @@ def hubbard_2D_decomposed():
         else:
             final_ops.append(op)
 
+    print(f'Number of operations in the circuit: {len(final_ops)}')
     decomposed_circuit = cirq.Circuit(final_ops)
     op_set = set()
     for op in decomposed_circuit.all_operations():
         op_set.add(op.gate.__class__.__name__)
     print(op_set)
+    return decomposed_circuit
 
 
 if __name__ == "__main__":
-    adder_decomposed()
-    qrom_decomposed()
-    qpe_decomposed()
+    # adder_decomposed()
+    # qrom_decomposed()
+    # qpe_decomposed()
     hubbard_2D_decomposed()

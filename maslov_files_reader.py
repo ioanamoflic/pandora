@@ -72,7 +72,7 @@ def markov_file_to_tuples(url, gate_id, label):
                     # NOT gate before first empty control
                     if control < 0:
                         control = control * -1
-                        x_to_add = Gate(gate_id, gates_on_qubits[control], None, None, "X", 0, False,
+                        x_to_add = Gate(gate_id, gates_on_qubits[control], None, None, "_PauliX", 1, False,
                                         (gate_id + 1) * 10, None, None, False, None, None)
                         for gate in db_tuples:
                             if gate.id == gates_on_qubits[control] // 10:
@@ -81,7 +81,7 @@ def markov_file_to_tuples(url, gate_id, label):
                         db_tuples.append(x_to_add)
                         gate_id += 1
 
-                    cx_to_add = Gate(gate_id, gates_on_qubits[control], gates_on_qubits[target], None, 'CNOT', 0,
+                    cx_to_add = Gate(gate_id, gates_on_qubits[control], gates_on_qubits[target], None, 'CXPowGate', 1,
                                      control < target, None, None, None, False, None, None)
 
                     prev_control_mod = gates_on_qubits[control] % 10
@@ -104,7 +104,7 @@ def markov_file_to_tuples(url, gate_id, label):
 
                     # NOT gate after empty control
                     if control_qubits[0] < 0:
-                        x_to_add = Gate(gate_id, gates_on_qubits[control], None, None, "X", 0, False, None, None,
+                        x_to_add = Gate(gate_id, gates_on_qubits[control], None, None, "_PauliX", 1, False, None, None,
                                         None, False, None, None)
                         setattr(cx_to_add, f'next_q1', x_to_add.id * 10)
                         db_tuples.append(x_to_add)
@@ -123,7 +123,7 @@ def markov_file_to_tuples(url, gate_id, label):
                     # NOT gate before first empty control
                     if control_qubits[0] < 0:
                         control_1 = control_qubits[0] * -1
-                        x_to_add = Gate(gate_id, gates_on_qubits[control_1], None, None, "X", 0, False,
+                        x_to_add = Gate(gate_id, gates_on_qubits[control_1], None, None, "_PauliX", 1, False,
                                         (gate_id + id_increment) * 10, None, None, False, None, None)
                         for gate in db_tuples:
                             if gate.id == gates_on_qubits[control_1] // 10:
@@ -134,7 +134,7 @@ def markov_file_to_tuples(url, gate_id, label):
                     # NOT gate before second empty control
                     if control_qubits[1] < 0:
                         control_2 = control_qubits[1] * -1
-                        x_to_add = Gate(gate_id + id_increment - 1, gates_on_qubits[control_2], None, None, "X", 0,
+                        x_to_add = Gate(gate_id + id_increment - 1, gates_on_qubits[control_2], None, None, "_PauliX", 1,
                                         False, (gate_id + id_increment) * 10 + 1, None, None, False, None, None)
                         for gate in db_tuples:
                             if gate.id == gates_on_qubits[control_2] // 10:
@@ -144,7 +144,7 @@ def markov_file_to_tuples(url, gate_id, label):
 
                     gate_id += id_increment
                     ccx_to_add = Gate(gate_id, gates_on_qubits[control_1], gates_on_qubits[control_2],
-                                      gates_on_qubits[target], 'TOFFOLI', 0, False, None, None, None, False, None, None)
+                                      gates_on_qubits[target], 'CCXPowGate', 1, False, None, None, None, False, None, None)
 
                     # set previous links accordingly
                     for gate in db_tuples:
@@ -165,7 +165,7 @@ def markov_file_to_tuples(url, gate_id, label):
 
                     # NOT gate after first empty control
                     if control_qubits[0] < 0:
-                        x_to_add = Gate(gate_id, gates_on_qubits[control_1], None, None, "X", 0, False, None, None,
+                        x_to_add = Gate(gate_id, gates_on_qubits[control_1], None, None, "_PauliX", 1, False, None, None,
                                         None, False, None, None)
                         setattr(ccx_to_add, f'next_q1', x_to_add.id * 10)
                         gates_on_qubits[control_1] = x_to_add.id * 10
@@ -173,7 +173,7 @@ def markov_file_to_tuples(url, gate_id, label):
 
                     # NOT gate after second empty control
                     if control_qubits[1] < 0:
-                        x_to_add = Gate(gate_id + id_increment - 1, gates_on_qubits[control_2], None, None, "X", 0,
+                        x_to_add = Gate(gate_id + id_increment - 1, gates_on_qubits[control_2], None, None, "_PauliX", 1,
                                         False, None, None, None, False, None, None)
                         setattr(ccx_to_add, f'next_q2', x_to_add.id * 10)
                         gates_on_qubits[control_2] = x_to_add.id * 10
@@ -193,11 +193,5 @@ def markov_file_to_tuples(url, gate_id, label):
          label, t.cl_ctrl, t.meas_key)
         for t in db_tuples], gate_id
 
-# if __name__ == "__main__":
-#     gate_id = 0
-#     for i in range(1):
-#
-#         # url = 'https://raw.githubusercontent.com/njross/optimizer/master/QFT_and_Adders/Adder2048_before'
-#         url = "tests/toffoli.txt"
-#         db_tuples, gate_id = markov_file_to_tuples(url, gate_id)
-#         insert_in_batches(db_tuples, batch_size=5000)
+
+
