@@ -49,7 +49,7 @@ begin
 		count := count + 1;
 		found := false;
 
-    	select * into toffoli from linked_circuit as it where it.type = 'TOFFOLI' for update skip locked limit 1;
+    	select * into toffoli from linked_circuit as it where it.type = 'CCXPowGate' for update skip locked limit 1;
 
     	if toffoli.id is not null then
     	    tof_prev_q1_id := div(toffoli.prev_q1, 10);
@@ -71,35 +71,35 @@ begin
 			        (select * from linked_circuit where id in (tof_prev_q1_id, tof_prev_q2_id, tof_prev_q3_id, tof_next_q1_id, tof_next_q2_id, tof_next_q3_id) for update skip locked) as it;
 
 			if distinct_count = distinct_existing then
-                insert into linked_circuit values (default, toffoli.prev_q3, null, null, 'H', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, toffoli.prev_q3, null, null, 'HPowGate', 1, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into a_id;
-                insert into linked_circuit values (default, toffoli.prev_q2, a_id * 10, null, 'CNOT', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, toffoli.prev_q2, a_id * 10, null, 'CXPowGate', 1, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into b_id;
-                insert into linked_circuit values (default, b_id * 10 + 1, null, null, 'T**-1', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, b_id * 10 + 1, null, null, 'ZPowGate**-0.25', -0.25, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into c_id;
-                insert into linked_circuit values (default, toffoli.prev_q1, c_id * 10, null, 'CNOT', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, toffoli.prev_q1, c_id * 10, null, 'CXPowGate', 1, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into d_id;
-                insert into linked_circuit values (default, d_id * 10 + 1, null, null, 'T', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, d_id * 10 + 1, null, null, 'ZPowGate**0.25', 0.25, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into e_id;
-                insert into linked_circuit values (default, b_id * 10, e_id * 10, null, 'CNOT', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, b_id * 10, e_id * 10, null, 'CXPowGate', 1, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into f_id;
-                insert into linked_circuit values (default, f_id * 10 + 1, null, null, 'T**-1', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, f_id * 10 + 1, null, null, 'ZPowGate**-0.25', -0.25, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into g_id;
-                insert into linked_circuit values (default, d_id * 10, g_id * 10, null, 'CNOT', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, d_id * 10, g_id * 10, null, 'CXPowGate', 1, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into h_id;
-                insert into linked_circuit values (default, h_id * 10, f_id * 10, null, 'CNOT', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, h_id * 10, f_id * 10, null, 'CXPowGate', 1, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into i_id;
-                insert into linked_circuit values (default, i_id * 10 + 1, null, null, 'T**-1', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, i_id * 10 + 1, null, null, 'ZPowGate**-0.25', -0.25, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into j_id;
-                insert into linked_circuit values (default, i_id * 10, j_id * 10, null, 'CNOT', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, i_id * 10, j_id * 10, null, 'CXPowGate', 1, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into k_id;
-                insert into linked_circuit values (default, k_id * 10 , null, null, 'T', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, k_id * 10 , null, null, 'ZPowGate**0.25', 0.25, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into l_id;
-                insert into linked_circuit values (default, k_id * 10 + 1, null, null, 'T', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, k_id * 10 + 1, null, null, 'ZPowGate**0.25', 0.25, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into m_id;
-                insert into linked_circuit values (default, h_id * 10 + 1, null, null, 'T', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, h_id * 10 + 1, null, null, 'ZPowGate**0.25', 0.25, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into n_id;
-                insert into linked_circuit values (default, n_id * 10, null, null, 'H', 0, false, null, null, null, false, toffoli.label)
+                insert into linked_circuit values (default, n_id * 10, null, null, 'HPowGate', 1, false, null, null, null, false, toffoli.label, false, null)
                                                       returning id into o_id;
 
                 -- updating remaining next links
