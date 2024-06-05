@@ -28,12 +28,12 @@ else:
     print("Connection to the PostgreSQL encountered and error.")
 
 
-def map_hack(aff, proc_call):
+def map_hack(aff, proc_call, verbose = False):
     if sys.platform == "linux":
         my_pid = os.getppid()
         old_aff = os.sched_getaffinity(0)
         x = (my_pid, old_aff, os.sched_getaffinity(0))
-        print("My pid is {} and my old affinity was {}, my new affinity is {}".format(*x))
+        # print("My pid is {} and my old affinity was {}, my new affinity is {}".format(*x))
 
     connection = psycopg2.connect(
         database="postgres",
@@ -42,19 +42,22 @@ def map_hack(aff, proc_call):
         port=5432,
         password="1234")
 
-    if connection:
-        print("Connection to the PostgreSQL established successfully.")
-    else:
-        print("Connection to the PostgreSQL encountered and error.")
+    if verbose:
+        if connection:
+            print("Connection to the PostgreSQL established successfully.")
+        else:
+            print("Connection to the PostgreSQL encountered and error.")
 
     cursor = connection.cursor()
     connection.set_session(autocommit=True)
-    print('Calling procedure...')
+    if verbose:
+        print('Calling procedure...')
+
     cursor.execute(proc_call)
 
 
 def db_multi_threaded(thread_proc: typing.List[tuple]):
-    print(f"MAIN PPID {os.getppid()} PID {os.getpid()} ")
+    # print(f"MAIN PPID {os.getppid()} PID {os.getpid()} ")
 
     n_threads = sum([n for (n, _) in thread_proc])
     if sys.platform == "linux":
@@ -70,7 +73,6 @@ def db_multi_threaded(thread_proc: typing.List[tuple]):
                 p = Process(target=map_hack, args=(None, proc))
             process_list.append(p)
 
-    print(process_list)
     for i in range(n_threads):
         process_list[i].start()
     for i in range(n_threads):
@@ -82,7 +84,7 @@ if __name__ == "__main__":
     create_linked_table(conn=connection, clean=True)
     refresh_all_stored_procedures(conn=connection)
 
-    db_tuples = get_maslov_adder(conn=connection, n_bits=512)
+    db_tuples = get_maslov_adder(conn=connection, n_bits=64)
     insert_in_batches(db_tuples=db_tuples, conn=connection, batch_size=1000000, reset_id=100000)
     print('...decomposing Toffolis')
     cursor.execute("call linked_toffoli_decomp()")
@@ -105,6 +107,7 @@ if __name__ == "__main__":
     print('...running optimization')
     stop_after = 60
     thread_procedures = [
+        (1, f"CALL stopper({stop_after});"),
         (8, f"CALL cancel_single_qubit('HPowGate', 'HPowGate', 100, 10000000)"),
         (4, f"CALL cancel_single_qubit('ZPowGate**0.25', 'ZPowGate**-0.25', 100, 10000000)"),
         (4, f"CALL cancel_single_qubit('_PauliX', '_PauliX', 100, 10000000)"),
@@ -117,8 +120,6 @@ if __name__ == "__main__":
         (4, f"CALL commute_single_control_left('ZPowGate**-0.5', 100, 10000000)"),
         (4, f"CALL linked_hhcxhh_to_cx(100, 10000000);"),
         (1, f"CALL linked_cx_to_hhcxhh(100, 10000000);"),
-        (1, f"CALL stopper({stop_after});")
-
     ]
     subprocess.Popen(["./readout_threadripper.sh"], shell=True, executable="/bin/bash")
     db_multi_threaded(thread_proc=thread_procedures)

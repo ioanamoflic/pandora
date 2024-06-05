@@ -34,6 +34,12 @@ def create_linked_table(conn, clean=False):
         cursor.execute(sql_statement)
         conn.commit()
 
+        print(f"...dropping stop_condition")
+        sql_statement = "drop table if exists stop_condition cascade"
+        # print(sql_statement)
+        cursor.execute(sql_statement)
+        conn.commit()
+
     with open("sql_generate_table.sql", "r") as create_f:
         print(f"...creating linked_circuit")
         sql_statement = create_f.read()
