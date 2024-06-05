@@ -1,4 +1,4 @@
-create or replace procedure commute_single_control_right(single_type varchar(8), sys_range int, run_nr int)
+create or replace procedure commute_single_control_right(single_type varchar(25), sys_range int, run_nr int)
     language plpgsql
 as
 $$
@@ -7,11 +7,11 @@ declare
     sg record;
     distinct_count int;
     distinct_existing int;
-    cx_next_q1 int;
-    sg_next_id int;
-    cx_next_id int;
-    cx_prev_id int;
-    cx_prev_q1 int;
+    cx_next_q1 bigint;
+    sg_next_id bigint;
+    cx_next_id bigint;
+    cx_prev_id bigint;
+    cx_prev_q1 bigint;
     modulus_prev varchar(8);
     modulus_next varchar(8);
     stop boolean;

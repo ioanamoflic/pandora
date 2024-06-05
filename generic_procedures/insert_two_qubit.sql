@@ -1,15 +1,15 @@
 -- this procedure needs more testing done before usage
-create or replace procedure insert_two_qubit(type_1 varchar(8), type_2 varchar(8), sys_range int)
+create or replace procedure insert_two_qubit(type_1 varchar(25), type_2 varchar(25), sys_range int)
     language plpgsql
 as
 $$
 declare
 	modulus_second_next_q1 varchar(8);
 	modulus_second_next_q2 varchar(8);
-    first_next_q1_id int;
-	first_next_q2_id int;
-    distinct_count int;
-    distinct_existing int;
+    first_next_q1_id bigint;
+	first_next_q2_id bigint;
+    distinct_count bigint;
+    distinct_existing bigint;
     first_insert_id bigint;
     second_insert_id bigint;
     first record;

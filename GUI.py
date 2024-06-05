@@ -4,7 +4,6 @@ from dash import dcc
 from dash import html
 import plotly.express as px
 from dash.dependencies import Output, Input
-import dash_bootstrap_components as dbc
 
 app = dash.Dash(__name__)
 app.title = "Database Optimiser"
@@ -61,7 +60,7 @@ app.layout = [
     Input('dropdown-selection', 'value')
 )
 def update_graph(n_intervals, value):
-    df = pd.read_csv(filepath_or_buffer='result.csv')
+    df = pd.read_csv(filepath_or_buffer='hubbard.csv')
     fig = px.line(data_frame=df,
                   x=df.index,
                   y=["Total count", "T count", "S count", "CX count", "H count", "X count"],
@@ -75,8 +74,8 @@ def update_graph(n_intervals, value):
     Input('interval-component', 'n_intervals'),
 )
 def update_graph2(n_intervals):
-    columns = ["Total count", "T count", "H count"]
-    df = pd.read_csv(filepath_or_buffer='result.csv')
+    columns = ["Total count", "T count", "H count", "CX count"]
+    df = pd.read_csv(filepath_or_buffer='hubbard.csv')
     for i in range(1, len(df)):
 
         for col in columns:

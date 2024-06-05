@@ -14,7 +14,7 @@ from qualtran2db import *
 
 connection = psycopg2.connect(
     database="postgres",
-    # user="postgres",
+    user="postgres",
     host="localhost",
     port=5432,
     password="1234")
@@ -37,7 +37,7 @@ def map_hack(aff, proc_call):
 
     connection = psycopg2.connect(
         database="postgres",
-        # user="postgres",
+        user="postgres",
         host="localhost",
         port=5432,
         password="1234")
@@ -96,28 +96,31 @@ if __name__ == "__main__":
     start = time.time()
     hubbard_decomposed = hubbard_2D_decomposed()
     print(f'Hubbard decomposition time: {time.time() - start}')
+    # Hubbard decomposition time: 2017.2842507362366
 
     start = time.time()
     db_tuples, _ = cirq2db.cirq_to_db(cirq_circuit=hubbard_decomposed, last_id=0, label='Q-hubbard', add_margins=True)
     print(f'cirq_to_db time: {time.time() - start}')
+    # cirq_to_db time: 164.87137579917908
 
     start = time.time()
-    insert_in_batches(db_tuples=db_tuples, conn=connection, batch_size=100000, reset_id=100000)
+    insert_in_batches(db_tuples=db_tuples, conn=connection, batch_size=1000000, reset_id=100000000)
     print(f'insert_in_batches time: {time.time() - start}')
+    # insert_in_batches time: 595.5628757476807
 
     print('...running optimization')
     thread_procedures = [
-        (4, f"CALL cancel_single_qubit('HPowGate', 'HPowGate', 1000, 10000000)"),
-        (2, f"CALL cancel_single_qubit('ZPowGate**0.25', 'ZPowGate**-0.25', 1000, 10000000)"),
-        (1, f"CALL cancel_single_qubit('_PauliX', '_PauliX', 1000, 10000000)"),
+        (8, f"CALL cancel_single_qubit('HPowGate', 'HPowGate', 1000, 10000000)"),
+        (4, f"CALL cancel_single_qubit('ZPowGate**0.25', 'ZPowGate**-0.25', 1000, 10000000)"),
+        (4, f"CALL cancel_single_qubit('_PauliX', '_PauliX', 1000, 10000000)"),
         (4, f"CALL cancel_two_qubit('CXPowGate', 'CXPowGate', 1000, 10000000)"),
-        (2, f"CALL replace_two_qubit('ZPowGate**0.25', 'ZPowGate**0.25', 'ZPowGate**0.5', 1000, 10000000)"),
-        (2, f"CALL replace_two_qubit('ZPowGate**-0.25', 'ZPowGate**-0.25', 'ZPowGate**-0.5', 1000, 10000000)"),
-        (2, f"CALL commute_single_control_left('ZPowGate**0.25', 1000, 10000000)"),
-        (2, f"CALL commute_single_control_left('ZPowGate**-0.25', 1000, 10000000)"),
-        (2, f"CALL commute_single_control_left('ZPowGate**0.5', 1000, 10000000)"),
-        (2, f"CALL commute_single_control_left('ZPowGate**-0.5', 1000, 10000000)"),
-        (2, f"CALL linked_hhcxhh_to_cx(1000, 10000000);"),
+        (4, f"CALL replace_two_qubit('ZPowGate**0.25', 'ZPowGate**0.25', 'ZPowGate**0.5', 1000, 10000000)"),
+        (4, f"CALL replace_two_qubit('ZPowGate**-0.25', 'ZPowGate**-0.25', 'ZPowGate**-0.5', 1000, 10000000)"),
+        (4, f"CALL commute_single_control_left('ZPowGate**0.25', 1000, 10000000)"),
+        (4, f"CALL commute_single_control_left('ZPowGate**-0.25', 1000, 10000000)"),
+        (4, f"CALL commute_single_control_left('ZPowGate**0.5', 1000, 10000000)"),
+        (4, f"CALL commute_single_control_left('ZPowGate**-0.5', 1000, 10000000)"),
+        (4, f"CALL linked_hhcxhh_to_cx(1000, 10000000);"),
         (1, f"CALL linked_cx_to_hhcxhh(1000, 10000000);")
     ]
     subprocess.Popen(["./readout_threadripper.sh"], shell=True, executable="/bin/bash")

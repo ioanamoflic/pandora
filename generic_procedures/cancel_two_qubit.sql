@@ -1,4 +1,4 @@
-create or replace procedure cancel_two_qubit(type_1 varchar(8), type_2 varchar(8), sys_range int, run_nr int)
+create or replace procedure cancel_two_qubit(type_1 varchar(25), type_2 varchar(25), sys_range int, run_nr int)
     language plpgsql
 as
 $$
@@ -7,12 +7,12 @@ declare
 	modulus_first_prev_q2 varchar(8);
 	modulus_second_next_q1 varchar(8);
 	modulus_second_next_q2 varchar(8);
-    first_id_plus_one int;
-    first_id_plus_zero int;
-	first_prev_q1 int;
-	first_prev_q2 int;
-    second_next_q1 int;
-	second_next_q2 int;
+    first_id_plus_one bigint;
+    first_id_plus_zero bigint;
+	first_prev_q1 bigint;
+	first_prev_q2 bigint;
+    second_next_q1 bigint;
+	second_next_q2 bigint;
     distinct_count int;
     distinct_existing int;
     first record;

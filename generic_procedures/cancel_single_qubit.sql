@@ -1,11 +1,11 @@
-create or replace procedure cancel_single_qubit(type_1 varchar(8), type_2 varchar(8), sys_range int, run_nr int)
+create or replace procedure cancel_single_qubit(type_1 varchar(25), type_2 varchar(25), sys_range int, run_nr int)
     language plpgsql
 as
 $$
 declare
-    first_next_id int;
-    first_prev_id int;
-    second_next_id int;
+    first_next_id bigint;
+    first_prev_id bigint;
+    second_next_id bigint;
     modulus_prev varchar(8);
     modulus_next varchar(8);
     first record;

@@ -1,15 +1,15 @@
-create or replace procedure replace_two_qubit(type_1 varchar(8), type_2 varchar(8), type_replace_1 varchar(8), sys_range int, run_nr int)
+create or replace procedure replace_two_qubit(type_1 varchar(25), type_2 varchar(25), type_replace_1 varchar(25), sys_range int, run_nr int)
     language plpgsql
 as
 $$
 declare
-    first_next_id int;
-    second_next_id int;
+    first_next_id bigint;
+    second_next_id bigint;
     modulus_next varchar(8);
     first record;
     second record;
-    distinct_count int;
-    distinct_existing int;
+    distinct_count bigint;
+    distinct_existing bigint;
     stop boolean;
 begin
 	while run_nr > 0 loop
