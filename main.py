@@ -120,6 +120,6 @@ if __name__ == "__main__":
         (1, f"CALL stopper({stop_after});")
 
     ]
-    subprocess.Popen(["./readout.sh"], shell=True, executable="/bin/bash")
+    subprocess.Popen(["./readout_threadripper.sh"], shell=True, executable="/bin/bash")
     db_multi_threaded(thread_proc=thread_procedures)
     # print(extract_cirq_circuit(conn=connection, circuit_label='Adder128', remove_io_gates=True))
