@@ -1,7 +1,5 @@
 import re
-import urllib.request
 import requests
-
 from _connection import *
 
 
@@ -194,4 +192,10 @@ def markov_file_to_tuples(url, gate_id, label):
         for t in db_tuples], gate_id
 
 
+def get_maslov_adder(conn, n_bits):
+    create_linked_table(conn=conn, clean=True)
+    refresh_all_stored_procedures(conn=conn)
 
+    url = f'https://raw.githubusercontent.com/njross/optimizer/master/QFT_and_Adders/Adder{n_bits}_before'
+    db_tuples, _ = markov_file_to_tuples(url, gate_id=0, label=f'Adder{n_bits}')
+    return db_tuples

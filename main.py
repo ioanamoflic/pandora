@@ -3,7 +3,7 @@ import subprocess
 import time
 import cirq2db
 from _connection import create_linked_table, refresh_all_stored_procedures, insert_in_batches, extract_cirq_circuit
-from maslov_files_reader import markov_file_to_tuples
+from maslov_files_reader import *
 import psycopg2
 import os
 import sys
@@ -14,7 +14,7 @@ from qualtran2db import *
 
 connection = psycopg2.connect(
     database="postgres",
-    user="postgres",
+    # user="postgres",
     host="localhost",
     port=5432,
     password="1234")
@@ -37,7 +37,7 @@ def map_hack(aff, proc_call):
 
     connection = psycopg2.connect(
         database="postgres",
-        user="postgres",
+        # user="postgres",
         host="localhost",
         port=5432,
         password="1234")
@@ -82,47 +82,44 @@ if __name__ == "__main__":
     create_linked_table(conn=connection, clean=True)
     refresh_all_stored_procedures(conn=connection)
 
-    # print('...insert circuit')
-    # url = 'https://raw.githubusercontent.com/njross/optimizer/master/QFT_and_Adders/Adder128_before'
-    # db_tuples, gate_id = markov_file_to_tuples(url, gate_id=0, label='Adder128')
-    # insert_in_batches(conn=connection, db_tuples=db_tuples)
-    # print('...decomposing Toffolis')
-    # cursor.execute("call linked_toffoli_decomp()")
+    db_tuples = get_maslov_adder(conn=connection, n_bits=512)
+    insert_in_batches(db_tuples=db_tuples, conn=connection, batch_size=1000000, reset_id=100000)
+    print('...decomposing Toffolis')
+    cursor.execute("call linked_toffoli_decomp()")
 
-    # bloq = Add(QUInt(4))
-    # circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
-    # assert_circuit_in_clifford_plus_t(circuit)
-
-    start = time.time()
-    hubbard_decomposed = hubbard_2D_decomposed()
-    print(f'Hubbard decomposition time: {time.time() - start}')
-    # Hubbard decomposition time: 2017.2842507362366
-
-    start = time.time()
-    db_tuples, _ = cirq2db.cirq_to_db(cirq_circuit=hubbard_decomposed, last_id=0, label='Q-hubbard', add_margins=True)
-    print(f'cirq_to_db time: {time.time() - start}')
-    # cirq_to_db time: 164.87137579917908
-
-    start = time.time()
-    insert_in_batches(db_tuples=db_tuples, conn=connection, batch_size=1000000, reset_id=100000000)
-    print(f'insert_in_batches time: {time.time() - start}')
-    # insert_in_batches time: 595.5628757476807
+    # start = time.time()
+    # hubbard_decomposed = hubbard_2D_decomposed()
+    # print(f'Hubbard decomposition time: {time.time() - start}')
+    # # Hubbard decomposition time: 2017.2842507362366
+    #
+    # start = time.time()
+    # db_tuples, _ = cirq2db.cirq_to_db(cirq_circuit=hubbard_decomposed, last_id=0, label='Q-hubbard', add_margins=True)
+    # print(f'cirq_to_db time: {time.time() - start}')
+    # # cirq_to_db time: 164.87137579917908
+    #
+    # start = time.time()
+    # insert_in_batches(db_tuples=db_tuples, conn=connection, batch_size=1000000, reset_id=100000000)
+    # print(f'insert_in_batches time: {time.time() - start}')
+    # # insert_in_batches time: 595.5628757476807
 
     print('...running optimization')
+    stop_after = 60
     thread_procedures = [
-        (8, f"CALL cancel_single_qubit('HPowGate', 'HPowGate', 1000, 10000000)"),
-        (4, f"CALL cancel_single_qubit('ZPowGate**0.25', 'ZPowGate**-0.25', 1000, 10000000)"),
-        (4, f"CALL cancel_single_qubit('_PauliX', '_PauliX', 1000, 10000000)"),
-        (4, f"CALL cancel_two_qubit('CXPowGate', 'CXPowGate', 1000, 10000000)"),
-        (4, f"CALL replace_two_qubit('ZPowGate**0.25', 'ZPowGate**0.25', 'ZPowGate**0.5', 1000, 10000000)"),
-        (4, f"CALL replace_two_qubit('ZPowGate**-0.25', 'ZPowGate**-0.25', 'ZPowGate**-0.5', 1000, 10000000)"),
-        (4, f"CALL commute_single_control_left('ZPowGate**0.25', 1000, 10000000)"),
-        (4, f"CALL commute_single_control_left('ZPowGate**-0.25', 1000, 10000000)"),
-        (4, f"CALL commute_single_control_left('ZPowGate**0.5', 1000, 10000000)"),
-        (4, f"CALL commute_single_control_left('ZPowGate**-0.5', 1000, 10000000)"),
-        (4, f"CALL linked_hhcxhh_to_cx(1000, 10000000);"),
-        (1, f"CALL linked_cx_to_hhcxhh(1000, 10000000);")
+        (1, f"CALL cancel_single_qubit('HPowGate', 'HPowGate', 100, 10000000)"),
+        (1, f"CALL cancel_single_qubit('ZPowGate**0.25', 'ZPowGate**-0.25', 100, 10000000)"),
+        (1, f"CALL cancel_single_qubit('_PauliX', '_PauliX', 100, 10000000)"),
+        (1, f"CALL cancel_two_qubit('CXPowGate', 'CXPowGate', 100, 10000000)"),
+        (1, f"CALL replace_two_qubit('ZPowGate**0.25', 'ZPowGate**0.25', 'ZPowGate**0.5', 100, 10000000)"),
+        (1, f"CALL replace_two_qubit('ZPowGate**-0.25', 'ZPowGate**-0.25', 'ZPowGate**-0.5', 100, 10000000)"),
+        (1, f"CALL commute_single_control_left('ZPowGate**0.25', 100, 10000000)"),
+        (1, f"CALL commute_single_control_left('ZPowGate**-0.25', 100, 10000000)"),
+        (1, f"CALL commute_single_control_left('ZPowGate**0.5', 100, 10000000)"),
+        (1, f"CALL commute_single_control_left('ZPowGate**-0.5', 100, 10000000)"),
+        (1, f"CALL linked_hhcxhh_to_cx(100, 10000000);"),
+        (1, f"CALL linked_cx_to_hhcxhh(100, 10000000);"),
+        (1, f"CALL stopper({stop_after});")
+
     ]
-    subprocess.Popen(["./readout_threadripper.sh"], shell=True, executable="/bin/bash")
+    subprocess.Popen(["./readout.sh"], shell=True, executable="/bin/bash")
     db_multi_threaded(thread_proc=thread_procedures)
     # print(extract_cirq_circuit(conn=connection, circuit_label='Adder128', remove_io_gates=True))
