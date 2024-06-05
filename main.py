@@ -105,17 +105,17 @@ if __name__ == "__main__":
     print('...running optimization')
     stop_after = 60
     thread_procedures = [
-        (1, f"CALL cancel_single_qubit('HPowGate', 'HPowGate', 100, 10000000)"),
-        (1, f"CALL cancel_single_qubit('ZPowGate**0.25', 'ZPowGate**-0.25', 100, 10000000)"),
-        (1, f"CALL cancel_single_qubit('_PauliX', '_PauliX', 100, 10000000)"),
-        (1, f"CALL cancel_two_qubit('CXPowGate', 'CXPowGate', 100, 10000000)"),
-        (1, f"CALL replace_two_qubit('ZPowGate**0.25', 'ZPowGate**0.25', 'ZPowGate**0.5', 100, 10000000)"),
-        (1, f"CALL replace_two_qubit('ZPowGate**-0.25', 'ZPowGate**-0.25', 'ZPowGate**-0.5', 100, 10000000)"),
-        (1, f"CALL commute_single_control_left('ZPowGate**0.25', 100, 10000000)"),
-        (1, f"CALL commute_single_control_left('ZPowGate**-0.25', 100, 10000000)"),
-        (1, f"CALL commute_single_control_left('ZPowGate**0.5', 100, 10000000)"),
-        (1, f"CALL commute_single_control_left('ZPowGate**-0.5', 100, 10000000)"),
-        (1, f"CALL linked_hhcxhh_to_cx(100, 10000000);"),
+        (8, f"CALL cancel_single_qubit('HPowGate', 'HPowGate', 100, 10000000)"),
+        (4, f"CALL cancel_single_qubit('ZPowGate**0.25', 'ZPowGate**-0.25', 100, 10000000)"),
+        (4, f"CALL cancel_single_qubit('_PauliX', '_PauliX', 100, 10000000)"),
+        (4, f"CALL cancel_two_qubit('CXPowGate', 'CXPowGate', 100, 10000000)"),
+        (4, f"CALL replace_two_qubit('ZPowGate**0.25', 'ZPowGate**0.25', 'ZPowGate**0.5', 100, 10000000)"),
+        (4, f"CALL replace_two_qubit('ZPowGate**-0.25', 'ZPowGate**-0.25', 'ZPowGate**-0.5', 100, 10000000)"),
+        (4, f"CALL commute_single_control_left('ZPowGate**0.25', 100, 10000000)"),
+        (4, f"CALL commute_single_control_left('ZPowGate**-0.25', 100, 10000000)"),
+        (4, f"CALL commute_single_control_left('ZPowGate**0.5', 100, 10000000)"),
+        (4, f"CALL commute_single_control_left('ZPowGate**-0.5', 100, 10000000)"),
+        (4, f"CALL linked_hhcxhh_to_cx(100, 10000000);"),
         (1, f"CALL linked_cx_to_hhcxhh(100, 10000000);"),
         (1, f"CALL stopper({stop_after});")
 
