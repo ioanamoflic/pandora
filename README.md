@@ -5,6 +5,9 @@
 * Faster compilation for practical, fault-tolerant QC
 * Faster and multi-threaded optimization for practical, fault-tolerant QC
 
+Preliminary results for illustrating the speed-up: a) single threaded performance vs Tket for cancelling pairs of Hadamard gates (horizontal axis); b) multi-threaded speed-up (vertical) when cancelling Hadamard gates using specified number of cores (horizontal); c) multi-threaded speed-up (vertical) when reverting the direction of CNOT gates using specified number of cores (horizontal).
+![pandora_res.png](pandora_res.png)
+
 **Pandora** is integrated with <a href="https://github.com/quantumlib/Qualtran" target=_blank>Google Qualtran</a>.
 
 A tutorial including setup instructions is <a href="https://colab.research.google.com/drive/1K7cEqRoXRAOOhEz4EmfSPtBUssaXPW-v?usp=sharing" target="_blank">here</a>
