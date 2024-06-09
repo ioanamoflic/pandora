@@ -9,7 +9,5 @@
 
 A tutorial including setup instructions is <a href="https://colab.research.google.com/drive/1K7cEqRoXRAOOhEz4EmfSPtBUssaXPW-v?usp=sharing" target="_blank">here</a>
 
-```
-This research was performed in part with funding from the Defense Advanced Research Projects Agency [under the Quantum Benchmarking
-(QB) program under award no. HR00112230006 and HR001121S0026 contracts].
-```
+**This research was performed in part with funding from the Defense Advanced Research Projects Agency [under the Quantum Benchmarking
+(QB) program under award no. HR00112230006 and HR001121S0026 contracts].**
