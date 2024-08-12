@@ -234,6 +234,18 @@ def test_replace_two_sq_with_one():
     print('Test replace_two_sq_with_one passed!')
 
 
+def test_commute_cx_ctrl():
+    return NotImplementedError()
+
+
+def test_commute_cx_target():
+    return NotImplementedError()
+
+
+def test_commute_cx_ctrl_target():
+    return NotImplementedError()
+
+
 def test_case_1():
     """
     Testing circuit

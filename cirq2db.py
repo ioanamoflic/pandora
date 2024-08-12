@@ -1,4 +1,5 @@
 import sys
+from abc import ABC
 from typing import List, Optional
 
 import numpy as np
@@ -7,9 +8,12 @@ from qualtran.bloqs.mcmt import And
 
 
 class In(cirq.Gate):
-    def __init__(self, is_classic=False):
+    def __init__(self, is_classic=False, init_val=None):
         super(In, self)
-        self.gate = 'In'
+        if init_val is None:
+            self.gate = 'In'
+        else:
+            self.gate = init_val
         self.is_classic = is_classic
 
     def _num_qubits_(self):
@@ -33,10 +37,13 @@ class In(cirq.Gate):
 
 
 class Out(cirq.Gate):
-    def __init__(self, is_classic=False):
+    def __init__(self, is_classic=False, init_val=None):
         super(Out, self)
-        self.gate = 'Out'
         self.is_classic = is_classic
+        if init_val is None:
+            self.gate = 'Out'
+        else:
+            self.gate = init_val
 
     def _num_qubits_(self):
         return 1
@@ -58,6 +65,26 @@ class Out(cirq.Gate):
         return "Out"
 
 
+class ParityCheck(cirq.Gate):
+    def __init__(self, n_qub, pauli_string, rotation_angle=0):
+        super(ParityCheck, self)
+        self.gate = pauli_string
+        self.num_qubits = n_qub
+        self.pauli_string = pauli_string
+
+    def _num_qubits_(self):
+        return self.num_qubits
+
+    def _unitary_(self):
+        return None
+
+    def _circuit_diagram_info_(self, args):
+        return self.pauli_string
+
+    def __str__(self):
+        return self.pauli_string
+
+
 SINGLE_QUBIT_GATES = {
     'Rx': cirq.ops.common_gates.Rx,
     'Ry': cirq.ops.common_gates.Ry,
@@ -75,10 +102,23 @@ SINGLE_QUBIT_GATES = {
     'Out': Out(),
     'Inc': In(is_classic=True),
     'Outc': Out(is_classic=True),
-    'M': cirq.MeasurementGate(1)
+    'M': cirq.MeasurementGate(1),
+    'X': ParityCheck(n_qub=1, pauli_string='X'),
+    'Z': ParityCheck(n_qub=1, pauli_string='Z')
 }
-TWO_QUBIT_GATES = {'CNOT': cirq.CX, 'CZ': cirq.CZ, 'CZPowGate': cirq.CZPowGate, 'CXPowGate': cirq.CXPowGate}
-THREE_QUBIT_GATES = {'TOFFOLI': cirq.CCX, 'AND': And, 'TOFFOLI**-1': cirq.CCX, 'AND**-1': And}
+
+TWO_QUBIT_GATES = {'CNOT': cirq.CX,
+                   'CZ': cirq.CZ,
+                   'CZPowGate': cirq.CZPowGate,
+                   'CXPowGate': cirq.CXPowGate,
+                   'XX': ParityCheck(n_qub=2, pauli_string='XX'),
+                   'ZZ': ParityCheck(n_qub=2, pauli_string='ZZ')}
+
+THREE_QUBIT_GATES = {'TOFFOLI': cirq.CCX,
+                     'AND': And,
+                     'TOFFOLI**-1': cirq.CCX,
+                     'AND**-1': And}
+
 ALL_GATES = {**SINGLE_QUBIT_GATES, **TWO_QUBIT_GATES, **THREE_QUBIT_GATES}
 
 for gate in ['HPowGate', 'XPowGate', 'ZPowGate', 'YPowGate']:
