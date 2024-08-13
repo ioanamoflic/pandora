@@ -63,7 +63,42 @@ def test_lscx_up_b():
 
 
 def test_simplify_erasure_error():
-    return NotImplementedError()
+    """
+      Testing circuit:
+
+      q1: ──────XX────── XX───
+                │        │
+      q2: ──────XX───Z───XX───
+
+      Should reduce to
+
+      q1: ──────XX──────
+                │
+      q2: ──────XX──────
+
+      """
+    create_linked_table(conn=connection, clean=True)
+    refresh_all_stored_procedures(conn=connection)
+
+    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
+    initial_circuit = cirq.Circuit([cirq.XX.on(q1, q2),
+                                    cirq.Z.on(q2),
+                                    cirq.XX.on(q1, q2)])
+    print(initial_circuit)
+    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit,
+                              last_id=0,
+                              add_margins=True,
+                              label='see')
+
+    insert_in_batches(db_tuples=db_tuples, conn=connection)
+    cursor.execute(f"call simplify_erasure_error('XXPowGate', '_PauliZ', 100, 1)")
+
+    extracted_circuit = extract_cirq_circuit(conn=connection,
+                                             circuit_label='see',
+                                             remove_io_gates=True)
+    print(extracted_circuit)
+    assert len(extracted_circuit) == 1
+    print('Test simplify_erasure_error passed!')
 
 
 def test_simplify_two_parity_check():
@@ -130,3 +165,4 @@ def test_useless_cx_zero_X():
 
 if __name__ == "__main__":
     test_simplify_two_parity_check()
+    test_simplify_erasure_error()
