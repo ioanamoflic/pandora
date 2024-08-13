@@ -14,7 +14,8 @@ def refresh_all_stored_procedures(conn):
         'generic_procedures/cx_to_hhcxhh.sql',
         'generic_procedures/hhcxhh_to_cx.sql',
         'generic_procedures/stopper.sql',
-        'generic_procedures/for_loop.sql'
+        'generic_procedures/for_loop.sql',
+        'ls_style_procedures/simplify_two_parity_check.sql'
     ]
     cursor = conn.cursor()
     for sp in procedures:

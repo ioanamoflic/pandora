@@ -1,5 +1,6 @@
 import random
 
+import cirq
 import psycopg2
 
 from benchmarking import benchmark_cirq
@@ -66,7 +67,41 @@ def test_simplify_erasure_error():
 
 
 def test_simplify_two_parity_check():
-    return NotImplementedError()
+    """
+    Testing circuit:
+
+    q1: ──────XX──────XX───
+              │       │
+    q2: ──────XX──────XX───
+
+    Should reduce to
+
+    q1: ──────XX──────
+              │
+    q2: ──────XX──────
+
+    """
+    create_linked_table(conn=connection, clean=True)
+    refresh_all_stored_procedures(conn=connection)
+
+    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
+    initial_circuit = cirq.Circuit([cirq.XX.on(q1, q2),
+                                    cirq.XX.on(q1, q2)])
+    print(initial_circuit)
+    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit,
+                              last_id=0,
+                              add_margins=True,
+                              label='stpc')
+
+    insert_in_batches(db_tuples=db_tuples, conn=connection)
+    cursor.execute(f"call simplify_two_parity_check('XXPowGate', 'XXPowGate', 100, 1)")
+
+    extracted_circuit = extract_cirq_circuit(conn=connection,
+                                             circuit_label='stpc',
+                                             remove_io_gates=True)
+    print(extracted_circuit)
+    assert len(extracted_circuit) == 1
+    print('Test simplify_two_parity_check passed!')
 
 
 def test_useless_cx_ancilla_zero_X():
@@ -91,3 +126,7 @@ def test_useless_cx_plus_Z():
 
 def test_useless_cx_zero_X():
     return NotImplementedError()
+
+
+if __name__ == "__main__":
+    test_simplify_two_parity_check()

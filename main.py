@@ -14,7 +14,7 @@ from qualtran2db import *
 
 connection = psycopg2.connect(
     database="postgres",
-    user="postgres",
+    # user="postgres",
     host="localhost",
     port=5432,
     password="1234")

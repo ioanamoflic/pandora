@@ -65,26 +65,6 @@ class Out(cirq.Gate):
         return "Out"
 
 
-class ParityCheck(cirq.Gate):
-    def __init__(self, n_qub, pauli_string, rotation_angle=0):
-        super(ParityCheck, self)
-        self.gate = pauli_string
-        self.num_qubits = n_qub
-        self.pauli_string = pauli_string
-
-    def _num_qubits_(self):
-        return self.num_qubits
-
-    def _unitary_(self):
-        return None
-
-    def _circuit_diagram_info_(self, args):
-        return self.pauli_string
-
-    def __str__(self):
-        return self.pauli_string
-
-
 SINGLE_QUBIT_GATES = {
     'Rx': cirq.ops.common_gates.Rx,
     'Ry': cirq.ops.common_gates.Ry,
@@ -103,16 +83,14 @@ SINGLE_QUBIT_GATES = {
     'Inc': In(is_classic=True),
     'Outc': Out(is_classic=True),
     'M': cirq.MeasurementGate(1),
-    'X': ParityCheck(n_qub=1, pauli_string='X'),
-    'Z': ParityCheck(n_qub=1, pauli_string='Z')
 }
 
 TWO_QUBIT_GATES = {'CNOT': cirq.CX,
                    'CZ': cirq.CZ,
                    'CZPowGate': cirq.CZPowGate,
                    'CXPowGate': cirq.CXPowGate,
-                   'XX': ParityCheck(n_qub=2, pauli_string='XX'),
-                   'ZZ': ParityCheck(n_qub=2, pauli_string='ZZ')}
+                   'XXPowGate': cirq.XXPowGate,
+                   'ZZPowGate': cirq.ZZPowGate}
 
 THREE_QUBIT_GATES = {'TOFFOLI': cirq.CCX,
                      'AND': And,
@@ -125,7 +103,7 @@ for gate in ['HPowGate', 'XPowGate', 'ZPowGate', 'YPowGate']:
     for param in [0.25, -0.25, 0.5, -0.5, -1.0]:
         SINGLE_QUBIT_GATES[f'{gate}**{param}'] = eval(f'cirq.{gate}')(exponent=param)
 
-for gate in ['CXPowGate', 'CZPowGate']:
+for gate in ['CXPowGate', 'CZPowGate', 'XXPowGate', 'ZZPowGate']:
     for param in [0.25, -0.25, 0.5, -0.5, -1.0]:
         TWO_QUBIT_GATES[f'{gate}**{param}'] = eval(f'cirq.{gate}')(exponent=param)
 
