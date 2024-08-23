@@ -26,14 +26,10 @@ class In(cirq.Gate):
         ])
 
     def _circuit_diagram_info_(self, args):
-        if self.is_classic:
-            return "Inc"
-        return "In"
+        return self.gate
 
     def __str__(self):
-        if self.is_classic:
-            return "Inc"
-        return "In"
+        return self.gate
 
 
 class Out(cirq.Gate):
@@ -55,14 +51,10 @@ class Out(cirq.Gate):
         ])
 
     def _circuit_diagram_info_(self, args):
-        if self.is_classic:
-            return "Outc"
-        return "Out"
+        return self.gate
 
     def __str__(self):
-        if self.is_classic:
-            return "Outc"
-        return "Out"
+        return self.gate
 
 
 SINGLE_QUBIT_GATES = {
@@ -282,7 +274,10 @@ def db_dictionary_to_circuit(dictionary: dict, n_qubits):
     q = [cirq.NamedQubit(str(j)) for j in range(n_qubits)]
     for k, v in dictionary.items():
         if v['type'] == 'In' or v['type'] == 'Out':
-            cirq_gate = eval(f'{v["type"]}()').on(q[v['q1']])
+            if v["meas_key"] is None:
+                cirq_gate = eval(f'{v["type"]}()').on(q[v['q1']])
+            else:
+                cirq_gate = eval(f'{v["type"]}(init_val="{v["meas_key"]}")').on(q[v['q1']])
             circuit.append(cirq_gate)
             continue
         if v['type'] == '_PauliX':

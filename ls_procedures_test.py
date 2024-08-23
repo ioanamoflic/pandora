@@ -31,11 +31,81 @@ def test_ancillify_measure_and_reset():
 
 
 def test_cnotify_XX():
-    return NotImplementedError()
+    """
+      Testing circuit:
+
+      q1: ──────XX─────
+                │
+      q2: ──────XX─────
+
+      Should reduce to
+
+    0: ───In────X───Out─────────
+                │
+    1: ───In────┼───X─────Out───
+                │   │
+    2: ───|+>───@───@─────Mx────
+
+      """
+    create_linked_table(conn=connection, clean=True)
+    refresh_all_stored_procedures(conn=connection)
+
+    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
+    initial_circuit = cirq.Circuit([cirq.XX.on(q1, q2)])
+    print(initial_circuit)
+    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit,
+                              last_id=0,
+                              add_margins=True,
+                              label='cnotify_XX')
+
+    insert_in_batches(db_tuples=db_tuples, conn=connection, reset_id=100)
+    cursor.execute(f"call cnotify_XX(100, 1)")
+
+    extracted_circuit = extract_cirq_circuit(conn=connection,
+                                             circuit_label='cnotify_XX',
+                                             remove_io_gates=False)
+    print(extracted_circuit)
+    assert len(extracted_circuit) == 4
+    print('Test cnotify_XX passed!')
 
 
 def test_cnotify_ZZ():
-    return NotImplementedError()
+    """
+      Testing circuit:
+
+      q1: ──────ZZ─────
+                │
+      q2: ──────ZZ─────
+
+      Should reduce to
+
+    0: ───In────@───Out─────────
+                │
+    1: ───In────┼───@─────Out───
+                │   │
+    2: ───|0>───X───X─────Mz────
+
+      """
+    create_linked_table(conn=connection, clean=True)
+    refresh_all_stored_procedures(conn=connection)
+
+    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
+    initial_circuit = cirq.Circuit([cirq.ZZ.on(q1, q2)])
+    print(initial_circuit)
+    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit,
+                              last_id=0,
+                              add_margins=True,
+                              label='cnotify_ZZ')
+
+    insert_in_batches(db_tuples=db_tuples, conn=connection, reset_id=100)
+    cursor.execute(f"call cnotify_ZZ(100, 1)")
+
+    extracted_circuit = extract_cirq_circuit(conn=connection,
+                                             circuit_label='cnotify_ZZ',
+                                             remove_io_gates=False)
+    print(extracted_circuit)
+    assert len(extracted_circuit) == 4
+    print('Test cnotify_ZZ passed!')
 
 
 def test_cxor0xora():
@@ -128,7 +198,7 @@ def test_simplify_two_parity_check():
                               add_margins=True,
                               label='stpc')
 
-    insert_in_batches(db_tuples=db_tuples, conn=connection)
+    insert_in_batches(db_tuples=db_tuples, conn=connection, reset_id=100)
     cursor.execute(f"call simplify_two_parity_check('XXPowGate', 'XXPowGate', 100, 1)")
 
     extracted_circuit = extract_cirq_circuit(conn=connection,
@@ -166,3 +236,5 @@ def test_useless_cx_zero_X():
 if __name__ == "__main__":
     test_simplify_two_parity_check()
     test_simplify_erasure_error()
+    test_cnotify_XX()
+    test_cnotify_ZZ()
