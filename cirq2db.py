@@ -102,10 +102,10 @@ for gate in ['CXPowGate', 'CZPowGate', 'XXPowGate', 'ZZPowGate']:
 for param in [0.25, -0.25, 0.5, -0.5, -1.0]:
     THREE_QUBIT_GATES[f'CCXPowGate**{param}'] = cirq.CCXPowGate(exponent=param)
 
-N_DB_COLUMNS = 14
+N_DB_COLUMNS = 17
 MAX_QUBITS_PER_GATE = 3
 DB_COLUMNS = ['prev_q1', 'prev_q2', 'prev_q3', 'type', 'param', 'switch', 'next_q1', 'next_q2', 'next_q3',
-              'visited', 'label', 'cl_ctrl', 'meas_key']
+              'visited', 'label', 'cl_ctrl', 'meas_key', 'qub_1', 'qub_2', 'qub_3']
 
 
 def get_cirq_gate_attr(operation: cirq.Operation):
@@ -194,7 +194,10 @@ def db_to_cirq(db_tuples, with_tags=False):
                 "visited": gate[10],
                 "label": gate[11],
                 "cl_ctrl": gate[12],
-                "meas_key": gate[13]
+                "meas_key": gate[13],
+                "qub_1": gate[14],
+                "qub_2": gate[15],
+                "qub_3": gate[16]
 
             }
             rh[gate_id]['q1'] = n_qubits
@@ -215,7 +218,10 @@ def db_to_cirq(db_tuples, with_tags=False):
                 "visited": gate[10],
                 "label": gate[11],
                 "cl_ctrl": gate[12],
-                "meas_key": gate[13]
+                "meas_key": gate[13],
+                "qub_1": gate[14],
+                "qub_2": gate[15],
+                "qub_3": gate[16],
             }
 
     for g in db_tuples:
@@ -352,7 +358,7 @@ def cirq_to_db(cirq_circuit: cirq.Circuit,
     # * (2) for target or second control
     # * (3) for target
     latest_conc_on_qubit = {}
-    in_values = [None, None, None, 'In', 0, False, None, None, None, False, label, None, None]
+    in_values = [None, None, None, 'In', 0, False, None, None, None, False, label, None, None, None, None, None]
 
     # the permutation of the qubits depends on the ordering of the In gates
     # sorting works for now
@@ -363,6 +369,7 @@ def cirq_to_db(cirq_circuit: cirq.Circuit,
 
     # assume tuples will have elements in this order: id(0), prev_q1(1), prev_q2(2), prev_q3(3), gate_name(4),
     # gate_param(5), switch(6), next_q1(7), next_q2(8), next_q3(9), visited(10), label(11), cl_ctrl(12)
+    qubit_map = dict(zip(cirq_circuit.all_qubits(), list(range(len(cirq_circuit.all_qubits())))))
     for moment in cirq_circuit:
         for i, current_operation in enumerate(moment):
             # current gate is an initial gate with no prev values
@@ -375,8 +382,10 @@ def cirq_to_db(cirq_circuit: cirq.Circuit,
             current_op_qubits = current_operation.qubits
             gate_name, gate_param, switch, is_classically_controlled, mes_key = get_cirq_gate_attr(current_operation)
             previous_concatenations = [latest_conc_on_qubit[q] for q in current_op_qubits]
+            qubit_ids = [qubit_map[q] for q in current_op_qubits]
             while len(previous_concatenations) < MAX_QUBITS_PER_GATE:
                 previous_concatenations.append(None)
+                qubit_ids.append(None)
 
             # fill out missing 'next' links for the gates on the left
             for q_idx, q in enumerate(current_op_qubits):
@@ -385,7 +394,7 @@ def cirq_to_db(cirq_circuit: cirq.Circuit,
                 latest_conc_on_qubit[q] = last_id * 10 + q_idx
 
             current_values = [*previous_concatenations, gate_name, gate_param, switch,
-                              None, None, None, False, label, is_classically_controlled, mes_key]
+                              None, None, None, False, label, is_classically_controlled, mes_key, *qubit_ids]
 
             op_db_specs[last_id] = dict(zip(DB_COLUMNS, current_values))
             last_id += 1
