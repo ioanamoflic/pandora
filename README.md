@@ -14,3 +14,14 @@ A tutorial including setup instructions is <a href="https://colab.research.googl
 
 **This research was performed in part with funding from the Defense Advanced Research Projects Agency [under the Quantum Benchmarking
 (QB) program under award no. HR00112230006 and HR001121S0026 contracts].**
+
+
+## Docker Setup
+Requires `docker`, `docker-compose` and `docker-buildx`.
+
+The image may be built and run using:
+```bash
+    docker compose up --build    
+```
+
+The resulting docker image will host the database on port 5432 on the docker image. The default password is `example` and can be changed in compose.yml. 
