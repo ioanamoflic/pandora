@@ -24,4 +24,8 @@ The image may be built and run using:
     docker compose up --build    
 ```
 
+```
+sudo dpkg -i containernetworking-plugins_1.1.1+ds1-3build1_amd64.deb
+```
+
 The resulting docker image will host the database on port 5432 on the docker image. The default password is `example` and can be changed in compose.yml. 

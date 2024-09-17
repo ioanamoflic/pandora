@@ -1,0 +1,17 @@
+services: 
+
+  db:
+    image: localhost/ubuntu/postgres
+    restart: always
+    shm_size: 128mb
+    environment:
+      - POSTGRES_PASSWORD=example
+
+    build:
+      dockerfile: ./Dockerfile
+
+#  adminer:
+#    image: adminer
+#    restart: always
+#    ports:
+#      - 8080:8080
