@@ -1,13 +1,13 @@
 import random
 import time
-import numpy as np
+import csv
 import pytket.passes
 from pytket import Circuit, OpType
 from pytket._tket.passes import RemoveRedundancies
 from pytket.passes import CliffordSimp
 
 
-def generate_random_circuit(n_templates, n_qubits):
+def generate_random_CX_circuit(n_templates, n_qubits):
     circ = Circuit(n_qubits)
     for t in range(n_templates):
         q1, q2 = random.choices(range(0, n_qubits), k=2)
@@ -146,21 +146,23 @@ def x_to_hzh(circ: Circuit) -> Circuit:
 
 if __name__ == "__main__":
 
-    n_t_list = [1000, 10000, 100000, 1000000, 10000000]
-    for n_t in n_t_list:
+    n_CX = [1000, 10000, 100000, 1000000, 10000000]
+
+    times = []
+    for cx_count in n_CX:
+
+        input_circ = generate_random_CX_circuit(n_templates=cx_count, n_qubits=50)
         start_time = time.time()
-        input_circ = generate_random_circuit(n_templates=n_t, n_qubits=50)
-        end_time = time.time()
-        print("circuit done ", end_time - start_time)
-        start_time = time.time()
-        # circuit = cx_to_hhcxhh_transform_append(input_circ)
+        print('cx count:', cx_count)
         circuit = cx_to_hhcxhh_transform_random(input_circ)
+        # circuit = cx_to_hhcxhh_transform_append(input_circ)
         # circuit = cx_to_hhcxhh_transform_blocked(input_circ, block_size=n_t//10)
-        end_time = time.time()
-        print("circuit optimized ", end_time - start_time)
+        print('time to optimize:', time.time() - start_time)
 
-        print(circuit.n_gates)
-        # assert (circuit.n_gates == 5 * n_t)
+        times.append(time.time() - start_time)
 
-        with open('results/tket_random.out', 'a') as f:
-            f.write(f'Time it took to randomly optimise circuit with {str(n_t)} templates : {end_time - start_time}')
+    rows = zip(n_CX, times)
+    with open('results/tket_random.csv', 'w') as f:
+        writer = csv.writer(f)
+        for row in rows:
+            writer.writerow(row)
