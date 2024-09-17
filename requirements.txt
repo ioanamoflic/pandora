@@ -2,3 +2,4 @@ qualtran@git+https://github.com/quantumlib/Qualtran.git
 psycopg2-binary
 requests
 pytest
+pytket
