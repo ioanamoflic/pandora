@@ -1,4 +1,3 @@
-
 Build the container on 22.04 Ubuntu server
 ```
 docker pull ubuntu/postgres
@@ -9,9 +8,14 @@ curl -O http://archive.ubuntu.com/ubuntu/pool/universe/g/golang-github-container
 sudo dpkg -i containernetworking-plugins_1.1.1+ds1-3build1_amd64.deb
 ```
 
-Start the container in the background
+Start the container (from scratch) in the background
 ```
 podman-compose -f compose_podman.yml up -d
+```
+
+Resume container 
+```
+podman start pandora_db_1
 ```
 
 Connect to the container
