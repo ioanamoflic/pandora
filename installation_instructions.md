@@ -10,6 +10,7 @@ sudo dpkg -i containernetworking-plugins_1.1.1+ds1-3build1_amd64.deb
 
 Start the container (from scratch) in the background
 ```
+podman-compose -f compose_podman.yml build
 podman-compose -f compose_podman.yml up -d
 ```
 
