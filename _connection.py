@@ -4,6 +4,17 @@ import cirq2db
 
 def refresh_all_stored_procedures(conn):
     procedures = [
+        # bernoulli sample version
+        'generic_procedures/cancel_single_qubit_bernoulli.sql',
+        'generic_procedures/cancel_two_qubit_bernoulli.sql',
+        'generic_procedures/commute_single_control_left_bernoulli.sql',
+        'generic_procedures/commute_single_control_right_bernoulli.sql',
+        'generic_procedures/replace_two_sq_with_one_bernoulli.sql',
+        'generic_procedures/insert_two_qubit_bernoulli.sql',
+        'generic_procedures/cx_to_hhcxhh_bernoulli.sql',
+        'generic_procedures/hhcxhh_to_cx_bernoulli.sql',
+
+        # system sample version
         'generic_procedures/cancel_single_qubit.sql',
         'generic_procedures/cancel_two_qubit.sql',
         'generic_procedures/commute_single_control_left.sql',
@@ -13,9 +24,15 @@ def refresh_all_stored_procedures(conn):
         'generic_procedures/toffoli_decomposition.sql',
         'generic_procedures/cx_to_hhcxhh.sql',
         'generic_procedures/hhcxhh_to_cx.sql',
+
+        # worker procedures
         'generic_procedures/stopper.sql',
         'generic_procedures/for_loop.sql',
+
+        # benchmarking only procedures
         'generic_procedures/cx_to_hhcxhh_visit.sql',
+
+        # ls style procedures
         'ls_style_procedures/simplify_two_parity_check.sql',
         'ls_style_procedures/simplify_erasure_error.sql',
         'ls_style_procedures/cnotify_XX.sql',
