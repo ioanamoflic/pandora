@@ -1,4 +1,4 @@
-qualtran@git+https://github.com/quantumlib/Qualtran.git
+qualtran==0.4.1
 psycopg2-binary
 requests
 pytest
