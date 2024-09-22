@@ -58,10 +58,6 @@ def test_cx_to_hhcxhh(initial_circuit, n_CX):
     tot_time = time.time() - start_time
     print('I finished optimizing...')
 
-    # extracted_circuit = extract_cirq_circuit(conn=connection, circuit_label='test_random', remove_io_gates=True)
-    # gc = gate_count(extracted_circuit)
-    # assert gc == 5 * n_CX
-
     return tot_time
 
 

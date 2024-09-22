@@ -242,8 +242,56 @@ def test_commute_cx_target():
     return NotImplementedError()
 
 
-def test_commute_cx_ctrl_target():
-    return NotImplementedError()
+def test_commute_cx_ctrl_target_case_1():
+    create_linked_table(conn=connection, clean=True)
+    refresh_all_stored_procedures(conn=connection)
+
+    q1, q2, q3 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2'), cirq.NamedQubit('q3')
+    initial_circuit = cirq.Circuit([cirq.CX.on(q2, q3), cirq.CX.on(q1, q2)])
+    final_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.CX.on(q2, q3), cirq.CX.on(q1, q3)])
+
+    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit, last_id=0, add_margins=True, label='test_cct')
+    insert_in_batches(db_tuples=db_tuples, conn=connection)
+    cursor.execute("ALTER SEQUENCE linked_circuit_id_seq RESTART WITH 100")
+    cursor.execute(f"call commute_cx_ctrl_target_bernoulli(10, 1)")
+    extracted_circuit = extract_cirq_circuit(conn=connection, circuit_label='test_cct', remove_io_gates=True)
+
+    qubit_map = dict(
+        zip(
+            sorted(final_circuit.all_qubits()),
+            sorted(extracted_circuit.all_qubits())
+        )
+    )
+    final_circuit = final_circuit.transform_qubits(qubit_map=qubit_map)
+
+    assert str(final_circuit) == str(extracted_circuit)
+    print('Test commute_cx_ctrl_target_1 passed!')
+
+
+def test_commute_cx_ctrl_target_case_2():
+    create_linked_table(conn=connection, clean=True)
+    refresh_all_stored_procedures(conn=connection)
+
+    q1, q2, q3 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2'), cirq.NamedQubit('q3')
+    initial_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.CX.on(q2, q3)])
+    final_circuit = cirq.Circuit([cirq.CX.on(q2, q3), cirq.CX.on(q1, q2), cirq.CX.on(q1, q3)])
+
+    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit, last_id=0, add_margins=True, label='test_cct_2')
+    insert_in_batches(db_tuples=db_tuples, conn=connection)
+    cursor.execute("ALTER SEQUENCE linked_circuit_id_seq RESTART WITH 100")
+    cursor.execute(f"call commute_cx_ctrl_target_bernoulli(10, 1)")
+    extracted_circuit = extract_cirq_circuit(conn=connection, circuit_label='test_cct_2', remove_io_gates=True)
+
+    qubit_map = dict(
+        zip(
+            sorted(final_circuit.all_qubits()),
+            sorted(extracted_circuit.all_qubits())
+        )
+    )
+    final_circuit = final_circuit.transform_qubits(qubit_map=qubit_map)
+
+    assert str(final_circuit) == str(extracted_circuit)
+    print('Test commute_cx_ctrl_target_2 passed!')
 
 
 def test_case_1():
@@ -444,8 +492,10 @@ def test_qualtran_adder_opt_reconstruction(stop_after=15):
             (1, f"CALL cancel_single_qubit_bernoulli('ZPowGate**0.25', 'ZPowGate**-0.25', 10, 10000000)"),
             (1, f"CALL cancel_single_qubit_bernoulli('_PauliX', '_PauliX', 10, 10000000)"),
             (1, f"CALL cancel_two_qubit_bernoulli('CXPowGate', 'CXPowGate', 10, 10000000)"),
-            (1, f"CALL replace_two_qubit_bernoulli('ZPowGate**0.25', 'ZPowGate**0.25', 'ZPowGate**0.5', 0.5, 10, 10000000)"),
-            (1, f"CALL replace_two_qubit_bernoulli('ZPowGate**-0.25', 'ZPowGate**-0.25', 'ZPowGate**-0.5', 0.5, 10, 10000000)"),
+            (1, f"CALL replace_two_qubit_bernoulli('ZPowGate**0.25', 'ZPowGate**0.25', "
+                f"'ZPowGate**0.5', 0.5, 10, 10000000)"),
+            (1, f"CALL replace_two_qubit_bernoulli('ZPowGate**-0.25', 'ZPowGate**-0.25', "
+                f"'ZPowGate**-0.5', 0.5, 10, 10000000)"),
             (1, f"CALL commute_single_control_left_bernoulli('ZPowGate**0.25', 10, 10000000)"),
             (1, f"CALL commute_single_control_left_bernoulli('ZPowGate**-0.25', 10, 10000000)"),
             (1, f"CALL commute_single_control_left_bernoulli('ZPowGate**0.5', 10, 10000000)"),
@@ -502,8 +552,10 @@ def check_logical_correctness_random(stop_after: int):
                 (1, f"CALL cancel_two_qubit_bernoulli('CXPowGate', 'CXPowGate', 10, 10000000)"),
                 (1, f"CALL replace_two_qubit_bernoulli('ZPowGate**0.25', 'ZPowGate**0.25', 'ZPowGate**0.5', 0.5, 10, "
                     f"10000000)"),
-                (1, f"CALL replace_two_qubit_bernoulli('ZPowGate**-0.5', 'ZPowGate**-0.5', '_PauliZ', 1.0, 10, 10000000)"),
-                (1, f"CALL replace_two_qubit_bernoulli('ZPowGate**-0.25', 'ZPowGate**-0.25', 'ZPowGate**-0.5', -0.5, 10, "
+                (1, f"CALL replace_two_qubit_bernoulli('ZPowGate**-0.5', 'ZPowGate**-0.5',"
+                    f"'_PauliZ', 1.0, 10, 10000000)"),
+                (1, f"CALL replace_two_qubit_bernoulli('ZPowGate**-0.25', 'ZPowGate**-0.25', "
+                    f"'ZPowGate**-0.5', -0.5, 10, "
                     f"10000000)"),
                 (1, f"CALL commute_single_control_left_bernoulli('ZPowGate**0.25', 10, 10000000)"),
                 (1, f"CALL commute_single_control_left_bernoulli('ZPowGate**-0.25', 10, 10000000)"),
@@ -564,19 +616,21 @@ def test_BVZ_optimization(stop_after):
 
 
 if __name__ == "__main__":
-    test_cancel_single_qubit()
-    test_cancel_two_qubit()
-    test_commute_single_control_right()
-    test_commute_single_control_left()
-    test_cx_to_hhcxhh_a()
-    test_cx_to_hhcxhh_b()
-    test_hhcxhh_to_cx_a()
-    test_hhcxhh_to_cx_b()
-    test_replace_two_sq_with_one()
-    test_case_1()
-    test_case_2()
-    test_case_1_repeated(n=100)
-    test_case_2_repeated(n=100)
-    check_logical_correctness_random(stop_after=15)
-    test_qualtran_adder_opt_reconstruction(stop_after=60)
-    test_BVZ_optimization(stop_after=15)
+    test_commute_cx_ctrl_target_case_1()
+    test_commute_cx_ctrl_target_case_2()
+    # test_cancel_single_qubit()
+    # test_cancel_two_qubit()
+    # test_commute_single_control_right()
+    # test_commute_single_control_left()
+    # test_cx_to_hhcxhh_a()
+    # test_cx_to_hhcxhh_b()
+    # test_hhcxhh_to_cx_a()
+    # test_hhcxhh_to_cx_b()
+    # test_replace_two_sq_with_one()
+    # test_case_1()
+    # test_case_2()
+    # test_case_1_repeated(n=100)
+    # test_case_2_repeated(n=100)
+    # check_logical_correctness_random(stop_after=15)
+    # test_qualtran_adder_opt_reconstruction(stop_after=60)
+    # test_BVZ_optimization(stop_after=15)
