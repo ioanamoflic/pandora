@@ -14,7 +14,7 @@ from qualtran2db import *
 
 connection = psycopg2.connect(
     database="postgres",
-    # user="postgres",
+    user="postgres",
     host="localhost",
     port=5432,
     password="1234")
@@ -37,7 +37,7 @@ def map_hack(aff, proc_call, verbose=False):
 
     connection = psycopg2.connect(
         database="postgres",
-        # user="postgres",
+        user="postgres",
         host="localhost",
         port=5432,
         password="1234")
@@ -100,9 +100,9 @@ if __name__ == "__main__":
             (4, f"CALL cancel_single_qubit_bernoulli('ZPowGate**0.25', 'ZPowGate**-0.25', 10, 10000000)"),
             (4, f"CALL cancel_single_qubit_bernoulli('_PauliX', '_PauliX', 10, 10000000)"),
             (4, f"CALL cancel_two_qubit_bernoulli('CXPowGate', 'CXPowGate', 10, 10000000)"),
-            (4, f"CALL replace_two_qubit_bernoulli('ZPowGate**0.25', 'ZPowGate**0.25', 'ZPowGate**0.5', 10, "
+            (4, f"CALL replace_two_qubit_bernoulli('ZPowGate**0.25', 'ZPowGate**0.25', 'ZPowGate**0.5', 0.5, 10, "
                 f"10000000)"),
-            (4, f"CALL replace_two_qubit_bernoulli('ZPowGate**-0.25', 'ZPowGate**-0.25', 'ZPowGate**-0.5', 10, "
+            (4, f"CALL replace_two_qubit_bernoulli('ZPowGate**-0.25', 'ZPowGate**-0.25', 'ZPowGate**-0.5', 0.5, 10, "
                 f"10000000)"),
             (4, f"CALL commute_single_control_left_bernoulli('ZPowGate**0.25', 10, 10000000)"),
             (4, f"CALL commute_single_control_left_bernoulli('ZPowGate**-0.25', 10, 10000000)"),
