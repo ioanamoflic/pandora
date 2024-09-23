@@ -111,7 +111,7 @@ if __name__ == "__main__":
             (4, f"CALL linked_hhcxhh_to_cx_bernoulli(10, 10000000);"),
             (1, f"CALL linked_cx_to_hhcxhh_bernoulli(10, 10000000);"),
         ]
-        proc = subprocess.Popen(["./readout_epyc.sh", f'results_{bits}.csv'], shell=True, executable="/bin/bash")
+        proc = subprocess.Popen([f'./readout_epyc.sh results_{bits}.csv'], shell=True, executable="/bin/bash")
         db_multi_threaded(thread_proc=thread_procedures)
         subprocess.Popen.kill(proc)
 

@@ -2,7 +2,7 @@
 
 FNAME="$1"
 
-echo "clean $FNAME"
+echo "clean --- $FNAME ---"
 rm -f $FNAME
 echo "Id, Total count, T count, S count, CX count, H count, X count" >> $FNAME
 
