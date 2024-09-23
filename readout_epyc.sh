@@ -6,7 +6,7 @@ echo "clean --- $FNAME ---"
 rm -f $FNAME
 echo "Id, Total count, T count, S count, CX count, H count, X count" >> $FNAME
 
-for i in {1..36}
+for i in {1..720}
 do
     echo $i
 
@@ -18,6 +18,7 @@ do
     x_count=$(psql -X -A -t -c "select count(*) from linked_circuit where type='_PauliX'" -U postgres)
 
     echo $(( i )) $(( total_count )) $(( t_count )) $(( s_count )) $(( cx_count )) $(( h_count )) $(( x_count )) >> $FNAME
-	sleep 5
+    sleep 5
 done
 
+psql -X -A -t -c "insert into stop_condition values (True)" -U postgres
