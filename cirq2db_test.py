@@ -145,7 +145,7 @@ def test_qualtran_qpe_reconstruction():
     m_bits: int = 2
     times = []
 
-    for ns in range(2, 10):
+    for ns in range(2, 25):
         circuit = cirq.Circuit(phase_estimation(get_walk_operator_for_1d_ising_model(ns, eps), m=m_bits))
         context = cirq.DecompositionContext(qubit_manager=cirq.SimpleQubitManager())
         circuit = cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
@@ -176,11 +176,11 @@ def test_qualtran_qpe_reconstruction():
 
         start_cirq_to_db = time.time()
         db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit, last_id=0, label='qpe', add_margins=True)
-        cirq_to_db_time = start_cirq_to_db - time.time()
+        cirq_to_db_time = time.time() - start_cirq_to_db
 
         start_db_to_cirq = time.time()
         reconstructed_circuit = db_to_cirq(db_tuples=db_tuples, with_tags=False)
-        db_to_cirq_time = start_db_to_cirq - time.time()
+        db_to_cirq_time = time.time() - start_db_to_cirq
 
         times.append((ns, len(db_tuples), cirq_to_db_time, db_to_cirq_time))
 
