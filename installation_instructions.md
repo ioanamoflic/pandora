@@ -8,7 +8,7 @@ curl -O http://archive.ubuntu.com/ubuntu/pool/universe/g/golang-github-container
 sudo dpkg -i containernetworking-plugins_1.1.1+ds1-3build1_amd64.deb
 ```
 
-Remove all containers
+Remove containers
 ```
 podman image ls | tail -n 6 | awk '{print $3}'  | xargs podman image rm
 ```

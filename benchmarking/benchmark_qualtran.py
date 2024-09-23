@@ -1,6 +1,6 @@
 import csv
-from cirq2db_test import test_qualtran_qrom_reconstruction, test_qualtran_adder_reconstruction, \
-    test_qualtran_qpe_reconstruction
+
+from tests.cirq2db_test import *
 
 if __name__ == "__main__":
     times = test_qualtran_adder_reconstruction()
