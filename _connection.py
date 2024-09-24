@@ -1,4 +1,5 @@
 import cirq
+
 import cirq2db
 
 
@@ -47,6 +48,9 @@ def refresh_all_stored_procedures(conn):
             cursor.execute(sql_statement)
             conn.commit()
 
+
+# TODO a damn database config file with a connect() cause
+#  I can't stand random connections in random files anymore ;c
 
 def create_linked_table(conn, clean=False):
     cursor = conn.cursor()
