@@ -93,7 +93,7 @@ if __name__ == "__main__":
         cursor.execute("call linked_toffoli_decomp()")
 
         print('...running optimization')
-        stop_after = 180
+        stop_after = 3600
         thread_procedures = [
             (1, f"CALL stopper({stop_after});"),
             (8, f"CALL cancel_single_qubit_bernoulli('HPowGate', 'HPowGate', 10, 10000000)"),
