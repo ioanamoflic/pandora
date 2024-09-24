@@ -13,7 +13,7 @@ def refresh_all_stored_procedures(conn):
         'generic_procedures/insert_two_qubit_bernoulli.sql',
         'generic_procedures/cx_to_hhcxhh_bernoulli.sql',
         'generic_procedures/hhcxhh_to_cx_bernoulli.sql',
-        'generic_procedures/commute_cx_ctrl_target_bernoulli.sql',
+        # 'generic_procedures/commute_cx_ctrl_target_bernoulli.sql',
 
         # system sample version
         'generic_procedures/cancel_single_qubit.sql',

@@ -21,3 +21,4 @@ do
 	sleep 5
 done
 
+psql -X -A -t -c "insert into stop_condition values (True)" -U postgres
