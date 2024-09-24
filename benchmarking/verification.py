@@ -9,7 +9,7 @@ from qualtran2db import *
 
 connection = psycopg2.connect(
     database="postgres",
-    # user="postgres",
+    user="postgres",
     host="localhost",
     port=5432,
     password="1234")
@@ -68,7 +68,7 @@ def verify_C_Ct_eq_I(concatenated_circuit, cnt, bernoulli_percentage, single_thr
             (1, f"call cancel_two_qubit_bernoulli('CXPowGate', 'CXPowGate', {bernoulli_percentage}, {cnt})"),
         ]
     else:
-        thread_procedures = []
+        thread_procedures = [(1, f"call stopper({stop_after});")]
         for _ in range(cnt):
             thread_procedures.append((1, f"call linked_hhcxhh_to_cx_bernoulli({bernoulli_percentage}, 1)"))
             thread_procedures.append((1, f"call cancel_two_qubit_bernoulli('CXPowGate', 'CXPowGate', "
@@ -106,7 +106,7 @@ if __name__ == "__main__":
         times.append((cx_count, time_val))
         print(cx_count)
 
-    with open('results/verification.csv', 'w') as f:
+    with open('results/verification_single_3.csv', 'w') as f:
         writer = csv.writer(f)
         for row in times:
             writer.writerow(row)
