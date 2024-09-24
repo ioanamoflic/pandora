@@ -9,7 +9,7 @@ from qualtran2db import *
 
 connection = psycopg2.connect(
     database="postgres",
-    user="postgres",
+    # user="postgres",
     host="localhost",
     port=5432,
     password="1234")
@@ -21,6 +21,8 @@ if connection:
     print("Connection to the PostgreSQL established successfully.")
 else:
     print("Connection to the PostgreSQL encountered and error.")
+
+TIMEOUT_VAL = 10000000
 
 
 def concatenate(init_circ, cnt, bernoulli_percentage=10):
@@ -52,7 +54,7 @@ def concatenate(init_circ, cnt, bernoulli_percentage=10):
     return concatenated_circuit
 
 
-def verify_C_Ct_eq_I(concatenated_circuit, cnt, bernoulli_percentage, single_threaded=False):
+def verify_C_Ct_eq_I(concatenated_circuit, cnt, bernoulli_percentage, single_threaded=False, stop_after=10):
     create_linked_table(conn=connection, clean=True)
     refresh_all_stored_procedures(conn=connection)
 
@@ -61,6 +63,7 @@ def verify_C_Ct_eq_I(concatenated_circuit, cnt, bernoulli_percentage, single_thr
 
     if single_threaded is True:
         thread_procedures = [
+            (1, f"call stopper({stop_after});"),
             (1, f"call linked_hhcxhh_to_cx_bernoulli({bernoulli_percentage}, {cnt})"),
             (1, f"call cancel_two_qubit_bernoulli('CXPowGate', 'CXPowGate', {bernoulli_percentage}, {cnt})"),
         ]
@@ -71,34 +74,39 @@ def verify_C_Ct_eq_I(concatenated_circuit, cnt, bernoulli_percentage, single_thr
             thread_procedures.append((1, f"call cancel_two_qubit_bernoulli('CXPowGate', 'CXPowGate', "
                                          f"{bernoulli_percentage}, 1)"))
 
+    start_time = time.time()
     db_multi_threaded(thread_proc=thread_procedures)
+    total_time = time.time() - start_time
     extracted_circuit = extract_cirq_circuit(conn=connection,
                                              circuit_label=f'verification',
                                              remove_io_gates=True)
 
-    assert len(extracted_circuit) == 0
+    if len(extracted_circuit) != 0:
+        return TIMEOUT_VAL
+    return total_time
 
 
 if __name__ == "__main__":
     times = []
     single_thr = True
     bp = 25
+    stop = 3
     for cx_count in range(2, 50):
         initial_circuit = generate_random_CX_circuit(n_templates=cx_count,
                                                      n_qubits=cx_count)
         concatenated = concatenate(init_circ=initial_circuit,
                                    cnt=cx_count,
                                    bernoulli_percentage=bp)
-        start_time = time.time()
-        verify_C_Ct_eq_I(concatenated_circuit=concatenated,
-                         cnt=cx_count,
-                         single_threaded=single_thr,
-                         bernoulli_percentage=bp)
-        times.append((cx_count, time.time() - start_time))
+        time_val = verify_C_Ct_eq_I(concatenated_circuit=concatenated,
+                                    cnt=cx_count,
+                                    single_threaded=single_thr,
+                                    bernoulli_percentage=bp,
+                                    stop_after=stop)
+
+        times.append((cx_count, time_val))
         print(cx_count)
 
     with open('results/verification.csv', 'w') as f:
         writer = csv.writer(f)
         for row in times:
             writer.writerow(row)
-

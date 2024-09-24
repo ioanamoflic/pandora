@@ -1,9 +1,9 @@
-create or replace procedure stopper(run_time int)
+create or replace procedure stopper(run_time real)
     language plpgsql
 as
 $$
 begin
-    update stop_condition set stop=False;
+    delete from stop_condition where stop=True and stop=False;
 	perform pg_sleep(run_time);
-	update stop_condition set stop=True;
+	insert into stop_condition values (True);
 end;$$;
