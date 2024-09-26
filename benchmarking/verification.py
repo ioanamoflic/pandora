@@ -63,13 +63,12 @@ def verify_C_Ct_eq_I(concatenated_circuit, cnt, bernoulli_percentage, single_thr
 
     if single_threaded is True:
         thread_procedures = [
-            # (1, f"call stopper({stop_after});"),
+            (1, f"call stopper({stop_after});"),
             (1, f"call linked_hhcxhh_to_cx_bernoulli({bernoulli_percentage}, {cnt})"),
             (1, f"call cancel_two_qubit_bernoulli('CXPowGate', 'CXPowGate', {bernoulli_percentage}, {cnt})"),
         ]
     else:
-        # thread_procedures = [(1, f"call stopper({stop_after});")]
-        thread_procedures = []
+        thread_procedures = [(1, f"call stopper({stop_after});")]
         for _ in range(cnt):
             thread_procedures.append((1, f"call linked_hhcxhh_to_cx_bernoulli({bernoulli_percentage}, 1)"))
             thread_procedures.append((1, f"call cancel_two_qubit_bernoulli('CXPowGate', 'CXPowGate', "
