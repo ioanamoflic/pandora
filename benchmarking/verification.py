@@ -108,7 +108,7 @@ if __name__ == "__main__":
                 times.append((cx_count, time_val))
                 print(cx_count)
 
-            with open(f'results/verification_{stop}_{i}.csv', 'w') as f:
+            with open(f'results/verification_single_{stop}_{i}.csv', 'w') as f:
                 writer = csv.writer(f)
                 for row in times:
                     writer.writerow(row)
