@@ -90,23 +90,23 @@ if __name__ == "__main__":
     single_thr = True
     bp = 25
 
+    circuits = [generate_random_CX_circuit(n_templates=cx_count, n_qubits=cx_count) for cx_count in range(2, 50)]
+
     for stop in [1, 2, 5, 10, 15, 20, 25, 30, 35]:
         for i in range(3):
             times = []
-            for cx_count in range(2, 50):
-                initial_circuit = generate_random_CX_circuit(n_templates=cx_count,
-                                                             n_qubits=cx_count)
-                concatenated = concatenate(init_circ=initial_circuit,
-                                           cnt=cx_count,
+            for cxc in range(2, 50):
+                concatenated = concatenate(init_circ=circuits[cxc - 2],
+                                           cnt=cxc,
                                            bernoulli_percentage=bp)
                 time_val = verify_C_Ct_eq_I(concatenated_circuit=concatenated,
-                                            cnt=cx_count,
+                                            cnt=cxc,
                                             single_threaded=single_thr,
                                             bernoulli_percentage=bp,
                                             stop_after=stop)
 
-                times.append((cx_count, time_val))
-                print(cx_count)
+                times.append((cxc, time_val))
+                print(cxc)
 
             with open(f'results/verification_single_{stop}_{i}.csv', 'w') as f:
                 writer = csv.writer(f)
