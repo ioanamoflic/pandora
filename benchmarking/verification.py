@@ -87,12 +87,12 @@ def verify_C_Ct_eq_I(concatenated_circuit, cnt, bernoulli_percentage, single_thr
 
 
 if __name__ == "__main__":
-    times = []
     single_thr = True
     bp = 25
 
     for stop in [1, 2, 5, 10, 15, 20, 25, 30, 35]:
         for i in range(3):
+            times = []
             for cx_count in range(2, 50):
                 initial_circuit = generate_random_CX_circuit(n_templates=cx_count,
                                                              n_qubits=cx_count)
