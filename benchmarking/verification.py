@@ -90,23 +90,25 @@ if __name__ == "__main__":
     times = []
     single_thr = True
     bp = 25
-    stop = 20
-    for cx_count in range(2, 50):
-        initial_circuit = generate_random_CX_circuit(n_templates=cx_count,
-                                                     n_qubits=cx_count)
-        concatenated = concatenate(init_circ=initial_circuit,
-                                   cnt=cx_count,
-                                   bernoulli_percentage=bp)
-        time_val = verify_C_Ct_eq_I(concatenated_circuit=concatenated,
-                                    cnt=cx_count,
-                                    single_threaded=single_thr,
-                                    bernoulli_percentage=bp,
-                                    stop_after=stop)
 
-        times.append((cx_count, time_val))
-        print(cx_count)
+    for stop in [1, 2, 5, 10, 15, 20, 25, 30, 35]:
+        for i in range(3):
+            for cx_count in range(2, 50):
+                initial_circuit = generate_random_CX_circuit(n_templates=cx_count,
+                                                             n_qubits=cx_count)
+                concatenated = concatenate(init_circ=initial_circuit,
+                                           cnt=cx_count,
+                                           bernoulli_percentage=bp)
+                time_val = verify_C_Ct_eq_I(concatenated_circuit=concatenated,
+                                            cnt=cx_count,
+                                            single_threaded=single_thr,
+                                            bernoulli_percentage=bp,
+                                            stop_after=stop)
 
-    with open('results/verification.csv', 'w') as f:
-        writer = csv.writer(f)
-        for row in times:
-            writer.writerow(row)
+                times.append((cx_count, time_val))
+                print(cx_count)
+
+            with open(f'results/verification_{stop}_{i}.csv', 'w') as f:
+                writer = csv.writer(f)
+                for row in times:
+                    writer.writerow(row)
