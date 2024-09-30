@@ -8,6 +8,6 @@ RUN apt-get update && \
     apt-get install -y git && \
     apt-get install -y pip 
 
-RUN git clone -b results https://github.com/ioanamoflic/pandora.git
+RUN git clone https://github.com/ioanamoflic/pandora.git
 
 RUN pip install -r pandora/requirements.txt
