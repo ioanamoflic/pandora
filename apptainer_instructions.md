@@ -18,3 +18,14 @@ export PYTHONPATH="$PYTHONPATH:/pandora"
 cd /pandora
 python3.10 benchmarking/benchmark_db.py
 ```
+
+```
+apptainer exec -B pgdata:/var/lib/postgresql/data -B pgrun:/var/run/postgresql -e -C pandora.sif bash -c "pg_ctl init && pg_ctl start && export PYTHONPATH=$PYTHONPATH:/pandora && cd /pandora && python3.10 benchmarking/benchmark_db.py"
+```
+
+ctrl-z for sending 
+
+```
+jobs
+kill -9 %1
+```
