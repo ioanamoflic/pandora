@@ -101,8 +101,7 @@ def test_cx_to_hhcxhh_a(connection):
     final_circuit = cirq.Circuit([cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q2, q1), cirq.H.on(q1), cirq.H.on(q2)])
 
     db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit, last_id=0, add_margins=True, label='test_cscl')
-    insert_in_batches(db_tuples=db_tuples, connection=connection)
-    cursor.execute("ALTER SEQUENCE linked_circuit_id_seq RESTART WITH 1000")
+    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=1000000)
     cursor.execute(f"call linked_cx_to_hhcxhh(10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection, circuit_label='test_cscl', remove_io_gates=True)
 
@@ -128,8 +127,7 @@ def test_cx_to_hhcxhh_b(connection):
     final_circuit = cirq.Circuit([cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q1, q2), cirq.H.on(q1), cirq.H.on(q2)])
 
     db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit, last_id=0, add_margins=True, label='test_cscl')
-    insert_in_batches(db_tuples=db_tuples, connection=connection)
-    cursor.execute("ALTER SEQUENCE linked_circuit_id_seq RESTART WITH 1000")
+    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=1000000)
     cursor.execute(f"call linked_cx_to_hhcxhh(10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection, circuit_label='test_cscl', remove_io_gates=True)
 
@@ -241,8 +239,7 @@ def test_commute_cx_ctrl_target_case_1(connection):
     final_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.CX.on(q2, q3), cirq.CX.on(q1, q3)])
 
     db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit, last_id=0, add_margins=True, label='test_cct')
-    insert_in_batches(db_tuples=db_tuples, connection=connection)
-    cursor.execute("ALTER SEQUENCE linked_circuit_id_seq RESTART WITH 100")
+    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=1000000)
     cursor.execute(f"call commute_cx_ctrl_target_bernoulli(10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection, circuit_label='test_cct', remove_io_gates=True)
 
@@ -268,8 +265,7 @@ def test_commute_cx_ctrl_target_case_2(connection):
     final_circuit = cirq.Circuit([cirq.CX.on(q2, q3), cirq.CX.on(q1, q2), cirq.CX.on(q1, q3)])
 
     db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit, last_id=0, add_margins=True, label='test_cct_2')
-    insert_in_batches(db_tuples=db_tuples, connection=connection)
-    cursor.execute("ALTER SEQUENCE linked_circuit_id_seq RESTART WITH 100")
+    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=1000000)
     cursor.execute(f"call commute_cx_ctrl_target_bernoulli(10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection, circuit_label='test_cct_2', remove_io_gates=True)
 
@@ -370,7 +366,6 @@ def test_case_2(connection):
 
     create_linked_table(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
-    cursor.execute("ALTER SEQUENCE linked_circuit_id_seq RESTART WITH 1000")
 
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.T.on(q1), cirq.CX.on(q1, q2), cirq.T.on(q1) ** -1,
@@ -382,7 +377,8 @@ def test_case_2(connection):
                               add_margins=True,
                               label='test_case_2')
     insert_in_batches(db_tuples=db_tuples,
-                      connection=connection)
+                      connection=connection,
+                      reset_id=1000000)
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='test_case_2',
                                              remove_io_gates=False,
@@ -422,7 +418,6 @@ def test_case_2_repeated(n, connection):
 
     create_linked_table(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
-    cursor.execute("ALTER SEQUENCE linked_circuit_id_seq RESTART WITH 1000000")
 
     def template(tup):
         q1, q2 = tup
@@ -443,7 +438,8 @@ def test_case_2_repeated(n, connection):
                               add_margins=True,
                               label='test_case_2_r')
     insert_in_batches(db_tuples=db_tuples,
-                      connection=connection)
+                      connection=connection,
+                      reset_id=1000000)
 
     cursor.execute(f"call linked_hhcxhh_to_cx_bernoulli(5, {n})")
     cursor.execute(f"call commute_single_control_right_bernoulli('ZPowGate**-0.25', 5, {n})")
@@ -482,8 +478,6 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
         insert_in_batches(db_tuples=db_tuples,
                           connection=connection,
                           batch_size=100000)
-
-        cursor.execute("ALTER SEQUENCE linked_circuit_id_seq RESTART WITH 1000000")
 
         thread_procedures = [
             (1, f"CALL cancel_single_qubit_bernoulli('HPowGate', 'HPowGate', 10, 10000000)"),
@@ -591,8 +585,6 @@ def test_BVZ_optimization(stop_after, connection):
             insert_in_batches(db_tuples=db_tuples,
                               connection=connection,
                               batch_size=100000)
-
-            cursor.execute("ALTER SEQUENCE linked_circuit_id_seq RESTART WITH 1000000")
 
             thread_procedures = [
                 (3, f"CALL cancel_single_qubit_bernoulli('HPowGate', 'HPowGate', 10, 10000000)"),
