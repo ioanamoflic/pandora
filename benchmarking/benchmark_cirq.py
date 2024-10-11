@@ -2,8 +2,6 @@ import random
 import cirq
 from cirq2db import In, Out
 
-"""Define a custom single-qubit gate."""
-
 
 @cirq.transformer
 def remove_double_hadamards(circuit, context=None) \

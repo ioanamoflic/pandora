@@ -1,18 +1,8 @@
 import time
-
-import psycopg2
-
 from qualtran2db import *
 from cirq2db import *
 import benchmarking.benchmark_cirq
 from _connection import *
-
-connection = psycopg2.connect(
-    database="postgres",
-    # user="postgres",
-    host="localhost",
-    port=5432,
-    password="1234")
 
 
 def test_random_reconstruction(n_circuits=100):

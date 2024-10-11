@@ -1,2 +1,0 @@
-Inputs: 0:Qbit, 1:Qbit, 2:Qbit
-QGate["not"](2) with controls=[+0, +1] with nocontrol
