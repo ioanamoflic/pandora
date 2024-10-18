@@ -1,6 +1,5 @@
 import re
 import requests
-from _connection import *
 
 
 class Gate:

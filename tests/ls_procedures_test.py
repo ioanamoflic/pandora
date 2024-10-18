@@ -1,36 +1,12 @@
-import random
-
-import cirq
-import psycopg2
-
-from benchmarking import benchmark_cirq
 from cirq2db import *
-from _connection import *
-from main import db_multi_threaded
 from qualtran2db import *
-import numpy as np
-
-connection = psycopg2.connect(
-    database="postgres",
-    # user="postgres",
-    host="localhost",
-    port=5432,
-    password="1234")
-
-cursor = connection.cursor()
-connection.set_session(autocommit=True)
-
-if connection:
-    print("Connection to the PostgreSQL established successfully.")
-else:
-    print("Connection to the PostgreSQL encountered and error.")
 
 
 def test_ancillify_measure_and_reset():
     return NotImplementedError()
 
 
-def test_cnotify_XX():
+def test_cnotify_XX(connection):
     """
       Testing circuit:
 
@@ -47,8 +23,9 @@ def test_cnotify_XX():
     2: ───|+>───@───@─────Mx────
 
       """
-    create_linked_table(conn=connection, clean=True)
-    refresh_all_stored_procedures(conn=connection)
+    cursor = connection.cursor()
+    create_linked_table(connection=connection, clean=True)
+    refresh_all_stored_procedures(connection=connection)
 
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.XX.on(q1, q2)])
@@ -58,10 +35,10 @@ def test_cnotify_XX():
                               add_margins=True,
                               label='cnotify_XX')
 
-    insert_in_batches(db_tuples=db_tuples, conn=connection, reset_id=100)
+    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=100)
     cursor.execute(f"call cnotify_XX(100, 1)")
 
-    extracted_circuit = extract_cirq_circuit(conn=connection,
+    extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='cnotify_XX',
                                              remove_io_gates=False)
     print(extracted_circuit)
@@ -69,7 +46,7 @@ def test_cnotify_XX():
     print('Test cnotify_XX passed!')
 
 
-def test_cnotify_ZZ():
+def test_cnotify_ZZ(connection):
     """
       Testing circuit:
 
@@ -86,8 +63,9 @@ def test_cnotify_ZZ():
     2: ───|0>───X───X─────Mz────
 
       """
-    create_linked_table(conn=connection, clean=True)
-    refresh_all_stored_procedures(conn=connection)
+    cursor = connection.cursor()
+    create_linked_table(connection=connection, clean=True)
+    refresh_all_stored_procedures(connection=connection)
 
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.ZZ.on(q1, q2)])
@@ -97,10 +75,10 @@ def test_cnotify_ZZ():
                               add_margins=True,
                               label='cnotify_ZZ')
 
-    insert_in_batches(db_tuples=db_tuples, conn=connection, reset_id=100)
+    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=100)
     cursor.execute(f"call cnotify_ZZ(100, 1)")
 
-    extracted_circuit = extract_cirq_circuit(conn=connection,
+    extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='cnotify_ZZ',
                                              remove_io_gates=False)
     print(extracted_circuit)
@@ -132,7 +110,7 @@ def test_lscx_up_b():
     return NotImplementedError()
 
 
-def test_simplify_erasure_error():
+def test_simplify_erasure_error(connection):
     """
       Testing circuit:
 
@@ -147,8 +125,9 @@ def test_simplify_erasure_error():
       q2: ──────XX──────
 
       """
-    create_linked_table(conn=connection, clean=True)
-    refresh_all_stored_procedures(conn=connection)
+    cursor = connection.cursor()
+    create_linked_table(connection=connection, clean=True)
+    refresh_all_stored_procedures(connection=connection)
 
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.XX.on(q1, q2),
@@ -160,10 +139,10 @@ def test_simplify_erasure_error():
                               add_margins=True,
                               label='see')
 
-    insert_in_batches(db_tuples=db_tuples, conn=connection)
+    insert_in_batches(db_tuples=db_tuples, connection=connection)
     cursor.execute(f"call simplify_erasure_error('XXPowGate', '_PauliZ', 100, 1)")
 
-    extracted_circuit = extract_cirq_circuit(conn=connection,
+    extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='see',
                                              remove_io_gates=True)
     print(extracted_circuit)
@@ -171,7 +150,7 @@ def test_simplify_erasure_error():
     print('Test simplify_erasure_error passed!')
 
 
-def test_simplify_two_parity_check():
+def test_simplify_two_parity_check(connection):
     """
     Testing circuit:
 
@@ -186,8 +165,9 @@ def test_simplify_two_parity_check():
     q2: ──────XX──────
 
     """
-    create_linked_table(conn=connection, clean=True)
-    refresh_all_stored_procedures(conn=connection)
+
+    create_linked_table(connection=connection, clean=True)
+    refresh_all_stored_procedures(connection=connection)
 
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.XX.on(q1, q2),
@@ -198,10 +178,11 @@ def test_simplify_two_parity_check():
                               add_margins=True,
                               label='stpc')
 
-    insert_in_batches(db_tuples=db_tuples, conn=connection, reset_id=100)
+    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=100)
+    cursor = connection.cursor()
     cursor.execute(f"call simplify_two_parity_check('XXPowGate', 'XXPowGate', 100, 1)")
 
-    extracted_circuit = extract_cirq_circuit(conn=connection,
+    extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='stpc',
                                              remove_io_gates=True)
     print(extracted_circuit)
@@ -234,7 +215,9 @@ def test_useless_cx_zero_X():
 
 
 if __name__ == "__main__":
-    test_simplify_two_parity_check()
-    test_simplify_erasure_error()
-    test_cnotify_XX()
-    test_cnotify_ZZ()
+    conn = get_connection()
+    test_simplify_two_parity_check(conn)
+    test_simplify_erasure_error(conn)
+    test_cnotify_XX(conn)
+    test_cnotify_ZZ(conn)
+    conn.close()

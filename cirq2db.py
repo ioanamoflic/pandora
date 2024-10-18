@@ -1,7 +1,4 @@
-import sys
-from abc import ABC
 from typing import List, Optional
-
 import numpy as np
 import cirq
 from qualtran.bloqs.mcmt import And

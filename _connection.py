@@ -1,8 +1,34 @@
+import os
+import sys
+import typing
+from itertools import cycle
+from multiprocessing import Process
+
 import cirq
+import psycopg2
 import cirq2db
+import db_config
 
 
-def refresh_all_stored_procedures(conn):
+def get_connection():
+    connection = psycopg2.connect(
+        database=db_config.database,
+        user=db_config.user,
+        host=db_config.host,
+        port=db_config.port,
+        password=db_config.password)
+
+    connection.set_session(autocommit=True)
+
+    if connection:
+        print("Connection to the PostgreSQL established successfully.")
+    else:
+        print("Connection to the PostgreSQL encountered and error.")
+
+    return connection
+
+
+def refresh_all_stored_procedures(connection):
     procedures = [
         # bernoulli sample version
         'generic_procedures/cancel_single_qubit_bernoulli.sql',
@@ -39,36 +65,33 @@ def refresh_all_stored_procedures(conn):
         'ls_style_procedures/cnotify_XX.sql',
         'ls_style_procedures/cnotify_ZZ.sql'
     ]
-    cursor = conn.cursor()
+    cursor = connection.cursor()
     for sp in procedures:
         with open(sp, "r") as spfile:
             print(f"...uploading {sp}")
             sql_statement = spfile.read()
             cursor.execute(sql_statement)
-            conn.commit()
+            connection.commit()
 
 
-def create_linked_table(conn, clean=False):
-    cursor = conn.cursor()
+def create_linked_table(connection, clean=False):
+    cursor = connection.cursor()
     if clean:
         print(f"...dropping linked_circuit")
         sql_statement = "drop table if exists linked_circuit cascade"
-        # print(sql_statement)
         cursor.execute(sql_statement)
-        conn.commit()
+        connection.commit()
 
         print(f"...dropping stop_condition")
         sql_statement = "drop table if exists stop_condition cascade"
-        # print(sql_statement)
         cursor.execute(sql_statement)
-        conn.commit()
+        connection.commit()
 
     with open("generic_procedures/_sql_generate_table.sql", "r") as create_f:
         print(f"...creating linked_circuit")
         sql_statement = create_f.read()
-        # print(sql_statement)
         cursor.execute(sql_statement)
-        conn.commit()
+        connection.commit()
 
 
 def create_batches(db_tuples, batch_size):
@@ -82,11 +105,11 @@ def create_batches(db_tuples, batch_size):
         yield db_tuples[i:i + batch_size]
 
 
-def insert_in_batches(db_tuples, conn, batch_size=1000, reset_id=None):
+def insert_in_batches(db_tuples, connection, batch_size=1000, reset_id=None):
     assert type(db_tuples) is list
 
     batches = create_batches(db_tuples, batch_size=int(batch_size))
-    cursor = conn.cursor()
+    cursor = connection.cursor()
     for i, batch in enumerate(batches):
         args = ','.join(
             cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup).decode('utf-8') for tup in
@@ -97,13 +120,13 @@ def insert_in_batches(db_tuples, conn, batch_size=1000, reset_id=None):
 
         # execute the sql statement
         cursor.execute(sql_statement)
-        conn.commit()
+        connection.commit()
 
     if reset_id is not None:
         cursor.execute(f"ALTER SEQUENCE linked_circuit_id_seq RESTART WITH {reset_id}")
 
 
-def extract_cirq_circuit(conn, circuit_label=None, remove_io_gates=False, with_tags=False):
+def extract_cirq_circuit(connection, circuit_label=None, remove_io_gates=False, with_tags=False):
     args = None
     if circuit_label is not None:
         args = (circuit_label,)
@@ -111,7 +134,7 @@ def extract_cirq_circuit(conn, circuit_label=None, remove_io_gates=False, with_t
     else:
         sql = f"select * from linked_circuit;"
 
-    cursor = conn.cursor()
+    cursor = connection.cursor()
     cursor.execute(sql, args)
     tuples = cursor.fetchall()
     final_circ = cirq2db.db_to_cirq(tuples, with_tags=with_tags)
@@ -124,3 +147,39 @@ def extract_cirq_circuit(conn, circuit_label=None, remove_io_gates=False, with_t
         return io_free_reconstructed
 
     return final_circ
+
+
+def map_hack(aff, proc_call, verbose=False):
+    if sys.platform == "linux":
+        my_pid = os.getppid()
+        old_aff = os.sched_getaffinity(0)
+        x = (my_pid, old_aff, os.sched_getaffinity(0))
+        print("My pid is {} and my old affinity was {}, my new affinity is {}".format(*x))
+
+    connection = get_connection()
+    cursor = connection.cursor()
+    connection.set_session(autocommit=True)
+    if verbose:
+        print('Calling procedure...')
+    cursor.execute(proc_call)
+
+
+def db_multi_threaded(thread_proc: typing.List[tuple]):
+    n_threads = sum([n for (n, _) in thread_proc])
+    if sys.platform == "linux":
+        my_cpus = cycle(os.sched_getaffinity(0))
+        cpus = [[next(my_cpus) * 2] for _ in range(n_threads)]
+
+    process_list = []
+    for (n, proc) in thread_proc:
+        for _ in range(n):
+            if sys.platform == "linux":
+                p = Process(target=map_hack, args=(cpus.pop(), proc))
+            else:
+                p = Process(target=map_hack, args=(None, proc))
+            process_list.append(p)
+
+    for i in range(n_threads):
+        process_list[i].start()
+    for i in range(n_threads):
+        process_list[i].join()

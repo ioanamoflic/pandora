@@ -1,10 +1,8 @@
 import random
 import time
 import csv
-import pytket.passes
 from pytket import Circuit, OpType
 from pytket._tket.passes import RemoveRedundancies
-from pytket.passes import CliffordSimp
 
 
 def generate_random_CX_circuit(n_templates, n_qubits):
