@@ -1,0 +1,14 @@
+Bootstrap: localimage
+From: images/postgres:latest.sif
+
+%files
+    pandora/requirements.txt requirements.txt
+
+%post
+    apt update
+    apt-get -y install python3 git
+    apt install python3-pip -y
+    pip3 install --break-system-packages -r requirements.txt
+
+%runscript
+#    julia --project="/opt/." "/opt/src/cli.jl" "$@"
