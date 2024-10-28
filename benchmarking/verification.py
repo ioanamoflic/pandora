@@ -36,7 +36,7 @@ def concatenate(connection, init_circ, cnt, bernoulli_percentage=10):
     return concatenated_circuit
 
 
-def verify_C_Ct_eq_I(connection, concatenated_circuit, cnt, bernoulli_percentage, single_threaded=False, stop_after=10):
+def verify_C_Ct_eq_I(connection, concatenated_circuit, cnt, bernoulli_percentage, max_thr, single_threaded=False, stop_after=10):
     create_linked_table(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
 
@@ -51,7 +51,7 @@ def verify_C_Ct_eq_I(connection, concatenated_circuit, cnt, bernoulli_percentage
         ]
     else:
         thread_procedures = [(1, f"call stopper({stop_after});")]
-        for _ in range(cnt):
+        for _ in range(max_thr):
             thread_procedures.append((1, f"call linked_hhcxhh_to_cx_bernoulli({bernoulli_percentage}, 1)"))
             thread_procedures.append((1, f"call cancel_two_qubit_bernoulli('CXPowGate', 'CXPowGate', "
                                          f"{bernoulli_percentage}, 1)"))
@@ -68,17 +68,21 @@ def verify_C_Ct_eq_I(connection, concatenated_circuit, cnt, bernoulli_percentage
 
 
 if __name__ == "__main__":
-    single_thr = True
+    single_thr = False
     bp = 25
-    circuits = [generate_random_CX_circuit(n_templates=cx_count, n_qubits=cx_count) for cx_count in range(2, 50)]
+    repetitions = 10
+    max_threads = 64
+    cx_count = [1000, 10000, 100000, 1000000, 10000000]
+    circuits = [generate_random_CX_circuit(n_templates=cnt, n_qubits=cnt) for cnt in cx_count]
+
     conn = get_connection()
 
-    for stop in [1, 2, 5, 10, 15, 20, 25, 30, 35]:
-        for i in range(3):
+    for stop in [10, 100, 1000, 10000]:
+        for i in range(repetitions):
             times = []
-            for cxc in range(2, 50):
+            for j, cxc in enumerate(cx_count):
                 concatenated = concatenate(connection=conn,
-                                           init_circ=circuits[cxc - 2],
+                                           init_circ=circuits[j],
                                            cnt=cxc,
                                            bernoulli_percentage=bp)
                 time_val = verify_C_Ct_eq_I(connection=conn,
@@ -86,12 +90,14 @@ if __name__ == "__main__":
                                             cnt=cxc,
                                             single_threaded=single_thr,
                                             bernoulli_percentage=bp,
-                                            stop_after=stop)
+                                            stop_after=stop,
+                                            max_thr=max_threads
+                                            )
 
                 times.append((cxc, time_val))
                 print(cxc)
 
-            with open(f'results/verification_single_{stop}_{i}.csv', 'w') as f:
+            with open(f'results/verification_st_is_{str(single_thr)}_{stop}_{i}.csv', 'w') as f:
                 writer = csv.writer(f)
                 for row in times:
                     writer.writerow(row)
