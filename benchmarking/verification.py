@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     conn = get_connection()
 
-    for stop in [10, 100, 1000, 10000]:
+    for stop in [100, 1000, 10000]:
         for i in range(repetitions):
             times = []
             for j, cxc in enumerate(cx_count):
@@ -95,7 +95,7 @@ if __name__ == "__main__":
                                             )
 
                 times.append((cxc, time_val))
-                print(cxc)
+                print(f"Iteration {i} for circuit with {cxc} gates took {time_val}s.")
 
             with open(f'results/verification_st_is_{str(single_thr)}_{stop}_{i}.csv', 'w') as f:
                 writer = csv.writer(f)
