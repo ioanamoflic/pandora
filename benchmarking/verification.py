@@ -71,16 +71,19 @@ if __name__ == "__main__":
     single_thr = False
     bp = 25
     repetitions = 10
-    max_threads = 64
+    max_threads = 32
     cx_count = [1000, 10000, 100000, 1000000, 10000000]
     circuits = [generate_random_CX_circuit(n_templates=cnt, n_qubits=cnt) for cnt in cx_count]
 
     conn = get_connection()
 
     for stop in [100, 1000, 10000]:
+        print(stop)
         for i in range(repetitions):
+            print(i)
             times = []
             for j, cxc in enumerate(cx_count):
+                print(cxc)
                 concatenated = concatenate(connection=conn,
                                            init_circ=circuits[j],
                                            cnt=cxc,
