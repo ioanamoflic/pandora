@@ -29,3 +29,7 @@ The image may be built and run using:
 ```
 
 The resulting docker image will host the database on port 5432 on the docker image. The default password is `example` and can be changed in compose.yml. 
+
+## Widgetization
+
+<a href="./widgetization/index.html" target=_blank>Example</a>
