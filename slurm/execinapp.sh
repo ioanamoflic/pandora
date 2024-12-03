@@ -7,4 +7,5 @@ export PYTHONPATH=$PYTHONPATH:/pandora
 
 cd /pandora
 
-python3 benchmarking/benchmark_db.py
+#python3 benchmarking/benchmark_db.py
+python3 main.py
