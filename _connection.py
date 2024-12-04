@@ -39,6 +39,7 @@ def refresh_all_stored_procedures(connection):
         'generic_procedures/insert_two_qubit_bernoulli.sql',
         'generic_procedures/cx_to_hhcxhh_bernoulli.sql',
         'generic_procedures/hhcxhh_to_cx_bernoulli.sql',
+        'generic_procedures/generate_edge_list.sql',
         # 'generic_procedures/commute_cx_ctrl_target_bernoulli.sql',
 
         # system sample version
@@ -87,6 +88,11 @@ def create_linked_table(connection, clean=False):
         cursor.execute(sql_statement)
         connection.commit()
 
+        print(f"...dropping edge_list")
+        sql_statement = "drop table if exists edge_list cascade"
+        cursor.execute(sql_statement)
+        connection.commit()
+
     with open("generic_procedures/_sql_generate_table.sql", "r") as create_f:
         print(f"...creating linked_circuit")
         sql_statement = create_f.read()
@@ -105,7 +111,7 @@ def create_batches(db_tuples, batch_size):
         yield db_tuples[i:i + batch_size]
 
 
-def insert_in_batches(db_tuples, connection, batch_size=1000, reset_id=None):
+def insert_in_batches(db_tuples, connection, batch_size=1000, reset_id=False):
     assert type(db_tuples) is list
 
     batches = create_batches(db_tuples, batch_size=int(batch_size))
@@ -122,17 +128,22 @@ def insert_in_batches(db_tuples, connection, batch_size=1000, reset_id=None):
         cursor.execute(sql_statement)
         connection.commit()
 
-    if reset_id is not None:
-        cursor.execute(f"ALTER SEQUENCE linked_circuit_id_seq RESTART WITH {reset_id}")
+    if reset_id is True:
+        query_max = "select * from linked_circuit order by id desc limit 1"
+        cursor.execute(query_max, None)
+        max_id = cursor.fetchall()[0][0]
+        print(max_id)
+        if reset_id is not None:
+            cursor.execute(f"ALTER SEQUENCE linked_circuit_id_seq RESTART WITH {max_id + 1}")
 
 
 def extract_cirq_circuit(connection, circuit_label=None, remove_io_gates=False, with_tags=False):
     args = None
     if circuit_label is not None:
         args = (circuit_label,)
-        sql = f"select * from linked_circuit where label=%s;"
+        sql = "select * from linked_circuit where label=%s;"
     else:
-        sql = f"select * from linked_circuit;"
+        sql = "select * from linked_circuit;"
 
     cursor = connection.cursor()
     cursor.execute(sql, args)
@@ -147,6 +158,67 @@ def extract_cirq_circuit(connection, circuit_label=None, remove_io_gates=False, 
         return io_free_reconstructed
 
     return final_circ
+
+
+def get_edge_list(connection):
+    sql = "select * from edge_list;"
+
+    cursor = connection.cursor()
+    cursor.execute(sql, None)
+    tuples = cursor.fetchall()
+
+    return tuples
+
+
+def get_gate_types(connection, num_elem):
+    TRANSLATE = {
+        'Rx': "Rx",
+        'Ry': "Ry",
+        'Rz': "Rz",
+        'XPowGate': "X",
+        'ZPowGate': "Z",
+        'YPowGate': "Y",
+        'HPowGate': "H",
+        '_PauliX': "X",
+        '_PauliZ': "Z",
+        '_PauliY': "Y",
+        'GlobalPhaseGate': "Phase",
+        'ResetChannel': "R",
+        'In': 'In',
+        'Out': 'Out',
+        'Inc': 'In',
+        'Outc': 'Out',
+        'M': "M",
+        'CNOT': "CX",
+        'CZ': "CZ",
+        'CZPowGate': "CZ",
+        'CXPowGate': "CX",
+        'XXPowGate': "XX",
+        'ZZPowGate': "ZZ"
+    }
+    EXTENDED = TRANSLATE.copy()
+    for gate in EXTENDED.keys():
+        for param in [0.25, -0.25, 0.5, -0.5, -1.0]:
+            TRANSLATE[f'{gate}**{param}'] = f'{EXTENDED[gate]}**{param}'
+
+    gate_ids = list(range(num_elem))
+    types = []
+    for gate_id in gate_ids:
+        args = (gate_id,)
+        sql = "select * from linked_circuit where id=%s;"
+        cursor = connection.cursor()
+        cursor.execute(sql, args)
+        gate = cursor.fetchone()
+        if gate is None:
+            if gate_id == num_elem - 1:
+                types.append("GLOBAL OUT")
+            if gate_id == num_elem - 2:
+                types.append("GLOBAL IN")
+            if gate_id != num_elem - 1 and gate_id != num_elem - 2:
+                print(f'Gate id {gate_id} not found!')
+        else:
+            types.append(TRANSLATE[gate[4]])
+    return types
 
 
 def map_hack(aff, proc_call, verbose=False):

@@ -37,7 +37,7 @@
                 return d.id;
             })
             .distance(function (d) {
-                return d.source.group === d.target.group ? 10 : 300;
+                return d.source.group === d.target.group ? 0.05 : 100;
             })
         )
         .force("charge", d3.forceManyBody())

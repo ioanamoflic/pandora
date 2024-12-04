@@ -1,4 +1,4 @@
-qualtran==0.4.1
+qualtran==0.5
 psycopg2-binary
 requests
 pytest

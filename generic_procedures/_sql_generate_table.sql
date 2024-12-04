@@ -42,4 +42,10 @@ create extension IF NOT EXISTS tsm_system_rows;
 create table if not exists public.stop_condition
 (
     stop boolean default false
-)
+);
+
+create table if not exists public.edge_list
+(
+    source bigint,
+    target bigint
+);
