@@ -19,15 +19,21 @@
     }
 
 </style>
-<svg width="1600" height="800"></svg>
+
 <script src="https://d3js.org/d3.v4.min.js"></script>
+
+<div id="cns" height="50">Hello World!</div>
+<svg width="1000" height="600"></svg>
+
 <script>
+
+    var cns = d3.select("#cns");
+    cns.innerHTML = "ddd....";
 
     var svg = d3.select("svg"),
         width = +svg.attr("width"),
         height = +svg.attr("height"),
         radius = 6;
-
 
     var color = d3.scaleOrdinal(d3.schemeCategory20);
 
@@ -37,11 +43,11 @@
                 return d.id;
             })
             .distance(function (d) {
-                return d.source.group === d.target.group ? 10 : 300;
+                return d.source.group === d.target.group ? -100 : 100;
             })
         )
-        .force("charge", d3.forceManyBody())
-        .force("center", d3.forceCenter(width / 2, height / 2));
+        // .force("charge", d3.forceManyBody())
+        .force("center", d3.forceCenter(width / 2, height / 2))
 
     d3.json("circuit.json", function (error, graph) {
         if (error) throw error;
@@ -62,7 +68,7 @@
             .enter().append("g")
 
         var circles = node.append("circle")
-            .attr("r", 5)
+            .attr("r", 10)
             .attr("fill", function (d) {
                 return color(d.group);
             });
@@ -137,5 +143,4 @@
         d.fx = null;
         d.fy = null;
     }
-
 </script>
