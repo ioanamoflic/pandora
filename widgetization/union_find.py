@@ -8,7 +8,7 @@ import json
 sys.setrecursionlimit(100000)
 
 
-class UnionFind:
+class UnionFindWidgetization:
     def __init__(self, num_elem, max_t, max_d, all_edges, node_labels, t_loc):
         self.parent = self.make_set(num_elem)
         self.size = [1] * num_elem
@@ -166,8 +166,8 @@ if __name__ == "__main__":
 
     start_time = time.time()
 
-    uf = UnionFind(num_elem, max_t=max_t_count, max_d=max_depth, all_edges=edges,
-                   node_labels=gate_labels, t_loc=t_locations)
+    uf = UnionFindWidgetization(num_elem, max_t=max_t_count, max_d=max_depth, all_edges=edges,
+                                node_labels=gate_labels, t_loc=t_locations)
 
     for node1, node2 in edges:
         uf.union(node1, node2)
