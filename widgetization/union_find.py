@@ -161,8 +161,8 @@ if __name__ == "__main__":
     # print(edges)
     # print(t_locations)
 
-    max_t_count = 20
-    max_depth = 100
+    max_t_count = 200
+    max_depth = 1000
 
     start_time = time.time()
 

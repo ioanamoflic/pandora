@@ -27,8 +27,8 @@
 
 <script>
 
-    var cns = d3.select("#cns");
-    cns.innerHTML = "ddd....";
+    var cns = document.getElementById("cns")
+    cns.innerHTML = "There are " ;
 
     var svg = d3.select("svg"),
         width = +svg.attr("width"),
@@ -51,6 +51,15 @@
 
     d3.json("circuit.json", function (error, graph) {
         if (error) throw error;
+
+        var maxgrp = -1
+        for (var i=0; i<graph.nodes.length; i++) {
+            node = graph.nodes[i];
+            maxgrp = Math.max(maxgrp, node.group);
+        }
+        maxgrp += 1;//zero indexed
+
+        cns.innerHTML += maxgrp;
 
         var link = svg.append("g")
             .attr("class", "links")
