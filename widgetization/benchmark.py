@@ -2,54 +2,15 @@ import csv
 import time
 from _connection import *
 from union_find import UnionFindWidgetization
-import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator
 
-
-def show_data():
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    df = pd.read_csv('widget_bench.csv', sep=',', usecols=['record_t', 'record_d', 'widget_count', 'times'])
-
-    # Extract data
-    X = df['record_t']
-    Y = df['record_d']
-    Z = df['widget_count']
-
-    # Apply colors based on Z values for clarity
-    # colors = Z / Z.max()  # Normalizing Z values for coloring
-    colors = Z
-    scatter = ax.scatter3D(X, Y, Z)
-
-    # Draw a line through the points
-    ax.plot3D(X, Y, Z, color='black', linewidth=0.1)
-
-    # Customize the z axis
-    ax.set_zlim(Z.min(), Z.max())  # Dynamically set z-axis limits
-    ax.zaxis.set_major_locator(LinearLocator(10))
-    ax.zaxis.set_major_formatter('{x:.02f}')
-
-    # Add labels
-    ax.set_xlabel('Max. T depth')
-    ax.set_ylabel('Max. Depth')
-    ax.set_zlabel('Widget Count', labelpad=15)
-
-    ax.tick_params(axis='x', labelsize=8)
-    ax.tick_params(axis='y', labelsize=8)
-    ax.tick_params(axis='z', labelsize=8, pad=8)
-
-    # Add a color bar
-    # fig.colorbar(scatter, shrink=0.5, aspect=1)
-
-    # Save the figure
-    plt.savefig('plot_3d_widget_with_line.png')
+from widget_plot import plot3dsurface
 
 
 if __name__ == "__main__":
     just_show = True
     if just_show:
-        show_data()
+        plot3dsurface()
+
     else:
         connection = get_connection()
         cursor = connection.cursor()
@@ -101,5 +62,5 @@ if __name__ == "__main__":
             for row in rows:
                 writer.writerow(row)
 
-        show_data()
+        plot3dsurface()
 
