@@ -5,15 +5,16 @@ import igraph as ig
 from qualtran2db import *
 from _connection import *
 import json
-sys.setrecursionlimit(100000)
+
+sys.setrecursionlimit(1000000)
 
 
 class UnionFindWidgetization:
-    def __init__(self, num_elem, max_t, max_d, all_edges, node_labels, t_loc):
+    def __init__(self, num_elem, max_t, max_d, all_edges, node_labels):
         self.parent = self.make_set(num_elem)
         self.size = [1] * num_elem
         self.depth = [1] * num_elem
-        self.count_t = t_loc
+        self.count_t = [1 if t == "Z**0.25" or t == "Z**-0.25" else 0 for t in node_labels]
         self.count = num_elem
         self.max_t_count = max_t
         self.max_depth = max_d
@@ -63,22 +64,41 @@ class UnionFindWidgetization:
 
         self.count -= 1
 
-    def print_components(self):
+    def print_components(self, verbose=False):
         components = {}
         for i, node in enumerate(self.parent):
             if node == i:
-                components[node] = []
+                components[node] = [node]
 
         for i, parent in enumerate(self.parent):
             if parent in components.keys():
                 components[parent].append(i)
 
-        # for (k, v) in components.items():
-        #     print(f"Component {k} has elements {v}")
+        if verbose:
+            for (k, v) in components.items():
+                print(f"Component {k} has elements {v}")
 
         return components
 
-    def display_graph(self):
+    def overlap_count(self):
+        n_overlapping = 0
+        component_types = {}
+        for i, node in enumerate(self.parent):
+            if node == i:
+                component_types[node] = [self.node_labels[node]]
+        for i, parent in enumerate(self.parent):
+            if parent in component_types.keys():
+                component_types[parent].append(self.node_labels[i])
+
+        all_components = component_types.values()
+        for i, c_i in enumerate(all_components):
+            for j, c_j in enumerate(all_components):
+                if i != j and set(c_i) == set(c_j) and len(c_i) == len(c_j):
+                    n_overlapping += 1
+
+        return n_overlapping
+
+    def display_png_graph(self):
         components = self.print_components()
         color_map = {}
         g = ig.Graph(edges=self.edges, directed=True)
@@ -101,7 +121,7 @@ class UnionFindWidgetization:
             vertex_label=g.vs["label"],
         )
 
-    def display_graph_d3(self):
+    def generate_d3_json(self):
         json_dict = {}
         nodes = []
         links = []
@@ -111,30 +131,29 @@ class UnionFindWidgetization:
         json_dict["nodes"] = nodes
 
         for source, target in self.edges:
-            d = {"source": f'{self.node_labels[source]} ({source})', "target": f'{self.node_labels[target]} ({target})', "value": 1}
+            d = {"source": f'{self.node_labels[source]} ({source})', "target": f'{self.node_labels[target]} ({target})',
+                 "value": 1}
             links.append(d)
         json_dict["links"] = links
 
         json_data = json.dumps(json_dict)
-        with open("circuit.json", "w") as f:
+        with open("widgetization/circuit.json", "w") as f:
             f.write(json_data)
 
 
 if __name__ == "__main__":
+    bit_size = 30000
+
     connection = get_connection()
     cursor = connection.cursor()
 
     create_linked_table(connection, clean=True)
     refresh_all_stored_procedures(connection)
 
-    bit_size = 15
     start_time = time.time()
-
     bloq = Add(QUInt(bit_size))
     circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
-    # print(circuit)
     assert_circuit_in_clifford_plus_t(circuit)
-
     db_tuples, _ = cirq2db.cirq_to_db(cirq_circuit=circuit,
                                       last_id=0,
                                       label=f'Adder{bit_size}',
@@ -142,43 +161,8 @@ if __name__ == "__main__":
 
     insert_in_batches(db_tuples=db_tuples, connection=connection, batch_size=1000000, reset_id=True)
     print(f"Time needed for compiling {bit_size} bit adder {time.time() - start_time}")
-
     cursor.execute("call linked_toffoli_decomp()")
     thread_procedures = [(1, f"call generate_edge_list()")]
     db_multi_threaded(thread_proc=thread_procedures)
-
-    max_node_id = 0
-    edges = get_edge_list(connection)
-    for tup in edges:
-        s, t = tup
-        max_node_id = max(max_node_id, max(s, t))
-
-    num_elem = max_node_id + 1
-
-    gate_labels = get_gate_types(connection, num_elem)
-    t_locations = [1 if t == "Z**0.25" or t == "Z**-0.25" else 0 for t in gate_labels]
-
-    # print(edges)
-    # print(t_locations)
-
-    max_t_count = 200
-    max_depth = 1000
-
-    start_time = time.time()
-
-    uf = UnionFindWidgetization(num_elem, max_t=max_t_count, max_d=max_depth, all_edges=edges,
-                                node_labels=gate_labels, t_loc=t_locations)
-
-    for node1, node2 in edges:
-        uf.union(node1, node2)
-
-    print(f"Time needed for widgetising {bit_size} bit adder {time.time() - start_time}")
-
-    # print(uf.parent)
-    # uf.display_graph()
-    start_time = time.time()
-    uf.display_graph_d3()
-    print(f"Time needed for json for {bit_size} bit adder {time.time() - start_time}")
-
-    print("Number of connected components", uf.count)
+    print("done.")
 
