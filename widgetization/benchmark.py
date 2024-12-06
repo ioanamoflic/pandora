@@ -14,6 +14,8 @@ if __name__ == "__main__":
         connection = get_connection()
         cursor = connection.cursor()
 
+        print("Getting edge list...")
+
         max_node_id = 0
         edges = get_edge_list(connection)
 
@@ -34,7 +36,7 @@ if __name__ == "__main__":
         times = []
         record_t = []
         record_d = []
-        t_counts = [x for x in range(0, 100000, 5000)][1:] #[10, 20, 50, 100, 200, 500, 1000, ]#2000, 5000, 10000, 20000, 50000, 100000]
+        t_counts = [x for x in range(0, 10000, 500)][1:] #[10, 20, 50, 100, 200, 500, 1000, ]#2000, 5000, 10000, 20000, 50000, 100000]
         depths = [50000, 60000, 70000, 80000, 90000, 100000] #[10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000]
 
         nodes = []

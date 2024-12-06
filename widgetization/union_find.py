@@ -153,7 +153,7 @@ class UnionFindWidgetization:
 
 
 if __name__ == "__main__":
-    bit_size = 30000
+    bit_size = 3000
 
     connection = get_connection()
     cursor = connection.cursor()
