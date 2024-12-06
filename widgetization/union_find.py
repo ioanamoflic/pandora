@@ -172,29 +172,28 @@ class UnionFindWidgetization:
         with open("widgetization/circuit.json", "w") as f:
             f.write(json_data)
 
+    def build_pandora(self):
+        bit_size = 3000
 
-if __name__ == "__main__":
-    bit_size = 3000
+        connection = get_connection()
+        cursor = connection.cursor()
 
-    connection = get_connection()
-    cursor = connection.cursor()
+        create_linked_table(connection, clean=True)
+        refresh_all_stored_procedures(connection)
 
-    create_linked_table(connection, clean=True)
-    refresh_all_stored_procedures(connection)
+        start_time = time.time()
+        bloq = Add(QUInt(bit_size))
+        circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
+        assert_circuit_in_clifford_plus_t(circuit)
+        db_tuples, _ = cirq2db.cirq_to_db(cirq_circuit=circuit,
+                                          last_id=0,
+                                          label=f'Adder{bit_size}',
+                                          add_margins=True)
 
-    start_time = time.time()
-    bloq = Add(QUInt(bit_size))
-    circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
-    assert_circuit_in_clifford_plus_t(circuit)
-    db_tuples, _ = cirq2db.cirq_to_db(cirq_circuit=circuit,
-                                      last_id=0,
-                                      label=f'Adder{bit_size}',
-                                      add_margins=True)
-
-    insert_in_batches(db_tuples=db_tuples, connection=connection, batch_size=1000000, reset_id=True)
-    print(f"Time needed for compiling {bit_size} bit adder {time.time() - start_time}")
-    cursor.execute("call linked_toffoli_decomp()")
-    thread_procedures = [(1, f"call generate_edge_list()")]
-    db_multi_threaded(thread_proc=thread_procedures)
-    print("done.")
+        insert_in_batches(db_tuples=db_tuples, connection=connection, batch_size=1000000, reset_id=True)
+        print(f"Time needed for compiling {bit_size} bit adder {time.time() - start_time}")
+        cursor.execute("call linked_toffoli_decomp()")
+        thread_procedures = [(1, f"call generate_edge_list()")]
+        db_multi_threaded(thread_proc=thread_procedures)
+        print("done.")
 

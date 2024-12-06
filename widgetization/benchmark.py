@@ -6,11 +6,15 @@ from union_find import UnionFindWidgetization, UnionReturnCodes
 
 from widget_plot import plot3dsurface
 
+import sys
+
 if __name__ == "__main__":
-    just_show = True
-    if just_show:
+
+    if sys.argv[1] == "plot":
         plot3dsurface()
-    else:
+
+    elif sys.argv[1] == "build":
+
         connection = get_connection()
         cursor = connection.cursor()
 
@@ -19,17 +23,39 @@ if __name__ == "__main__":
         max_node_id = 0
         edges = get_edge_list(connection)
 
-        # file1 = open('myfile.txt', 'w')
-        # file1.writelines(edges)
-        # file1.close()
-
         for tup in edges:
             s, t = tup
             max_node_id = max(max_node_id, max(s, t))
-
         num_elem = max_node_id + 1
+
         gate_labels = get_gate_types(connection, num_elem)
         connection.close()
+
+        file1 = open('edges.txt', 'w')
+        file1.write(f"{num_elem}\n")
+        file1.write(f"{len(edges)}\n")
+        for tup in edges:
+            file1.write(f"{tup[0]},{tup[1]}\n")
+        for i in range(num_elem):
+            file1.write(f"{gate_labels[i]}\n")
+        file1.close()
+
+    elif sys.argv[1] == "union":
+
+        # Read the file
+        num_elem = 0
+        edges = []
+        gate_labels = []
+
+        file1 = open('edges.txt', 'r')
+        num_elem = int(file1.readline())
+        num_edges = int(file1.readline())
+        for tup in range(num_edges):
+            s = file1.readline().split(",")
+            edges.append((int(s[0]), int(s[1])))
+
+        for i in range(num_elem):
+            gate_labels.append(file1.readline())
 
         widget_count = []
         n_overlapping = []
@@ -91,5 +117,6 @@ if __name__ == "__main__":
             for row in rows:
                 writer.writerow(row)
 
+        # Finally, plot the results
         plot3dsurface()
 
