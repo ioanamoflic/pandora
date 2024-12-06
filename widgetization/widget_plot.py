@@ -23,6 +23,7 @@ def plot3dsurface():
     surf = ax.plot_trisurf(x, y, z, antialiased=False, edgecolor="black", linewidth=0.1,)
 
     ax.set_xlabel("Depth")
-    ax.set_ylabel("T count")
+    ax.set_ylabel("T-count")
+    ax.set_zlabel("Widget-count")
 
     plt.show()

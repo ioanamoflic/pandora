@@ -9,6 +9,7 @@ import json
 sys.setrecursionlimit(1000000)
 
 from enum import Enum
+
 class UnionReturnCodes(Enum):
     OK = 0
     EXIST = 1

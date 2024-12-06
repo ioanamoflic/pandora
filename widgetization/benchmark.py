@@ -2,12 +2,12 @@ import csv
 import random
 import time
 from _connection import *
-from union_find import UnionFindWidgetization
+from union_find import UnionFindWidgetization, UnionReturnCodes
 
 from widget_plot import plot3dsurface
 
 if __name__ == "__main__":
-    just_show = False
+    just_show = True
     if just_show:
         plot3dsurface()
     else:
@@ -36,13 +36,19 @@ if __name__ == "__main__":
         times = []
         record_t = []
         record_d = []
-        t_counts = [x for x in range(0, 10000, 500)][1:] #[10, 20, 50, 100, 200, 500, 1000, ]#2000, 5000, 10000, 20000, 50000, 100000]
-        depths = [50000, 60000, 70000, 80000, 90000, 100000] #[10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000]
+
+        t_counts = [x for x in range(0, 10000, 500)][1:]
+        depths = [50000, 60000, 70000, 80000, 90000, 100000]
 
         nodes = []
 
-
         print("Start widget find...")
+
+        union_ret_code_stats = {}
+        union_ret_code_stats[UnionReturnCodes.OK] = 0
+        union_ret_code_stats[UnionReturnCodes.EXIST] = 0
+        union_ret_code_stats[UnionReturnCodes.TCOUNT] = 0
+        union_ret_code_stats[UnionReturnCodes.DEPTH] = 0
 
         for t_count_i in t_counts:
             for depth_i in depths:
@@ -53,9 +59,12 @@ if __name__ == "__main__":
                                             max_d=depth_i,
                                             all_edges=edges,
                                             node_labels=gate_labels)
-                random.shuffle(edges)
+                # random.shuffle(edges)
                 for node1, node2 in edges:
-                    uf.union(node1, node2)
+                    ret = uf.union(node1, node2)
+
+                    #update stats
+                    union_ret_code_stats[ret] = union_ret_code_stats[ret] + 1
 
                 end_time = time.time()
 
@@ -71,6 +80,8 @@ if __name__ == "__main__":
                 # n_overlapping.append(uf.overlap_count())
                 # print(f"Time overlap = {time.time() - start_overlap}")
                 times.append(end_time - start_time)
+
+        print(union_ret_code_stats)
 
         # rows = zip(t_counts, depths, widget_count, n_overlapping, times)
         rows = zip(record_t, record_d, widget_count, times)
