@@ -8,13 +8,19 @@ import json
 
 sys.setrecursionlimit(1000000)
 
+from enum import Enum
+class UnionReturnCodes(Enum):
+    OK = 0
+    EXIST = 1
+    TCOUNT = 2
+    DEPTH = 3
 
 class UnionFindWidgetization:
     def __init__(self, num_elem, max_t, max_d, all_edges, node_labels):
         self.parent = [x for x in range(num_elem)]
         self.size = [1] * num_elem
         self.depth = [1] * num_elem
-        self.count_t = [1 if t == "Z**0.25" or t == "Z**-0.25" else 0 for t in node_labels]
+        self.t_count = [1 if t == "Z**0.25" or t == "Z**-0.25" else 0 for t in node_labels]
         self.widget_count = 0
         self.max_t_count = max_t
         self.max_depth = max_d
@@ -28,25 +34,31 @@ class UnionFindWidgetization:
             node = self.parent[node]
         return node
 
+    """
+       Returns 0 - everything ok
+       1 - already same union
+       2 - tcount overflow
+       3 - gatecount overflow 
+    """
     def union(self, node1, node2):
         root1 = self.find(node1)
         root2 = self.find(node2)
 
-        t_count1 = self.count_t[root1]
-        t_count2 = self.count_t[root2]
+        t_count1 = self.t_count[root1]
+        t_count2 = self.t_count[root2]
 
         depth1 = self.depth[root1]
         depth2 = self.depth[root2]
 
         # already in the same set
         if root1 == root2:
-            return
+            return UnionReturnCodes.EXIST
 
         if t_count1 + t_count2 > self.max_t_count:
-            return
-        #
-        # if depth1 + depth2 > self.max_depth:
-        #     return
+            return UnionReturnCodes.TCOUNT
+
+        if depth1 + depth2 > self.max_depth:
+            return UnionReturnCodes.DEPTH
 
         if self.size[root1] > self.size[root2]:
             # Root1 is large
@@ -55,14 +67,22 @@ class UnionFindWidgetization:
             # Root2 is large
             self.update_properties(root2, root1)
 
+        return UnionReturnCodes.OK
+
     def update_properties(self, root_large, root_small):
         self.parent[root_small] = root_large
 
         self.size[root_large] += self.size[root_small]
         self.depth[root_large] += self.depth[root_small]
-        self.count_t[root_large] += self.count_t[root_small]
+        self.t_count[root_large] += self.t_count[root_small]
 
-    def compute_widget_count(self):
+    def compute_widgets_and_properties(self):
+
+        # Compress all the possible paths
+        for node in range(len(self.parent)):
+            self.find(node)
+
+        # Create a set of all the unique widgets
         widgets = set(self.parent)
 
         self.widget_count = len(widgets) + 1
@@ -70,7 +90,7 @@ class UnionFindWidgetization:
         sss = [self.size[w] for w in widgets]
         avg_size = sum(sss) / len(sss)
 
-        ttt = [self.count_t[w] for w in widgets]
+        ttt = [self.t_count[w] for w in widgets]
         avg_t = sum(ttt) / len(ttt)
 
         return self.widget_count, avg_size, avg_t

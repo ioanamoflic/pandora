@@ -53,17 +53,13 @@ if __name__ == "__main__":
                                             max_d=depth_i,
                                             all_edges=edges,
                                             node_labels=gate_labels)
-                # random.shuffle(edges)
+                random.shuffle(edges)
                 for node1, node2 in edges:
                     uf.union(node1, node2)
 
-                # Path compression for all the nodes
-                for node in range(num_elem):
-                    uf.find(node)
-
                 end_time = time.time()
 
-                nrwidgets, avs, avt = uf.compute_widget_count()
+                nrwidgets, avs, avt = uf.compute_widgets_and_properties()
                 print(f"Started with {t_count_i} and {depth_i} -> {nrwidgets} avgsize={avs} avt={avt}")
                 print(f"     Time union = {end_time - start_time}")
 
