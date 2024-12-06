@@ -1,4 +1,5 @@
 import csv
+import random
 import time
 from _connection import *
 from union_find import UnionFindWidgetization
@@ -7,10 +8,9 @@ from widget_plot import plot3dsurface
 
 
 if __name__ == "__main__":
-    just_show = True
+    just_show = False
     if just_show:
         plot3dsurface()
-
     else:
         connection = get_connection()
         cursor = connection.cursor()
@@ -30,25 +30,41 @@ if __name__ == "__main__":
         times = []
         record_t = []
         record_d = []
-        t_counts = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 100000, 500000]
-        depths = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 500000]
+        t_counts = [x for x in range(0, 100000, 5000)][1:] #[10, 20, 50, 100, 200, 500, 1000, ]#2000, 5000, 10000, 20000, 50000, 100000]
+        depths = [50000, 60000, 70000, 80000, 90000, 100000] #[10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000]
+
+        nodes = []
+
+
+        print("Start widget find...")
+
         for t_count_i in t_counts:
             for depth_i in depths:
-                print(f"Started with {t_count_i} and {depth_i}")
+
                 start_time = time.time()
                 uf = UnionFindWidgetization(num_elem,
                                             max_t=t_count_i,
                                             max_d=depth_i,
                                             all_edges=edges,
                                             node_labels=gate_labels)
+                # random.shuffle(edges)
                 for node1, node2 in edges:
                     uf.union(node1, node2)
+
+                # Path compression for all the nodes
+                for node in range(num_elem):
+                    uf.find(node)
+
                 end_time = time.time()
-                print(f"Time union = {end_time - start_time}")
+
+                nrwidgets, avs, avt = uf.compute_widget_count()
+                print(f"Started with {t_count_i} and {depth_i} -> {nrwidgets} avgsize={avs} avt={avt}")
+                print(f"     Time union = {end_time - start_time}")
 
                 record_t.append(t_count_i)
                 record_d.append(depth_i)
-                widget_count.append(uf.count)
+                widget_count.append(nrwidgets)
+
                 # start_overlap = time.time()
                 # n_overlapping.append(uf.overlap_count())
                 # print(f"Time overlap = {time.time() - start_overlap}")

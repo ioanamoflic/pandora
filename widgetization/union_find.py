@@ -11,18 +11,15 @@ sys.setrecursionlimit(1000000)
 
 class UnionFindWidgetization:
     def __init__(self, num_elem, max_t, max_d, all_edges, node_labels):
-        self.parent = self.make_set(num_elem)
+        self.parent = [x for x in range(num_elem)]
         self.size = [1] * num_elem
         self.depth = [1] * num_elem
         self.count_t = [1 if t == "Z**0.25" or t == "Z**-0.25" else 0 for t in node_labels]
-        self.count = num_elem
+        self.widget_count = 0
         self.max_t_count = max_t
         self.max_depth = max_d
         self.edges = all_edges
         self.node_labels = node_labels
-
-    def make_set(self, num_elem):
-        return [x for x in range(num_elem)]
 
     def find(self, node):
         while node != self.parent[node]:
@@ -47,22 +44,36 @@ class UnionFindWidgetization:
 
         if t_count1 + t_count2 > self.max_t_count:
             return
-
-        if depth1 + depth2 > self.max_depth:
-            return
+        #
+        # if depth1 + depth2 > self.max_depth:
+        #     return
 
         if self.size[root1] > self.size[root2]:
-            self.parent[root2] = root1
-            self.size[root1] += 1
-            self.depth[root1] += 1
-            self.count_t[root1] += t_count2
+            # Root1 is large
+            self.update_properties(root1, root2)
         else:
-            self.parent[root1] = root2
-            self.size[root2] += 1
-            self.depth[root2] += 1
-            self.count_t[root2] += t_count1
+            # Root2 is large
+            self.update_properties(root2, root1)
 
-        self.count -= 1
+    def update_properties(self, root_large, root_small):
+        self.parent[root_small] = root_large
+
+        self.size[root_large] += self.size[root_small]
+        self.depth[root_large] += self.depth[root_small]
+        self.count_t[root_large] += self.count_t[root_small]
+
+    def compute_widget_count(self):
+        widgets = set(self.parent)
+
+        self.widget_count = len(widgets) + 1
+
+        sss = [self.size[w] for w in widgets]
+        avg_size = sum(sss) / len(sss)
+
+        ttt = [self.count_t[w] for w in widgets]
+        avg_t = sum(ttt) / len(ttt)
+
+        return self.widget_count, avg_size, avg_t
 
     def print_components(self, verbose=False):
         components = {}
