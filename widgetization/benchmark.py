@@ -6,7 +6,6 @@ from union_find import UnionFindWidgetization
 
 from widget_plot import plot3dsurface
 
-
 if __name__ == "__main__":
     just_show = False
     if just_show:
@@ -17,6 +16,11 @@ if __name__ == "__main__":
 
         max_node_id = 0
         edges = get_edge_list(connection)
+
+        # file1 = open('myfile.txt', 'w')
+        # file1.writelines(edges)
+        # file1.close()
+
         for tup in edges:
             s, t = tup
             max_node_id = max(max_node_id, max(s, t))
