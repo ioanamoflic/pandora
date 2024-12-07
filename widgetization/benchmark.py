@@ -2,7 +2,7 @@ import csv
 import random
 import time
 from _connection import *
-from union_find import UnionFindWidgetization, UnionReturnCodes
+from union_find import UnionFindWidgetization, WidgetizationReturnCodes, BFSWidgetization
 
 from widget_plot import plot3dsurface
 
@@ -57,44 +57,58 @@ if __name__ == "__main__":
         for i in range(num_elem):
             gate_labels.append(file1.readline().strip())
 
+        print("Start widget find...")
+
+        """
+            Stats
+        """
+        ret_code_stats = {}
+        ret_code_stats[WidgetizationReturnCodes.OK] = 0
+        ret_code_stats[WidgetizationReturnCodes.EXIST] = 0
+        ret_code_stats[WidgetizationReturnCodes.TCOUNT] = 0
+        ret_code_stats[WidgetizationReturnCodes.DEPTH] = 0
+
         widget_count = []
         n_overlapping = []
         times = []
         record_t = []
         record_d = []
 
-        t_counts = [x for x in range(0, 10000, 500)][1:]
-        depths = [50000, 60000, 70000, 80000, 90000, 100000]
+        t_counts = [x for x in range(0, 1000, 200)][1:]
+        depths = [100, 1000, 10000]
 
         nodes = []
-
-        print("Start widget find...")
-
-        union_ret_code_stats = {}
-        union_ret_code_stats[UnionReturnCodes.OK] = 0
-        union_ret_code_stats[UnionReturnCodes.EXIST] = 0
-        union_ret_code_stats[UnionReturnCodes.TCOUNT] = 0
-        union_ret_code_stats[UnionReturnCodes.DEPTH] = 0
 
         for t_count_i in t_counts:
             for depth_i in depths:
 
                 start_time = time.time()
-                uf = UnionFindWidgetization(num_elem,
-                                            max_t=t_count_i,
-                                            max_d=depth_i,
-                                            all_edges=edges,
-                                            node_labels=gate_labels)
-                # random.shuffle(edges)
-                for node1, node2 in edges:
-                    ret = uf.union(node1, node2)
 
-                    #update stats
-                    union_ret_code_stats[ret] = union_ret_code_stats[ret] + 1
+                # uf = UnionFindWidgetization(num_elem,
+                #                             max_t=t_count_i,
+                #                             max_d=depth_i,
+                #                             all_edges=edges,
+                #                             node_labels=gate_labels)
+                # # random.shuffle(edges)
+                # for node1, node2 in edges:
+                #     ret = uf.union(node1, node2)
+                #     #update stats
+                #     ret_code_stats[ret] = ret_code_stats[ret] + 1
+
+                bfsw = BFSWidgetization(num_elem, edges, gate_labels)
+                nr_potential_roots = len(bfsw.get_potential_roots())
+                while nr_potential_roots > 0:
+                    root = random.choice(bfsw.get_potential_roots())
+
+                    ret = bfsw.widgetize(root, t_count_i, depth_i)
+                    ret_code_stats[ret] += 1
+
+                    nr_potential_roots = len(bfsw.get_potential_roots())
 
                 end_time = time.time()
 
-                nrwidgets, avs, avt = uf.compute_widgets_and_properties()
+                # nrwidgets, avs, avt = uf.compute_widgets_and_properties()
+                nrwidgets, avs, avt = bfsw.compute_widgets_and_properties()
                 print(f"Started with {t_count_i} and {depth_i} -> {nrwidgets} avgsize={avs} avt={avt}")
                 print(f"     Time union = {end_time - start_time}")
 
@@ -107,7 +121,7 @@ if __name__ == "__main__":
                 # print(f"Time overlap = {time.time() - start_overlap}")
                 times.append(end_time - start_time)
 
-        print(union_ret_code_stats)
+        print(ret_code_stats)
 
         # rows = zip(t_counts, depths, widget_count, n_overlapping, times)
         rows = zip(record_t, record_d, widget_count, times)

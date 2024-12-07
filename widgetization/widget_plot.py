@@ -16,9 +16,9 @@ def plot3dsurface():
     y = df['record_t']
     z = df['widget_count']
 
-    # x = np.log(x)
-    # y = np.log(y)
-    # z = np.log(z)
+    x = np.log(x)
+    y = np.log(y)
+    z = np.log(z)
 
     surf = ax.plot_trisurf(x, y, z, antialiased=False, edgecolor="black", linewidth=0.1,)
 

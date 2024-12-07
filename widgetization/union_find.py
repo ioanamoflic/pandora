@@ -10,15 +10,90 @@ sys.setrecursionlimit(1000000)
 
 from enum import Enum
 
-class UnionReturnCodes(Enum):
+class WidgetizationReturnCodes(Enum):
     OK = 0
     EXIST = 1
     TCOUNT = 2
     DEPTH = 3
 
+class BFSWidgetization:
+
+
+    def __init__(self, num_elem, edges, node_labels):
+        self.parent = [x for x in range(num_elem)]
+
+        self.g = ig.Graph()
+        self.g.add_vertices(num_elem)
+        self.g.add_edges(edges)
+
+        self.not_visited_nodes = set(range(num_elem))
+        self.widget = list(range(num_elem))
+
+        self.node_labels = node_labels
+
+        self.size = {}
+        self.t_count = {}
+
+    def get_potential_roots(self):
+        return list(self.not_visited_nodes)
+    def is_tgate(self, index):
+        label = self.node_labels[index]
+        return label == "Z**0.25" or label == "Z**-0.25"
+
+    def widgetize(self, root, max_tcount, max_size):
+
+        tcount = 0
+        for vertex, dist, parent in self.g.dfsiter(root, advanced=True):
+
+            if vertex.index not in self.not_visited_nodes:
+                continue
+
+            self.not_visited_nodes.remove(vertex.index)
+            self.widget[vertex.index] = root
+
+            if root not in self.size:
+                self.size[root] = 0
+            if root not in self.t_count:
+                self.t_count[root] = 0
+
+            self.size[root] = 1 + self.size[root]
+
+            if parent is None:
+                # print(f"Widget from {vertex.index}")
+                True
+            else:
+                # print(f"Vertex {vertex.index} reached at distance {dist} from vertex {parent.index}")
+                if self.is_tgate(vertex.index):
+                    self.t_count[root] = 1 + self.t_count[root]
+
+                if self.t_count[root] == max_tcount:
+                    # print("... found")
+                    return WidgetizationReturnCodes.TCOUNT
+
+                if self.size[root] == max_size:
+                    # print("... found")
+                    return WidgetizationReturnCodes.DEPTH
+
+        return WidgetizationReturnCodes.OK
+
+    def compute_widgets_and_properties(self):
+
+        # Create a set of all the unique widgets
+        widgets = set(self.widget)
+
+        self.widget_count = len(widgets) + 1
+
+        sss = [self.size[w] for w in widgets]
+        avg_size = sum(sss) / len(sss)
+
+        ttt = [self.t_count[w] for w in widgets]
+        avg_t = sum(ttt) / len(ttt)
+
+        return self.widget_count, avg_size, avg_t
+
 class UnionFindWidgetization:
     def __init__(self, num_elem, max_t, max_d, all_edges, node_labels):
-        self.parent = [x for x in range(num_elem)]
+        self.widget = [x for x in range(num_elem)]
         self.size = [1] * num_elem
         self.depth = [1] * num_elem
         self.t_count = [1 if t == "Z**0.25" or t == "Z**-0.25" else 0 for t in node_labels]
@@ -29,18 +104,14 @@ class UnionFindWidgetization:
         self.node_labels = node_labels
 
     def find(self, node):
-        while node != self.parent[node]:
+        # Path compression. The union-find way
+        while node != self.widget[node]:
             # path compression
-            self.parent[node] = self.parent[self.parent[node]]
-            node = self.parent[node]
+            self.widget[node] = self.widget[self.widget[node]]
+            node = self.widget[node]
+
         return node
 
-    """
-       Returns 0 - everything ok
-       1 - already same union
-       2 - tcount overflow
-       3 - gatecount overflow 
-    """
     def union(self, node1, node2):
         root1 = self.find(node1)
         root2 = self.find(node2)
@@ -53,13 +124,13 @@ class UnionFindWidgetization:
 
         # already in the same set
         if root1 == root2:
-            return UnionReturnCodes.EXIST
+            return WidgetizationReturnCodes.EXIST
 
         if t_count1 + t_count2 > self.max_t_count:
-            return UnionReturnCodes.TCOUNT
+            return WidgetizationReturnCodes.TCOUNT
 
         if depth1 + depth2 > self.max_depth:
-            return UnionReturnCodes.DEPTH
+            return WidgetizationReturnCodes.DEPTH
 
         if self.size[root1] > self.size[root2]:
             # Root1 is large
@@ -68,10 +139,10 @@ class UnionFindWidgetization:
             # Root2 is large
             self.update_properties(root2, root1)
 
-        return UnionReturnCodes.OK
+        return WidgetizationReturnCodes.OK
 
     def update_properties(self, root_large, root_small):
-        self.parent[root_small] = root_large
+        self.widget[root_small] = root_large
 
         self.size[root_large] += self.size[root_small]
         self.depth[root_large] += self.depth[root_small]
@@ -80,11 +151,11 @@ class UnionFindWidgetization:
     def compute_widgets_and_properties(self):
 
         # Compress all the possible paths
-        for node in range(len(self.parent)):
+        for node in range(len(self.widget)):
             self.find(node)
 
         # Create a set of all the unique widgets
-        widgets = set(self.parent)
+        widgets = set(self.widget)
 
         self.widget_count = len(widgets) + 1
 
@@ -98,11 +169,11 @@ class UnionFindWidgetization:
 
     def print_components(self, verbose=False):
         components = {}
-        for i, node in enumerate(self.parent):
+        for i, node in enumerate(self.widget):
             if node == i:
                 components[node] = [node]
 
-        for i, parent in enumerate(self.parent):
+        for i, parent in enumerate(self.widget):
             if parent in components.keys():
                 components[parent].append(i)
 
@@ -115,10 +186,10 @@ class UnionFindWidgetization:
     def overlap_count(self):
         n_overlapping = 0
         component_types = {}
-        for i, node in enumerate(self.parent):
+        for i, node in enumerate(self.widget):
             if node == i:
                 component_types[node] = [self.node_labels[node]]
-        for i, parent in enumerate(self.parent):
+        for i, parent in enumerate(self.widget):
             if parent in component_types.keys():
                 component_types[parent].append(self.node_labels[i])
 
@@ -137,8 +208,8 @@ class UnionFindWidgetization:
         g.vs["label"] = self.node_labels
         for root in components.keys():
             color_map[root] = "#{:06x}".format(random.randint(0, 0xFFFFFF))
-        g.vs["color"] = [color_map[self.parent[i]] if self.parent[i] in color_map.keys() else "white" for i in
-                         range(len(self.parent))]
+        g.vs["color"] = [color_map[self.widget[i]] if self.widget[i] in color_map.keys() else "white" for i in
+                         range(len(self.widget))]
 
         # make it look like an actual circuit
         layout = g.layout_reingold_tilford(root=[0], mode="all")
@@ -157,8 +228,8 @@ class UnionFindWidgetization:
         json_dict = {}
         nodes = []
         links = []
-        for node_id in range(len(self.parent)):
-            d = {"id": f'{self.node_labels[node_id]} ({node_id})', "group": self.parent[node_id]}
+        for node_id in range(len(self.widget)):
+            d = {"id": f'{self.node_labels[node_id]} ({node_id})', "group": self.widget[node_id]}
             nodes.append(d)
         json_dict["nodes"] = nodes
 
