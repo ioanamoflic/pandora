@@ -1,3 +1,4 @@
+import inspect
 import os
 import sys
 import typing
@@ -67,8 +68,10 @@ def refresh_all_stored_procedures(connection):
         'ls_style_procedures/cnotify_ZZ.sql'
     ]
     cursor = connection.cursor()
+
+    dir, file = os.path.split(inspect.getfile(create_linked_table))
     for sp in procedures:
-        with open(sp, "r") as spfile:
+        with open(f"{dir}/{sp}", "r") as spfile:
             print(f"...uploading {sp}")
             sql_statement = spfile.read()
             cursor.execute(sql_statement)
@@ -93,7 +96,9 @@ def create_linked_table(connection, clean=False):
         cursor.execute(sql_statement)
         connection.commit()
 
-    with open("generic_procedures/_sql_generate_table.sql", "r") as create_f:
+
+    dir, file = os.path.split(inspect.getfile(create_linked_table))
+    with open(f"{dir}/generic_procedures/_sql_generate_table.sql", "r") as create_f:
         print(f"...creating linked_circuit")
         sql_statement = create_f.read()
         cursor.execute(sql_statement)
