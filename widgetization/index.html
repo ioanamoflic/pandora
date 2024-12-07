@@ -43,23 +43,21 @@
                 return d.id;
             })
             .distance(function (d) {
-                return d.source.group === d.target.group ? -100 : 100;
+                return d.source.group === d.target.group ? 1 : 100;
             })
         )
-        // .force("charge", d3.forceManyBody())
+        .force("charge", d3.forceManyBody())
         .force("center", d3.forceCenter(width / 2, height / 2))
 
     d3.json("circuit.json", function (error, graph) {
         if (error) throw error;
 
-        var maxgrp = -1
+        var groups = {}
         for (var i=0; i<graph.nodes.length; i++) {
-            node = graph.nodes[i];
-            maxgrp = Math.max(maxgrp, node.group);
+            //just store something to record the key
+            groups[graph.nodes[i].group] = 0;
         }
-        maxgrp += 1;//zero indexed
-
-        cns.innerHTML += maxgrp;
+        cns.innerHTML += Object.keys(groups).length + " widgets";
 
         var link = svg.append("g")
             .attr("class", "links")
