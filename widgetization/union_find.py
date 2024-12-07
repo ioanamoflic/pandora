@@ -26,9 +26,9 @@ class BFSWidgetization:
         self.g.add_vertices(num_elem)
         self.g.add_edges(edges)
 
+        self.edges = edges
         self.not_visited_nodes = set(range(num_elem))
         self.widget = list(range(num_elem))
-
         self.node_labels = node_labels
 
         self.size = {}
@@ -224,28 +224,27 @@ class UnionFindWidgetization:
             vertex_label=g.vs["label"],
         )
 
-    def generate_d3_json(self):
+class WidgetUtils:
+    def generate_d3_json(self, widgetizer):
         json_dict = {}
         nodes = []
         links = []
-        for node_id in range(len(self.widget)):
-            d = {"id": f'{self.node_labels[node_id]} ({node_id})', "group": self.widget[node_id]}
+        for node_id in range(len(widgetizer.widget)):
+            d = {"id": f'{widgetizer.node_labels[node_id]} ({node_id})', "group": widgetizer.widget[node_id]}
             nodes.append(d)
         json_dict["nodes"] = nodes
 
-        for source, target in self.edges:
-            d = {"source": f'{self.node_labels[source]} ({source})', "target": f'{self.node_labels[target]} ({target})',
+        for source, target in widgetizer.edges:
+            d = {"source": f'{widgetizer.node_labels[source]} ({source})', "target": f'{widgetizer.node_labels[target]} ({target})',
                  "value": 1}
             links.append(d)
         json_dict["links"] = links
 
         json_data = json.dumps(json_dict)
-        with open("widgetization/circuit.json", "w") as f:
+        with open("circuit.json", "w") as f:
             f.write(json_data)
 
-    def build_pandora(self):
-        bit_size = 3000
-
+    def build_pandora(self, bit_size=3000):
         connection = get_connection()
         cursor = connection.cursor()
 

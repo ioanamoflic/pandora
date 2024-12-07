@@ -2,7 +2,7 @@ import csv
 import random
 import time
 from _connection import *
-from union_find import UnionFindWidgetization, WidgetizationReturnCodes, BFSWidgetization
+from union_find import UnionFindWidgetization, WidgetizationReturnCodes, BFSWidgetization, WidgetUtils
 
 from widget_plot import plot3dsurface
 
@@ -10,16 +10,21 @@ import sys
 
 if __name__ == "__main__":
 
+    wutils = WidgetUtils()
+
     if sys.argv[1] == "plot":
         plot3dsurface()
 
     elif sys.argv[1] == "build":
 
+        # Build a circuit in the Pandora
+        wutils.build_pandora(bit_size=3000)
+
+        print("Connecting...")
         connection = get_connection()
         cursor = connection.cursor()
 
-        print("Getting edge list...")
-
+        print("Get Edge List...")
         max_node_id = 0
         edges = get_edge_list(connection)
 
@@ -74,8 +79,11 @@ if __name__ == "__main__":
         record_t = []
         record_d = []
 
-        t_counts = [x for x in range(0, 1000, 200)][1:]
-        depths = [100, 1000, 10000]
+        # t_counts = [x for x in range(0, 1000, 200)][1:]
+        # depths = [100, 1000, 10000]
+
+        t_counts = [50000]
+        depths = [100000]
 
         nodes = []
 
@@ -121,6 +129,8 @@ if __name__ == "__main__":
                 # print(f"Time overlap = {time.time() - start_overlap}")
                 times.append(end_time - start_time)
 
+                wutils.generate_d3_json(bfsw)
+
         print(ret_code_stats)
 
         # rows = zip(t_counts, depths, widget_count, n_overlapping, times)
@@ -132,5 +142,5 @@ if __name__ == "__main__":
                 writer.writerow(row)
 
         # Finally, plot the results
-        plot3dsurface()
+        # plot3dsurface()
 
