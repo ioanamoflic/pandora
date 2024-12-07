@@ -55,7 +55,7 @@ if __name__ == "__main__":
             edges.append((int(s[0]), int(s[1])))
 
         for i in range(num_elem):
-            gate_labels.append(file1.readline())
+            gate_labels.append(file1.readline().strip())
 
         widget_count = []
         n_overlapping = []
