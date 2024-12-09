@@ -1,29 +1,61 @@
 #!/bin/bash
 
+echo "-----------------------collector side--------------------------"
+echo "The collector running on $(hostname) "
+echo "This job started at $(date +%Y-%m-%dT%T)"
+echo "This job will end at $(squeue --noheader -j $SLURM_JOBID -o %e) (in $(squeue --noheader -j $SLURM_JOBID -o %L))"
+echo "---------------------++++collector side++++--------------------------"
+
+
 FNAME="collected_result.csv"
 write_csv() {
     echo $1, $2, $3, $4, $5, $6, $7 >> $FNAME
 }
 
 rm $FNAME
+
 #echo "Id, Total count, T count, S count, CX count, H count, X count" >> $FNAME
-
 #SQL="`select count(*) from linked_circuit`"
+#/usr/lib/postgresql/14/bin/pg_isready -h $nhost -U redouane.bouchouirba -p 5432
 
-for i in {1..100}
+DBUSER=redouane.bouchourba
+startcollect=true
+
+# https://stackoverflow.com/questions/2953646/how-can-i-declare-and-use-boolean-variables-in-a-shell-script
+while [ "$startcollect" = true ]
 do
-	echo " --- RUN $i"
+	startcollect=true
 	for nhost in `cat machinefile.txt`
 	do
-		echo $nhost
 
-#		total_count=$(apptainer exec pandora.sif psql -h $nhost -U $USER -p 5432 -d postgres -X -A -t -c "select count(*) from linked_circuit where type='ZPowGate**0.25' or type='ZPowGate**-0.25'")
-		total_count=$(apptainer exec pandora.sif psql -h $nhost -U $USER -p 5432 -d postgres -X -A -t -c "select count(*) from linked_circuit")
+		if [ "$nhost" = $(hostname)]; then
+			continue
+		fi
 
-		echo $nhost, $i, $total_count
-		echo $nhost, $i, $total_count >> $FNAME
+		apptainer exec pandora.sif /usr/bin/pg_isready -h $nhost -U $DBUSER -d postgres -p 5432 -t5
+        ret=$(apptainer exec pandora.sif echo $?)
+
+		# we chek not to connect to the collector
+		if [ $ret -ne 0 ]; then
+			startcollect=false
+		fi
 	done
-	sleep 2
+done
+
+for i in {1..100}
+   do
+	echo " --- RUN $i"
+	for nhost in `cat machinefile.txt`
+		do
+			if [ "$nhost" = $(hostname) ]; then
+				echo $nhost
+
+				total_count=$(apptainer exec pandora.sif psql -h $nhost -U $DBUSER -p 5432 -d postgres -X -A -t -c "select count(*) from linked_circuit")
+				echo $nhost, $i, $total_count
+				echo $nhost, $i, $total_count >> $FNAME
+			fi
+		done
+	sleep 1
 done
 
 

@@ -10,19 +10,6 @@
 # SBATCH --dependency=singleton
 # SBATCH --signal=B:SIGINT@60
 
-#export COMMON=$HOME/lustre/quansim_1-dsg0j0wqqk8/users/$USER
-#export POSTGRES_HOME=$COMMON/postgres
-#export POSTGRES_PASSWORD_FILE=$POSTGRES_HOME/config/postgres-password
-#export PGPASSWORD="1234"
-#export POSTGRES_USER=$USER
-#export POSTGRES_DB=postgres
-#export PGDATA=$POSTGRES_HOME/db/data
-#export POSTGRES_HOST_AUTH_METHOD=md5
-#export POSTGRES_INITDB_ARGS="--data-checksums"
-#export POSTGRES_PORT=$(shuf -i 2000-65000 -n 1)
-
-#module load PostgreSQL/14.4-GCCcore-11.3.0  Python/3.10.4-GCCcore-11.3.0
-
 
 #module loadsingularity
 
@@ -38,7 +25,7 @@ export EXEC="apptainer exec -B pgdata:/var/lib/postgresql/data -B pgrun:/var/run
 $EXEC bash -c "pg_ctl init && echo 'host all all 0.0.0.0/0 trust'>> /var/lib/postgresql/data/pg_hba.conf && pg_ctl start && export PYTHONPATH=$PYTHONPATH:/pandora && cd /pandora && python3.10 benchmarking/benchmark_db.py"
 
 
-#appaitner run -B $POSTGRES_HOME/db:/var/lib/postgresql -B $POSTGRES_HOME/run:/var/run/postgresql docker://postgres:11 -c "port=$POSTGRES_PORT"
+#apptainer run -B $POSTGRES_HOME/db:/var/lib/postgresql -B $POSTGRES_HOME/run:/var/run/postgresql docker://postgres:11 -c "port=$POSTGRES_PORT"
 
 # database="postgres",
 # user="postgres",
