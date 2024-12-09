@@ -21,26 +21,29 @@ rm $FNAME
 # https://stackoverflow.com/questions/2953646/how-can-i-declare-and-use-boolean-variables-in-a-shell-script
 
 DBUSER=redouane.bouchourba
-startcollect=true
+all_nodes_started=false
 
 # We wait for all the hosts to be running the database
-while [ "$startcollect" = true ]
+while [ "$all_nodes_started" = false ]
 do
-    startcollect=true
+    # Assume that all hosts have started
+    all_nodes_started=true
+
     for nhost in `cat machinefile.txt`
     do
 
         # Avoid connecting to the host running the collector
-        if [ "$nhost" = $(hostname)]; then
+        if [ "$nhost" = $(hostname) ]; then
             continue
         fi
 
         apptainer exec pandora.sif /usr/bin/pg_isready -h $nhost -U $DBUSER -d postgres -p 5432 -t5
         ret=$(apptainer exec pandora.sif echo $?)
 
-        # we check if the connection failed. this means the database is not running
+        # we check if the connection failed
+        # this means that one of the hosts is not started -> set to false
         if [ $ret -ne 0 ]; then
-            startcollect=false
+            all_nodes_started=false
         fi
     done
 done
