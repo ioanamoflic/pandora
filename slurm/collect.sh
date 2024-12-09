@@ -18,44 +18,51 @@ rm $FNAME
 #SQL="`select count(*) from linked_circuit`"
 #/usr/lib/postgresql/14/bin/pg_isready -h $nhost -U redouane.bouchouirba -p 5432
 
+# https://stackoverflow.com/questions/2953646/how-can-i-declare-and-use-boolean-variables-in-a-shell-script
+
 DBUSER=redouane.bouchourba
 startcollect=true
 
-# https://stackoverflow.com/questions/2953646/how-can-i-declare-and-use-boolean-variables-in-a-shell-script
+# We wait for all the hosts to be running the database
 while [ "$startcollect" = true ]
 do
-	startcollect=true
-	for nhost in `cat machinefile.txt`
-	do
+    startcollect=true
+    for nhost in `cat machinefile.txt`
+    do
 
-		if [ "$nhost" = $(hostname)]; then
-			continue
-		fi
+        # Avoid connecting to the host running the collector
+        if [ "$nhost" = $(hostname)]; then
+            continue
+        fi
 
-		apptainer exec pandora.sif /usr/bin/pg_isready -h $nhost -U $DBUSER -d postgres -p 5432 -t5
+        apptainer exec pandora.sif /usr/bin/pg_isready -h $nhost -U $DBUSER -d postgres -p 5432 -t5
         ret=$(apptainer exec pandora.sif echo $?)
 
-		# we chek not to connect to the collector
-		if [ $ret -ne 0 ]; then
-			startcollect=false
-		fi
-	done
+        # we check if the connection failed. this means the database is not running
+        if [ $ret -ne 0 ]; then
+            startcollect=false
+        fi
+    done
 done
 
-for i in {1..100}
-   do
-	echo " --- RUN $i"
-	for nhost in `cat machinefile.txt`
-		do
-			if [ "$nhost" = $(hostname) ]; then
-				echo $nhost
 
-				total_count=$(apptainer exec pandora.sif psql -h $nhost -U $DBUSER -p 5432 -d postgres -X -A -t -c "select count(*) from linked_circuit")
-				echo $nhost, $i, $total_count
-				echo $nhost, $i, $total_count >> $FNAME
-			fi
-		done
-	sleep 1
+# We collect from each Pandora for a specified number of times, e.g. 100
+for i in {1..100}
+do
+    echo " --- RUN $i"
+    for nhost in `cat machinefile.txt`
+    do
+        # We should not connect to the host running the collector
+        if [ "$nhost" -ne $(hostname) ]; then
+            echo $nhost
+
+            #for example, get the number of gates from the Pandora
+            total_count=$(apptainer exec pandora.sif psql -h $nhost -U $DBUSER -p 5432 -d postgres -X -A -t -c "select count(*) from linked_circuit")
+            echo $nhost, $i, $total_count
+            echo $nhost, $i, $total_count >> $FNAME
+        fi
+    done
+    sleep 1
 done
 
 
