@@ -1,18 +1,17 @@
 import csv
 import time
 from benchmarking.benchmark_db import generate_random_CX_circuit
-from cirq2db import *
-from qualtran2db import *
+from pandora.connection_util import *
 
 TIMEOUT_VAL = 10000000
 
 
 def concatenate(connection, init_circ, cnt, bernoulli_percentage=10):
-    create_linked_table(connection=connection, clean=True)
+    drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
 
-    db_tuples, _ = cirq_to_db(cirq_circuit=init_circ, last_id=0, add_margins=True, label='verification')
-    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=10000000)
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=init_circ, last_id=0, add_margins=True, label='verification')
+    insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
 
     thread_procedures = [
         (1, f"call linked_cx_to_hhcxhh_bernoulli({bernoulli_percentage}, {cnt})"),
@@ -37,11 +36,11 @@ def concatenate(connection, init_circ, cnt, bernoulli_percentage=10):
 
 
 def verify_C_Ct_eq_I(connection, concatenated_circuit, cnt, bernoulli_percentage, max_thr, single_threaded=False, stop_after=10):
-    create_linked_table(connection=connection, clean=True)
+    drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
 
-    db_tuples, _ = cirq_to_db(cirq_circuit=concatenated_circuit, last_id=0, add_margins=True, label='verification')
-    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=10000000)
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=concatenated_circuit, last_id=0, add_margins=True, label='verification')
+    insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
 
     if single_threaded is True:
         thread_procedures = [

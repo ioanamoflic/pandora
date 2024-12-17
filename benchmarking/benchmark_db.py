@@ -1,8 +1,7 @@
 import random
 import time
 import csv
-from cirq2db import *
-from qualtran2db import *
+from pandora.connection_util import *
 
 
 def generate_random_CX_circuit(n_templates, n_qubits=50):
@@ -26,11 +25,14 @@ def gate_count(circuit):
 
 def test_cx_to_hhcxhh(connection, initial_circuit, n_CX):
     cursor = connection.cursor()
-    create_linked_table(connection=connection, clean=True)
+    drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
 
-    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit, last_id=0, add_margins=True, label='test_random')
-    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=1000000)
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit, last_id=0, add_margins=True, label='test_random')
+    insert_in_batches(pandora_gates=db_tuples,
+                      connection=connection,
+                      table_name='linked_circuit',
+                      reset_id=True)
 
     st_time = time.time()
     print('I started optimizing...')

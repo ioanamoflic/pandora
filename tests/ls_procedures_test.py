@@ -1,5 +1,6 @@
-from cirq2db import *
-from qualtran2db import *
+from cirq_to_pandora_util import *
+from qualtran_to_pandora_util import *
+from connection_util import *
 
 
 def test_ancillify_measure_and_reset():
@@ -30,10 +31,10 @@ def test_cnotify_XX(connection):
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.XX.on(q1, q2)])
     print(initial_circuit)
-    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit,
-                              last_id=0,
-                              add_margins=True,
-                              label='cnotify_XX')
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
+                                   last_id=0,
+                                   add_margins=True,
+                                   label='cnotify_XX')
 
     insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=100)
     cursor.execute(f"call cnotify_XX(100, 1)")
@@ -70,10 +71,10 @@ def test_cnotify_ZZ(connection):
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.ZZ.on(q1, q2)])
     print(initial_circuit)
-    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit,
-                              last_id=0,
-                              add_margins=True,
-                              label='cnotify_ZZ')
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
+                                   last_id=0,
+                                   add_margins=True,
+                                   label='cnotify_ZZ')
 
     insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=100)
     cursor.execute(f"call cnotify_ZZ(100, 1)")
@@ -134,10 +135,10 @@ def test_simplify_erasure_error(connection):
                                     cirq.Z.on(q2),
                                     cirq.XX.on(q1, q2)])
     print(initial_circuit)
-    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit,
-                              last_id=0,
-                              add_margins=True,
-                              label='see')
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
+                                   last_id=0,
+                                   add_margins=True,
+                                   label='see')
 
     insert_in_batches(db_tuples=db_tuples, connection=connection)
     cursor.execute(f"call simplify_erasure_error('XXPowGate', '_PauliZ', 100, 1)")
@@ -173,10 +174,10 @@ def test_simplify_two_parity_check(connection):
     initial_circuit = cirq.Circuit([cirq.XX.on(q1, q2),
                                     cirq.XX.on(q1, q2)])
     print(initial_circuit)
-    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit,
-                              last_id=0,
-                              add_margins=True,
-                              label='stpc')
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
+                                   last_id=0,
+                                   add_margins=True,
+                                   label='stpc')
 
     insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=100)
     cursor = connection.cursor()

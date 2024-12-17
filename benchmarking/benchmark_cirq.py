@@ -1,6 +1,6 @@
 import random
 import cirq
-from cirq2db import In, Out
+from pandora.cirq_to_pandora_util import In, Out
 
 
 @cirq.transformer
