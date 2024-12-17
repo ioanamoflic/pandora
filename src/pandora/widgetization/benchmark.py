@@ -1,7 +1,7 @@
 import csv
 import random
 import time
-from connection_util import *
+from pandora.connection_util import get_connection, get_edge_list, get_gate_types
 from union_find import UnionFindWidgetization, WidgetizationReturnCodes, BFSWidgetization, WidgetUtils
 
 from widget_plot import plot3dsurface

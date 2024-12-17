@@ -2,8 +2,8 @@ import random
 import time
 
 import igraph as ig
-from qualtran_to_pandora_util import *
-from connection_util import *
+from pandora.qualtran_to_pandora_util import *
+from pandora.connection_util import *
 import json
 
 sys.setrecursionlimit(1000000)
