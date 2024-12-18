@@ -3,9 +3,9 @@ import subprocess
 from cirq_to_pandora_util import *
 from qualtran_to_pandora_util import *
 from benchmarking.benchmark_adders import get_maslov_adder
-from connection_util import db_multi_threaded, refresh_all_stored_procedures, drop_and_replace_tables, insert_in_batches, \
+from connection_util import db_multi_threaded, refresh_all_stored_procedures, drop_and_replace_tables, \
+    insert_in_batches, \
     get_connection
-import cirq
 
 
 class Pandora:
@@ -81,23 +81,33 @@ class Pandora:
 
         self.decompose_toffolis()
 
+        myH = PandoraGateTranslator.HPowGate.value
+        myCX = PandoraGateTranslator.CXPowGate.value
+        myZPow = PandoraGateTranslator.ZPowGate.value
+        myPauliX = PandoraGateTranslator._PauliX.value
+        myPauliZ = PandoraGateTranslator._PauliZ.value
+
         print('...running optimization')
         thread_procedures = [
-            (1, f"CALL stopper({self.stop_after})"),
-            (8, f"CALL cancel_single_qubit_bernoulli('HPowGate', 'HPowGate', 10, 10000000)"),
-            (4, f"CALL cancel_single_qubit_bernoulli('ZPowGate**0.25', 'ZPowGate**-0.25', 10, 10000000)"),
-            (4, f"CALL cancel_single_qubit_bernoulli('_PauliX', '_PauliX', 10, 10000000)"),
-            (4, f"CALL cancel_two_qubit_bernoulli('CXPowGate', 'CXPowGate', 10, 10000000)"),
-            (4, f"CALL replace_two_qubit_bernoulli('ZPowGate**0.25', 'ZPowGate**0.25', 'ZPowGate**0.5', 0.5, 10, "
-                f"10000000)"),
-            (4, f"CALL replace_two_qubit_bernoulli('ZPowGate**-0.25', 'ZPowGate**-0.25', 'ZPowGate**-0.5', 0.5, 10, "
-                f"10000000)"),
-            (4, f"CALL commute_single_control_left_bernoulli('ZPowGate**0.25', 10, 10000000)"),
-            (4, f"CALL commute_single_control_left_bernoulli('ZPowGate**-0.25', 10, 10000000)"),
-            (4, f"CALL commute_single_control_left_bernoulli('ZPowGate**0.5', 10, 10000000)"),
-            (4, f"CALL commute_single_control_left_bernoulli('ZPowGate**-0.5', 10, 10000000)"),
+            (8, f"CALL cancel_single_qubit_bernoulli({myH}, {myH}, 1, 1, 10, 10000000)"),
+            (4, f"CALL cancel_single_qubit_bernoulli({myPauliZ}, {myPauliZ}, 1, 1, 10, 10000000)"),
+            (4, f"CALL cancel_single_qubit_bernoulli({myZPow}, {myZPow}, 0.25, -0.25, 10, 10000000)"),
+            (4, f"CALL cancel_single_qubit_bernoulli({myPauliX}, {myPauliX}, 1, 1, 10, 10000000)"),
+            (4, f"CALL cancel_two_qubit_bernoulli({myCX}, {myCX}, 1, 10, 10000000)"),
+            (4, f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, 10, 10000000)"),
+            (
+                4,
+                f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, 10, 10000000)"),
+            (
+                4,
+                f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, 10, 10000000)"),
+            (4, f"CALL commute_single_control_left_bernoulli({myZPow}, 0.25, 10, 10000000)"),
+            (4, f"CALL commute_single_control_left_bernoulli({myZPow}, -0.25, 10, 10000000)"),
+            (4, f"CALL commute_single_control_left_bernoulli({myZPow}, 0.5, 10, 10000000)"),
+            (4, f"CALL commute_single_control_left_bernoulli({myZPow}, -0.5, 10, 10000000)"),
             (4, f"CALL linked_hhcxhh_to_cx_bernoulli(10, 10000000)"),
-            (1, f"CALL linked_cx_to_hhcxhh_bernoulli(10, 10000000)"),
+            (4, f"CALL linked_cx_to_hhcxhh_bernoulli(10, 10000000)"),
+            (1, f"CALL stopper({self.stop_after})")
         ]
 
         # TODO: This should be cleaned
@@ -105,4 +115,3 @@ class Pandora:
         proc = subprocess.Popen([f'./readout_epyc.sh results_{m_bits}.csv'], shell=True, executable="/bin/bash")
         db_multi_threaded(thread_proc=thread_procedures)
         subprocess.Popen.kill(proc)
-
