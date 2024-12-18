@@ -1,12 +1,12 @@
 import subprocess
 
-from cirq_to_pandora_util import *
-from qualtran_to_pandora_util import *
-from benchmarking.benchmark_adders import get_maslov_adder
-from connection_util import db_multi_threaded, refresh_all_stored_procedures, drop_and_replace_tables, \
-    insert_in_batches, \
-    get_connection
+import cirq
 
+from .cirq_to_pandora_util import *
+from .qualtran_to_pandora_util import *
+from benchmarking.benchmark_adders import get_maslov_adder
+from .connection_util import db_multi_threaded, refresh_all_stored_procedures, drop_and_replace_tables, insert_in_batches, \
+    get_connection
 
 class Pandora:
 

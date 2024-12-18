@@ -30,6 +30,12 @@ The image may be built and run using:
 
 The resulting docker image will host the database on port 5432 on the docker image. The default password is `example` and can be changed in compose.yml. 
 
+## First Steps 
+
+TODO: More documentation
+* Install PostgreSQL and get a server running. For example, on MacOS you can use [this](https://www.atlassian.com/data/sql/how-to-start-a-postgresql-server-on-mac-os-x)
+* `python main.py adder 8` for building an 8-bit adder
+
 ## Widgetization
 
 <a href="./vis/index.html" target=_blank>Example</a>
