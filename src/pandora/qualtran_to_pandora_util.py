@@ -132,7 +132,7 @@ def phase_estimation(walk: QubitizationWalkOperator, m: int) -> cirq.OP_TREE:
     walk_controlled = walk.controlled(control_values=[1])
 
     m_qubits = [cirq.q(f'm_{i}') for i in range(m)]
-    # state_prep = cirq.StatePreparationChannel(get_resource_state(m), name='chi_m')
+    state_prep = cirq.StatePreparationChannel(get_resource_state(m), name='chi_m')
 
     # yield state_prep.on(*m_qubits)
     yield walk_controlled.on_registers(**walk_regs, control=m_qubits[0])
@@ -179,6 +179,9 @@ def get_qpe_of_1d_ising_model(num_sites=1, eps=1e-5, m_bits=1) -> cirq.Circuit:
 
     final_ops = []
     for op in qpe_circuit.all_operations():
+        if isinstance(op.gate, cirq.GlobalPhaseGate):
+            print(f'Encountered GlobalPhaseGate with qubits = {op.qubits}')
+            continue
         if isinstance(op.gate, BloqAsCirqGate):
             if isinstance(op.gate.bloq, TwoBitCSwap):
                 final_ops = final_ops + decompose_fredkin(op)

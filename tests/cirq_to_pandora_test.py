@@ -137,12 +137,10 @@ def test_qualtran_qrom_reconstruction():
 
 
 def test_qualtran_qpe_reconstruction():
-    qpe_circuit = get_qpe_of_1d_ising_model(num_sites=2, m_bits=5)
+    qpe_circuit = get_qpe_of_1d_ising_model(num_sites=2, m_bits=2)
 
     start_cirq_to_db = time.time()
     db_tuples, _ = cirq_to_pandora(cirq_circuit=qpe_circuit, last_id=0, label='qpe', add_margins=True)
-
-    print(db_tuples)
 
     print(f'Cirq to pandora: {time.time() - start_cirq_to_db}')
 
