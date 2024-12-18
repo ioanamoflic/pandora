@@ -22,8 +22,8 @@ class Pandora:
         """
         Creates the Pandora database table from scratch and updates all stored procedures.
         """
-        drop_and_replace_tables(self.connection, clean=True)
-        refresh_all_stored_procedures(self.connection)
+        drop_and_replace_tables(self.connection, clean=True, verbose=True)
+        refresh_all_stored_procedures(self.connection, verbose=True)
 
     def decompose_toffolis(self):
         """

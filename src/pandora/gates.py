@@ -73,25 +73,25 @@ class PandoraGate:
 
 class PandoraGateWrapper:
     def __init__(self,
-                 pandora_gate_obj: PandoraGate,
+                 pandora_gate: PandoraGate,
                  q1: int = None,
                  q2: int = None,
                  q3: int = None,
                  moment: int = -1):
 
-        self.pandora_gate = pandora_gate_obj
+        self.pandora_gate = pandora_gate
         self.moment = moment
         self.q1 = q1
         self.q2 = q2
         self.q3 = q3
         # pre-compute the ids of previous gates
-        self.prev_id1 = self.get_neighbour_gate_id(pandora_gate_obj.prev_q1)
-        self.prev_id2 = self.get_neighbour_gate_id(pandora_gate_obj.prev_q2)
-        self.prev_id3 = self.get_neighbour_gate_id(pandora_gate_obj.prev_q3)
+        self.prev_id1 = self.get_neighbour_gate_id(pandora_gate.prev_q1)
+        self.prev_id2 = self.get_neighbour_gate_id(pandora_gate.prev_q2)
+        self.prev_id3 = self.get_neighbour_gate_id(pandora_gate.prev_q3)
         # pre-compute the ids of next gates
-        self.next_id1 = self.get_neighbour_gate_id(pandora_gate_obj.next_q1)
-        self.next_id2 = self.get_neighbour_gate_id(pandora_gate_obj.next_q2)
-        self.next_id3 = self.get_neighbour_gate_id(pandora_gate_obj.next_q3)
+        self.next_id1 = self.get_neighbour_gate_id(pandora_gate.next_q1)
+        self.next_id2 = self.get_neighbour_gate_id(pandora_gate.next_q2)
+        self.next_id3 = self.get_neighbour_gate_id(pandora_gate.next_q3)
 
     def __str__(self):
         return f'{self.pandora_gate.type}({self.q1}, {self.q2}, {self.q3})'

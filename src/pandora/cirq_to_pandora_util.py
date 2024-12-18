@@ -2,7 +2,10 @@ from typing import Optional
 import cirq
 
 from pandora.exceptions import *
-from pandora.gate_translator import In, Out, PandoraGateTranslator, TWO_QUBIT_GATES, SINGLE_QUBIT_GATES, MAX_QUBITS_PER_GATE
+from pandora.gate_translator import In, Out, PandoraGateTranslator, \
+    TWO_QUBIT_GATES, SINGLE_QUBIT_GATES, MAX_QUBITS_PER_GATE, \
+    REQUIRES_ROTATION, REQUIRES_EXPONENT
+
 from pandora.gates import PandoraGate, PandoraGateWrapper
 
 
@@ -41,31 +44,49 @@ def cirq_operation_to_pandora_gate(operation: cirq.Operation) -> PandoraGate:
     # boolean value which tells whether the operation is classically controlled or not
     is_classically_controlled = len(operation.classical_controls) > 0
     # gate object in cirq
-    gate = operation.without_classical_controls().gate
+    cirq_gate = operation.without_classical_controls().gate
+
     # CNOT direction (control up or down)
     switch = False
     if len(operation.qubits) == 2:
         switch = operation.qubits[0] < operation.qubits[1]
 
     # cirq gate class name will be used by the pandora gate translator
-    if isinstance(gate, cirq.MeasurementGate):
-        pandora_gate_code, measurement_key = PandoraGateTranslator.M.value, gate.key
+    if isinstance(cirq_gate, cirq.MeasurementGate):
+        pandora_gate_code, measurement_key = PandoraGateTranslator.M.value, cirq_gate.key
     else:
-        if gate.__class__.__name__ not in list(PandoraGateTranslator.__members__):
-            print(gate.__class__.__name__)
-            print(gate.bloq)
+        """
+            Translation between Cirq and Pandora:
+            * get the class name from cirq
+            * get a list of all the members of the translator
+            * check that the cirq class name is supported by the translator
+            * by convention the translated name uses the cirq class name. e.g. cirq._PauliX -> translator._PauliX
+        """
+        cirq_class_name = cirq_gate.__class__.__name__
+        if cirq_class_name not in list(PandoraGateTranslator.__members__):
+            print(cirq_class_name)
+            print(cirq_gate.bloq)
             raise CirqGateHasNoPandoraEquivalent
-        enum_value = eval(f'PandoraGateTranslator.{gate.__class__.__name__}.value')
+
+        # Build the translation starting from the cirq class name
+        enum_value = eval(f'PandoraGateTranslator.{cirq_class_name}.value')
         pandora_gate_code, measurement_key = enum_value, None
 
     parameter = 0
     global_shift = 0
-    if isinstance(gate, (cirq.ops.common_gates.Rz, cirq.ops.common_gates.Ry, cirq.ops.common_gates.Rx)):
-        parameter = gate._rads
-    if isinstance(gate, (cirq.HPowGate, cirq.XPowGate, cirq.YPowGate, cirq.ZPowGate,
-                         cirq.CXPowGate, cirq.CZPowGate, cirq.CCXPowGate)):
-        parameter = gate.exponent
-        global_shift = gate.global_shift
+
+    if pandora_gate_code in REQUIRES_ROTATION:
+        parameter = cirq_gate._rads
+    if pandora_gate_code in REQUIRES_EXPONENT:
+        parameter = cirq_gate.exponent
+        global_shift = cirq_gate.global_shift
+
+    # if isinstance(cirq_gate, (cirq.ops.common_gates.Rz, cirq.ops.common_gates.Ry, cirq.ops.common_gates.Rx)):
+    #
+    # if isinstance(cirq_gate, (cirq.HPowGate, cirq.XPowGate, cirq.YPowGate, cirq.ZPowGate,
+    #                      cirq.CXPowGate, cirq.CZPowGate, cirq.CCXPowGate)):
+    #     parameter = cirq_gate.exponent
+    #     global_shift = cirq_gate.global_shift
 
     return PandoraGate(gate_code=pandora_gate_code,
                        gate_parameter=parameter,
@@ -82,7 +103,7 @@ def wrap_pandora_gates(pandora_gates: list[PandoraGate]) -> dict[int, PandoraGat
     """
     pandora_gate_id_map = {}
     for gate in pandora_gates:
-        wrapped = PandoraGateWrapper(pandora_gate_obj=gate)
+        wrapped = PandoraGateWrapper(pandora_gate=gate)
         if gate.type == PandoraGateTranslator.In.value:
             wrapped.moment = 0
         pandora_gate_id_map[gate.id] = wrapped
