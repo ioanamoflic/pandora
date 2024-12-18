@@ -129,7 +129,7 @@ if __name__ == "__main__":
                 # print(f"Time overlap = {time.time() - start_overlap}")
                 times.append(end_time - start_time)
 
-                wutils.generate_d3_json(bfsw)
+                wutils.generate_d3_json(bfsw, file_path=".")
 
         print(ret_code_stats)
 

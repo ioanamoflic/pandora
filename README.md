@@ -32,4 +32,4 @@ The resulting docker image will host the database on port 5432 on the docker ima
 
 ## Widgetization
 
-<a href="./widgetization/index.html" target=_blank>Example</a>
+<a href="./vis/index.html" target=_blank>Example</a>

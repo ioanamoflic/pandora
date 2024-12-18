@@ -229,7 +229,7 @@ class UnionFindWidgetization:
 
 
 class WidgetUtils:
-    def generate_d3_json(self, widgetizer):
+    def generate_d3_json(self, widgetizer, file_path=""):
         json_dict = {}
         nodes = []
         links = []
@@ -246,7 +246,7 @@ class WidgetUtils:
         json_dict["links"] = links
 
         json_data = json.dumps(json_dict)
-        with open("circuit.json", "w") as f:
+        with open(f"{file_path}/circuit.json", "w") as f:
             f.write(json_data)
 
     def build_pandora(self, bit_size=3000):
