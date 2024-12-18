@@ -151,7 +151,7 @@ def reset_database_id(connection,
     If there are no elements in table table_name, the starting index is set to 0.
     If large_buffer_value is non-null, reset the id to this value.
 
-    TODO: explain why we need this
+    TODO: Set ID seq to MAXid + 1 - Urgent!
     """
     cursor = connection.cursor()
 
@@ -159,7 +159,7 @@ def reset_database_id(connection,
         cursor.execute(f"ALTER SEQUENCE {table_name}_id_seq RESTART WITH {large_buffer_value}")
         return
 
-    cursor.execute(f"ALTER SEQUENCE {table_name}_id_seq RESTART WITH 0")
+    cursor.execute(f"ALTER SEQUENCE {table_name}_id_seq RESTART WITH 1")
 
 
 def insert_in_batches(pandora_gates: list[PandoraGate],
@@ -213,7 +213,7 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
         connection.commit()
 
     if reset_id is True:
-        reset_database_id(cursor, table_name=table_name)
+        reset_database_id(connection, table_name=table_name)
 
 
 def remove_io_gates_from_circuit(circuit: cirq.Circuit) -> cirq.Circuit:

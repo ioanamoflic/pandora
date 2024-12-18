@@ -14,7 +14,7 @@ if __name__ == "__main__":
         n_bits = [int(sys.argv[2])]
 
         for bits in n_bits:
-            pandora.benchmark_maslov_adder(bits)
+            pandora.build_maslov_adder(bits)
 
     elif sys.argv[1] == "tket":
         print("tket")

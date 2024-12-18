@@ -69,7 +69,7 @@ class Pandora:
 
         self.decompose_toffolis()
 
-    def benchmark_maslov_adder(self, m_bits):
+    def build_maslov_adder(self, m_bits):
         self.build_pandora()
 
         db_tuples = get_maslov_adder(conn=self.connection, n_bits=m_bits)
