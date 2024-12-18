@@ -77,7 +77,7 @@ class Pandora:
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit',
-                          reset_id=True)
+                          reset_id=False)
 
         self.decompose_toffolis()
 

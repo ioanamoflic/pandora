@@ -188,7 +188,7 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
     batches = create_batches(pandora_gates, batch_size=int(batch_size))
     cursor = connection.cursor()
 
-    mogrify_arg, insert_query = pandora_gates[0].get_insert_query(table_name=table_name)
+    # mogrify_arg, insert_query = pandora_gates[0].get_insert_query(table_name=table_name)
     for i, batch in enumerate(batches):
         # TODO fix this to avid hard coding
         #     args = ','.join(cursor.mogrify(mogrify_arg, pandora_gate.to_tuple()).decode('utf-8')

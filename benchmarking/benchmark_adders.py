@@ -262,7 +262,7 @@ def markov_file_to_tuples(url, gate_id, label):
                 setattr(gate, f'next_q{gates_on_qubits[i] % 10 + 1}', gate_id * 10)
         gate_id += 1
 
-    return [t.to_tuple() for t in db_tuples], gate_id
+    return db_tuples, gate_id
 
 def get_maslov_adder(conn, n_bits):
     url = f'https://raw.githubusercontent.com/njross/optimizer/master/QFT_and_Adders/Adder{n_bits}_before'
