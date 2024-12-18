@@ -81,37 +81,35 @@ class Pandora:
 
         self.decompose_toffolis()
 
-        myH = PandoraGateTranslator.HPowGate.value
-        myCX = PandoraGateTranslator.CXPowGate.value
-        myZPow = PandoraGateTranslator.ZPowGate.value
-        myPauliX = PandoraGateTranslator._PauliX.value
-        myPauliZ = PandoraGateTranslator._PauliZ.value
-
-        print('...running optimization')
-        thread_procedures = [
-            (8, f"CALL cancel_single_qubit_bernoulli({myH}, {myH}, 1, 1, 10, 10000000)"),
-            (4, f"CALL cancel_single_qubit_bernoulli({myPauliZ}, {myPauliZ}, 1, 1, 10, 10000000)"),
-            (4, f"CALL cancel_single_qubit_bernoulli({myZPow}, {myZPow}, 0.25, -0.25, 10, 10000000)"),
-            (4, f"CALL cancel_single_qubit_bernoulli({myPauliX}, {myPauliX}, 1, 1, 10, 10000000)"),
-            (4, f"CALL cancel_two_qubit_bernoulli({myCX}, {myCX}, 1, 10, 10000000)"),
-            (4, f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, 10, 10000000)"),
-            (
-                4,
-                f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, 10, 10000000)"),
-            (
-                4,
-                f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, 10, 10000000)"),
-            (4, f"CALL commute_single_control_left_bernoulli({myZPow}, 0.25, 10, 10000000)"),
-            (4, f"CALL commute_single_control_left_bernoulli({myZPow}, -0.25, 10, 10000000)"),
-            (4, f"CALL commute_single_control_left_bernoulli({myZPow}, 0.5, 10, 10000000)"),
-            (4, f"CALL commute_single_control_left_bernoulli({myZPow}, -0.5, 10, 10000000)"),
-            (4, f"CALL linked_hhcxhh_to_cx_bernoulli(10, 10000000)"),
-            (4, f"CALL linked_cx_to_hhcxhh_bernoulli(10, 10000000)"),
-            (1, f"CALL stopper({self.stop_after})")
-        ]
-
+        # myH = PandoraGateTranslator.HPowGate.value
+        # myCX = PandoraGateTranslator.CXPowGate.value
+        # myZPow = PandoraGateTranslator.ZPowGate.value
+        # myPauliX = PandoraGateTranslator._PauliX.value
+        # myPauliZ = PandoraGateTranslator._PauliZ.value
+        # print('...running optimization')
+        # thread_procedures = [
+        #     (8, f"CALL cancel_single_qubit_bernoulli({myH}, {myH}, 1, 1, 10, 10000000)"),
+        #     (4, f"CALL cancel_single_qubit_bernoulli({myPauliZ}, {myPauliZ}, 1, 1, 10, 10000000)"),
+        #     (4, f"CALL cancel_single_qubit_bernoulli({myZPow}, {myZPow}, 0.25, -0.25, 10, 10000000)"),
+        #     (4, f"CALL cancel_single_qubit_bernoulli({myPauliX}, {myPauliX}, 1, 1, 10, 10000000)"),
+        #     (4, f"CALL cancel_two_qubit_bernoulli({myCX}, {myCX}, 1, 10, 10000000)"),
+        #     (4, f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, 10, 10000000)"),
+        #     (
+        #         4,
+        #         f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, 10, 10000000)"),
+        #     (
+        #         4,
+        #         f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, 10, 10000000)"),
+        #     (4, f"CALL commute_single_control_left_bernoulli({myZPow}, 0.25, 10, 10000000)"),
+        #     (4, f"CALL commute_single_control_left_bernoulli({myZPow}, -0.25, 10, 10000000)"),
+        #     (4, f"CALL commute_single_control_left_bernoulli({myZPow}, 0.5, 10, 10000000)"),
+        #     (4, f"CALL commute_single_control_left_bernoulli({myZPow}, -0.5, 10, 10000000)"),
+        #     (4, f"CALL linked_hhcxhh_to_cx_bernoulli(10, 10000000)"),
+        #     (4, f"CALL linked_cx_to_hhcxhh_bernoulli(10, 10000000)"),
+        #     (1, f"CALL stopper({self.stop_after})")
+        # ]
         # TODO: This should be cleaned
         #  There is a collector.py the results branch
-        proc = subprocess.Popen([f'./readout_epyc.sh results_{m_bits}.csv'], shell=True, executable="/bin/bash")
-        db_multi_threaded(thread_proc=thread_procedures)
-        subprocess.Popen.kill(proc)
+        # proc = subprocess.Popen([f'./readout_epyc.sh results_{m_bits}.csv'], shell=True, executable="/bin/bash")
+        # db_multi_threaded(thread_proc=thread_procedures)
+        # subprocess.Popen.kill(proc)
