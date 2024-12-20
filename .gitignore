@@ -1,3 +1,6 @@
 *.err
 *.out
+pgdata/
+pgrun/
+trace*
 circuitsharing/
