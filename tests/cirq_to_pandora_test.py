@@ -1,19 +1,10 @@
+import csv
 import time
 
-import numpy as np
-import cirq
-
-from qualtran.bloqs.mod_arithmetic import ModAddK
-from qualtran.bloqs.basic_gates import TwoBitCSwap
-from qualtran.cirq_interop import BloqAsCirqGate
-from qualtran._infra.adjoint import Adjoint
-from qualtran.bloqs.chemistry.hubbard_model.qubitization import get_walk_operator_for_hubbard_model
-
 import benchmarking.benchmark_cirq
-from pandora.cirq_to_pandora_util import cirq_to_pandora, pandora_to_cirq
-from pandora.gate_translator import In, Out
-from pandora.qualtran_to_pandora_util import get_adder, get_qrom, get_qpe_of_1d_ising_model, phase_estimation, keep, \
-    decompose_qualtran_bloq_gate, decompose_fredkin
+from pandora.qualtran_to_pandora_util import get_adder, get_qrom, get_qpe_of_1d_ising_model
+from pandora.connection_util import *
+from pandora.plot_utils import plot3dsurface
 
 
 def test_random_reconstruction(n_circuits=100):
@@ -137,84 +128,71 @@ def test_qualtran_qrom_reconstruction():
 
 
 def test_qualtran_qpe_reconstruction():
-    qpe_circuit = get_qpe_of_1d_ising_model(num_sites=2, m_bits=2)
+    n_sites = [1, 2, 3]
+    m_bits = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-    start_cirq_to_db = time.time()
-    db_tuples, _ = cirq_to_pandora(cirq_circuit=qpe_circuit, last_id=0, label='qpe', add_margins=True)
+    n_tup = []
+    times = []
+    all_sites = []
+    all_bits = []
+    for n_s in n_sites:
+        for bits in m_bits:
+            print(f'Reached {n_s} and {bits}')
+            start_global = time.time()
+            qpe_circuit = get_qpe_of_1d_ising_model(num_sites=n_s, m_bits=bits)
+            db_tuples, _ = cirq_to_pandora(cirq_circuit=qpe_circuit, last_id=0, label='qpe', add_margins=True)
 
-    print(f'Cirq to pandora: {time.time() - start_cirq_to_db}')
+            connection = get_connection()
+            drop_and_replace_tables(connection=connection, clean=True)
+            refresh_all_stored_procedures(connection=connection)
+            reset_database_id(connection, table_name='linked_circuit', large_buffer_value=1000)
+            insert_in_batches(pandora_gates=db_tuples,
+                              connection=connection,
+                              batch_size=1000000,
+                              table_name='linked_circuit')
 
-    start_db_to_cirq = time.time()
-    reconstructed_circuit = pandora_to_cirq(pandora_gates=db_tuples)
-    print(f'Pandora to cirq: {time.time() - start_db_to_cirq}')
+            n_tup.append(len(db_tuples))
+            all_sites.append(n_s)
+            all_bits.append(bits)
+            times.append(time.time() - start_global)
 
-    # remove classical controls
-    cl_ctrl_free_initial = cirq.Circuit()
-    for op in qpe_circuit.all_operations():
-        cl_ctrl_free_initial.append(op.without_classical_controls())
+    rows = zip(all_sites, all_bits, n_tup, times)
+    with open('qpe_bench.csv', 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(['n_sites', 'n_bits', 'gate_count', 'time'])
+        for row in rows:
+            writer.writerow(row)
 
-    # remove In/Out gates from reconstruction
-    io_free_reconstructed = cirq.Circuit()
-    for op in reconstructed_circuit.all_operations():
-        if not isinstance(op.gate, In) and not isinstance(op.gate, Out):
-            io_free_reconstructed.append(op)
-
-    # use the same qubits for both circuits
-    qubit_map = dict(
-        zip(
-            sorted(io_free_reconstructed.all_qubits()),
-            sorted(cl_ctrl_free_initial.all_qubits())
-        )
-    )
-    io_free_reconstructed = io_free_reconstructed.transform_qubits(qubit_map=qubit_map)
-
-    assert len(list(cl_ctrl_free_initial.all_operations())) == len(list(io_free_reconstructed.all_operations()))
-    for op_1, op_2 in zip(cl_ctrl_free_initial.all_operations(), io_free_reconstructed.all_operations()):
-        assert type(op_1) == type(op_2)
-    print('Test passed!')
-
-
-def test_qualtran_hubbard_reconstruction():
-    # TODO fix this
-    x_dim, y_dim = 2, 2
-    t = 1
-    mu = 4 * t
-    N = x_dim * y_dim * 2
-    qlambda = 2 * N * t + (N * mu) // 2
-    delta_E = t / 100
-    m_bits = int(np.ceil(np.log2(qlambda * np.pi * np.sqrt(2) / delta_E)))
-    walk = get_walk_operator_for_hubbard_model(x_dim, y_dim, t, mu)
-    circuit = cirq.Circuit(phase_estimation(walk, m=m_bits))
-    context = cirq.DecompositionContext(qubit_manager=cirq.SimpleQubitManager())
-    hubbard_circuit = cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
-
-    final_ops = []
-    for op in hubbard_circuit.all_operations():
-        if isinstance(op.gate, Adjoint):
-            sub_bloq = op.gate.subbloq
-            my_ops = list(decompose_qualtran_bloq_gate(sub_bloq))
-            final_ops = final_ops + my_ops
-        if isinstance(op.gate, ModAddK):
-            # TODO
-            pass
-        if isinstance(op.gate, BloqAsCirqGate):
-            if isinstance(op.gate.bloq, TwoBitCSwap):
-                final_ops = final_ops + decompose_fredkin(op)
-            else:
-                my_ops = list(decompose_qualtran_bloq_gate(op.gate.bloq))
-                final_ops = final_ops + my_ops
-        else:
-            final_ops.append(op)
-
-    print(f'Number of ops: {len(final_ops)}')
-
-    start_create = time.time()
-    hubbard_circuit = cirq.Circuit(final_ops)
-    print(f'Time to create: {time.time() - start_create}')
-
-    start_cirq_to_pandora = time.time()
-    db_tuples, _ = cirq_to_pandora(cirq_circuit=hubbard_circuit, last_id=0, label='qrom', add_margins=True)
-    print(f'Time to cirq_to_pandora: {time.time() - start_cirq_to_pandora}')
+    # start_db_to_cirq = time.time()
+    # reconstructed_circuit = pandora_to_cirq(pandora_gates=db_tuples)
+    # print(f'Pandora to cirq: {time.time() - start_db_to_cirq}')
+    #
+    # # remove classical controls
+    # cl_ctrl_free_initial = cirq.Circuit()
+    # for op in qpe_circuit.all_operations():
+    #     cl_ctrl_free_initial.append(op.without_classical_controls())
+    #
+    # # remove In/Out gates from reconstruction
+    # io_free_reconstructed = cirq.Circuit()
+    # for op in reconstructed_circuit.all_operations():
+    #     if not isinstance(op.gate, In) and not isinstance(op.gate, Out):
+    #         io_free_reconstructed.append(op)
+    #
+    # # use the same qubits for both circuits
+    # qubit_map = dict(
+    #     zip(
+    #         sorted(io_free_reconstructed.all_qubits()),
+    #         sorted(cl_ctrl_free_initial.all_qubits())
+    #     )
+    # )
+    # io_free_reconstructed = io_free_reconstructed.transform_qubits(qubit_map=qubit_map)
+    #
+    # cl_free_ops = cl_ctrl_free_initial.all_operations()
+    # io_free_ops = io_free_reconstructed.all_operations()
+    # assert len(list(cl_free_ops)) == len(list(io_free_ops))
+    # for op_1, op_2 in zip(cl_free_ops, io_free_ops):
+    #     assert type(op_1) == type(op_2)
+    # print('Test passed!')
 
 
 if __name__ == "__main__":
@@ -223,4 +201,4 @@ if __name__ == "__main__":
     test_qualtran_adder_reconstruction()
     test_qualtran_qrom_reconstruction()
     test_qualtran_qpe_reconstruction()
-    # test_qualtran_hubbard_reconstruction()
+    plot3dsurface()

@@ -12,10 +12,9 @@ from qualtran._infra.gate_with_registers import get_named_qubits
 from qualtran.bloqs.qubitization import QubitizationWalkOperator
 from qualtran.bloqs.qubitization.qubitization_walk_operator_test import get_walk_operator_for_1d_ising_model
 
-
 sys.setrecursionlimit(10000)  # Increase recursion limit from default since adder bloq has a recursive implementation.
 
-more_general_gate_set = cirq.Gateset(
+cirq_and_bloq_gate_set = cirq.Gateset(
     cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel,
     cirq.GlobalPhaseGate, cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
     cirq.CZPowGate, cirq.CXPowGate, cirq.ZZPowGate, cirq.XXPowGate, cirq.CCXPowGate,
@@ -25,16 +24,23 @@ more_general_gate_set = cirq.Gateset(
     BloqAsCirqGate,
 )
 
+pandora_ingestible_gate_set = cirq.Gateset(
+    cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel,
+    cirq.GlobalPhaseGate, cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
+    cirq.CZPowGate, cirq.CXPowGate, cirq.ZZPowGate, cirq.XXPowGate, cirq.CCXPowGate,
+    cirq.X, cirq.Y, cirq.Z,
+)
+
 
 def keep(op: cirq.Operation):
     gate = op.without_classical_controls().gate
-    ret = gate in more_general_gate_set
+    ret = gate in cirq_and_bloq_gate_set
     if isinstance(gate, cirq.ops.raw_types._InverseCompositeGate):
-        ret |= op.gate._original in more_general_gate_set
+        ret |= op.gate._original in cirq_and_bloq_gate_set
     return ret
 
 
-def get_clifford_plus_t_cirq_circuit_for_bloq(bloq: Bloq):
+def get_cirq_circuit_for_bloq(bloq: Bloq):
     # Get a cirq circuit containing only this operation.
     circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts()))
     # Decompose the operation until all gates are in the target gate set.
@@ -42,13 +48,14 @@ def get_clifford_plus_t_cirq_circuit_for_bloq(bloq: Bloq):
     return cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
 
 
-def assert_circuit_in_clifford_plus_t(circuit: cirq.Circuit):
+def assert_circuit_is_decomposable(circuit: cirq.Circuit):
     # Assert that all operations in the decomposed circuit are part of the target gate set.
-    assert all(op.without_classical_controls() in more_general_gate_set for op in circuit.all_operations())
+    assert all(op.without_classical_controls() in cirq_and_bloq_gate_set for op in circuit.all_operations())
 
 
-def assert_circuit_has_no_bloqs(circuit: cirq.Circuit):
-    assert all(type(op) != Bloq and type(op) != BloqAsCirqGate for op in circuit.all_operations())
+def assert_circuit_is_pandora_ingestible(circuit: cirq.Circuit):
+    # Assert that all operations in the decomposed circuit are part of the target gate set.
+    assert all(op.without_classical_controls() in pandora_ingestible_gate_set for op in circuit.all_operations())
 
 
 def decompose_fredkin(op: cirq.Operation):
@@ -82,9 +89,34 @@ def decompose_qualtran_bloq_gate(bloq: Bloq):
                 fully_decomposed_ops.append(cirq.X.on(op.qubits[0]))
             elif isinstance(op.gate.bloq, TwoBitCSwap):
                 fully_decomposed_ops = fully_decomposed_ops + decompose_fredkin(op)
-            else:
-                fully_decomposed_ops.append(op)
+        else:
+            fully_decomposed_ops.append(op)
     return fully_decomposed_ops
+
+
+def get_pandora_compatible_circuit(circuit: cirq.Circuit, decompose_from_high_level=True) -> cirq.Circuit:
+    """
+    Takes a Cirq circuit as input and outputs a logically equivalent circuit with operations acting on at most three
+    qubits which can be ingested into Pandora.
+    """
+    if decompose_from_high_level:
+        context = cirq.DecompositionContext(qubit_manager=cirq.SimpleQubitManager())
+        circuit = cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
+
+    final_ops = []
+    for op in circuit.all_operations():
+        # TODO: should we ignore GlobalPhaseGate?
+        if isinstance(op.gate, cirq.GlobalPhaseGate):
+            print(f'Encountered GlobalPhaseGate with qubits = {op.qubits}')
+            continue
+        if isinstance(op.gate, BloqAsCirqGate):
+            atomic_ops = list(decompose_qualtran_bloq_gate(op.gate.bloq))
+            final_ops = final_ops + atomic_ops
+        else:
+            final_ops.append(op)
+
+    decomposed_circuit = cirq.Circuit(final_ops)
+    return decomposed_circuit
 
 
 def get_resource_state(m: int):
@@ -146,53 +178,33 @@ def phase_estimation(walk: QubitizationWalkOperator, m: int) -> cirq.OP_TREE:
 
 
 def get_adder(n_bits) -> cirq.Circuit:
+    """
+    Returns a decomposed Qualtran Adder into a Pandora compatible gate format.
+    """
     bloq = Add(QUInt(n_bits))
-    clifford_t_circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
-    assert_circuit_in_clifford_plus_t(clifford_t_circuit)
+    clifford_t_circuit = get_cirq_circuit_for_bloq(bloq)
+    assert_circuit_is_pandora_ingestible(clifford_t_circuit)
     return clifford_t_circuit
 
 
 def get_qrom(data) -> cirq.Circuit:
+    """
+    Returns a decomposed Qualtran QROM into a Pandora compatible gate format.
+    """
     bloq = QROM.build_from_data(data)
-    qrom_circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
-    final_ops = []
-    for op in qrom_circuit.all_operations():
-        if isinstance(op.gate, BloqAsCirqGate):
-            if isinstance(op.gate.bloq, TwoBitCSwap):
-                final_ops = final_ops + decompose_fredkin(op)
-            else:
-                my_ops = list(decompose_qualtran_bloq_gate(op.gate.bloq))
-                final_ops = final_ops + my_ops
-        else:
-            final_ops.append(op)
-
-    qrom_circuit = cirq.Circuit(final_ops)
-    return qrom_circuit
+    qrom_circuit = get_cirq_circuit_for_bloq(bloq)
+    return get_pandora_compatible_circuit(circuit=qrom_circuit, decompose_from_high_level=False)
 
 
 def get_qpe_of_1d_ising_model(num_sites=1, eps=1e-5, m_bits=1) -> cirq.Circuit:
-    walk_op, _ = get_walk_operator_for_1d_ising_model(num_sites, eps)
+    """
+    Returns a decomposed Qualtran QPE of a 1d ising model into a Pandora compatible gate format.
+
+    Implementation from https://github.com/quantumlib/Qualtran/blob/main/qualtran/bloqs/phase_estimation/phase_estimation_of_quantum_walk.ipynb
+    """
+    walk_op = get_walk_operator_for_1d_ising_model(num_sites, eps)
     circuit = cirq.Circuit(phase_estimation(walk_op, m=m_bits))
-
-    context = cirq.DecompositionContext(qubit_manager=cirq.SimpleQubitManager())
-    qpe_circuit = cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
-
-    final_ops = []
-    for op in qpe_circuit.all_operations():
-        if isinstance(op.gate, cirq.GlobalPhaseGate):
-            print(f'Encountered GlobalPhaseGate with qubits = {op.qubits}')
-            continue
-        if isinstance(op.gate, BloqAsCirqGate):
-            if isinstance(op.gate.bloq, TwoBitCSwap):
-                final_ops = final_ops + decompose_fredkin(op)
-            else:
-                my_ops = list(decompose_qualtran_bloq_gate(op.gate.bloq))
-                final_ops = final_ops + my_ops
-        else:
-            final_ops.append(op)
-
-    decomposed_circuit = cirq.Circuit(final_ops)
-    return decomposed_circuit
+    return get_pandora_compatible_circuit(circuit=circuit, decompose_from_high_level=True)
 
 
 def get_qpe_of_2d_hubbard_model() -> cirq.Circuit:

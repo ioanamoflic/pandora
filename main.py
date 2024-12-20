@@ -9,12 +9,19 @@ if __name__ == "__main__":
 
     pandora = Pandora(max_time=3600)
 
+    # this needs multiple virtual machines, each with its own main call
     if sys.argv[1] == "adder":
-        # n_bits = [8, 16, 32, 64, 128, 256, 512, 1024, 2048]
-        n_bits = [int(sys.argv[2])]
-
-        for bits in n_bits:
-            pandora.build_maslov_adder(bits)
-
-    elif sys.argv[1] == "tket":
-        print("tket")
+        n_bits = int(sys.argv[2])
+        pandora.build_qualtran_adder(n_bits)
+    if sys.argv[1] == "fh":
+        N = int(sys.argv[2])
+        pandora.build_fh_circuit(N=N)
+    if sys.argv[1] == "mg":
+        pandora.build_mg_coating_walk_op()
+    if sys.argv[1] == "o3":
+        pandora.build_cyclic_o3()
+    if sys.argv[1] == "hc":
+        pandora.build_hc_circuit()
+    if sys.argv[1] == "ising":
+        N = int(sys.argv[2])
+        pandora.build_traverse_ising(N=N)

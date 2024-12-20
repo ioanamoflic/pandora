@@ -1,12 +1,11 @@
-import subprocess
-
-import cirq
-
-from .cirq_to_pandora_util import *
 from .qualtran_to_pandora_util import *
 from benchmarking.benchmark_adders import get_maslov_adder
-from .connection_util import db_multi_threaded, refresh_all_stored_procedures, drop_and_replace_tables, insert_in_batches, \
-    get_connection
+
+from pandora.connection_util import *
+from pandora.qualtran_to_pandora_util import get_pandora_compatible_circuit
+
+from pyliqtr_to_pandora_util import *
+
 
 class Pandora:
 
@@ -81,35 +80,88 @@ class Pandora:
 
         self.decompose_toffolis()
 
-        # myH = PandoraGateTranslator.HPowGate.value
-        # myCX = PandoraGateTranslator.CXPowGate.value
-        # myZPow = PandoraGateTranslator.ZPowGate.value
-        # myPauliX = PandoraGateTranslator._PauliX.value
-        # myPauliZ = PandoraGateTranslator._PauliZ.value
-        # print('...running optimization')
-        # thread_procedures = [
-        #     (8, f"CALL cancel_single_qubit_bernoulli({myH}, {myH}, 1, 1, 10, 10000000)"),
-        #     (4, f"CALL cancel_single_qubit_bernoulli({myPauliZ}, {myPauliZ}, 1, 1, 10, 10000000)"),
-        #     (4, f"CALL cancel_single_qubit_bernoulli({myZPow}, {myZPow}, 0.25, -0.25, 10, 10000000)"),
-        #     (4, f"CALL cancel_single_qubit_bernoulli({myPauliX}, {myPauliX}, 1, 1, 10, 10000000)"),
-        #     (4, f"CALL cancel_two_qubit_bernoulli({myCX}, {myCX}, 1, 10, 10000000)"),
-        #     (4, f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, 10, 10000000)"),
-        #     (
-        #         4,
-        #         f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, 10, 10000000)"),
-        #     (
-        #         4,
-        #         f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, 10, 10000000)"),
-        #     (4, f"CALL commute_single_control_left_bernoulli({myZPow}, 0.25, 10, 10000000)"),
-        #     (4, f"CALL commute_single_control_left_bernoulli({myZPow}, -0.25, 10, 10000000)"),
-        #     (4, f"CALL commute_single_control_left_bernoulli({myZPow}, 0.5, 10, 10000000)"),
-        #     (4, f"CALL commute_single_control_left_bernoulli({myZPow}, -0.5, 10, 10000000)"),
-        #     (4, f"CALL linked_hhcxhh_to_cx_bernoulli(10, 10000000)"),
-        #     (4, f"CALL linked_cx_to_hhcxhh_bernoulli(10, 10000000)"),
-        #     (1, f"CALL stopper({self.stop_after})")
-        # ]
         # TODO: This should be cleaned
         #  There is a collector.py the results branch
         # proc = subprocess.Popen([f'./readout_epyc.sh results_{m_bits}.csv'], shell=True, executable="/bin/bash")
         # db_multi_threaded(thread_proc=thread_procedures)
         # subprocess.Popen.kill(proc)
+
+    def build_fh_circuit(self, N=10, p_algo=0.9999999904, times=0.01):
+        print("Making fh circuit...")
+        fh_circuit = make_fh_circuit(N=N, p_algo=p_algo, times=times)
+
+        self.build_pandora()
+        decomposed_circuit = get_pandora_compatible_circuit(circuit=fh_circuit, decompose_from_high_level=True)
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='fh', add_margins=True)
+
+        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
+        insert_in_batches(pandora_gates=db_tuples,
+                          connection=self.connection,
+                          batch_size=1000000,
+                          table_name='linked_circuit')
+
+        print('Done fh_circuit!')
+
+    def build_mg_coating_walk_op(self):
+        print("Making mg circuit...")
+        mg_circuit = make_mg_coating_walk_op(EC=13)
+        print(type(mg_circuit))
+
+        decomposed_circuit = get_pandora_compatible_circuit(circuit=mg_circuit, decompose_from_high_level=True)
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='mg_coating', add_margins=True)
+
+        self.build_pandora()
+        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
+        insert_in_batches(pandora_gates=db_tuples,
+                          connection=self.connection,
+                          batch_size=1000000,
+                          table_name='linked_circuit')
+        print('Done mg_circuit!')
+
+    def build_cyclic_o3(self):
+        print("Making o3 circuit...")
+        o3_circuit = make_cyclic_o3_circuit()
+
+        decomposed_circuit = get_pandora_compatible_circuit(circuit=o3_circuit, decompose_from_high_level=True)
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='cyclic_o3', add_margins=True)
+
+        self.build_pandora()
+        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
+        insert_in_batches(pandora_gates=db_tuples,
+                          connection=self.connection,
+                          batch_size=1000000,
+                          table_name='linked_circuit')
+
+        print('Done o3_circuit!')
+
+    def build_hc_circuit(self):
+        print("Making hc circuit...")
+        hc_circuit = make_hc_circuit()
+
+        decomposed_circuit = get_pandora_compatible_circuit(circuit=hc_circuit, decompose_from_high_level=True)
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='hc', add_margins=True)
+
+        self.build_pandora()
+        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
+        insert_in_batches(pandora_gates=db_tuples,
+                          connection=self.connection,
+                          batch_size=1000000,
+                          table_name='linked_circuit')
+
+        print('Done hc_circuit!')
+
+    def build_traverse_ising(self, N=2):
+        print("Making ti circuit...")
+        ti_circuit = make_transverse_ising_circuit(N=N)
+        print(type(ti_circuit))
+
+        decomposed_circuit = get_pandora_compatible_circuit(circuit=ti_circuit, decompose_from_high_level=True)
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='ising', add_margins=True)
+
+        self.build_pandora()
+        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
+        insert_in_batches(pandora_gates=db_tuples,
+                          connection=self.connection,
+                          batch_size=1000000,
+                          table_name='linked_circuit')
+        print('Done ti_circuit!')

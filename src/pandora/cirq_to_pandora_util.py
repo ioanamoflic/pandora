@@ -81,13 +81,6 @@ def cirq_operation_to_pandora_gate(operation: cirq.Operation) -> PandoraGate:
         parameter = cirq_gate.exponent
         global_shift = cirq_gate.global_shift
 
-    # if isinstance(cirq_gate, (cirq.ops.common_gates.Rz, cirq.ops.common_gates.Ry, cirq.ops.common_gates.Rx)):
-    #
-    # if isinstance(cirq_gate, (cirq.HPowGate, cirq.XPowGate, cirq.YPowGate, cirq.ZPowGate,
-    #                      cirq.CXPowGate, cirq.CZPowGate, cirq.CCXPowGate)):
-    #     parameter = cirq_gate.exponent
-    #     global_shift = cirq_gate.global_shift
-
     return PandoraGate(gate_code=pandora_gate_code,
                        gate_parameter=parameter,
                        switch=switch,
@@ -325,4 +318,3 @@ def cirq_to_pandora(cirq_circuit: cirq.Circuit,
             last_id += 1
 
     return pandora_gates.values(), last_id
-
