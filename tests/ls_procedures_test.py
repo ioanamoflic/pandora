@@ -1,5 +1,5 @@
-from cirq2db import *
-from qualtran2db import *
+from pandora.connection_util import *
+from pandora.cirq_to_pandora_util import *
 
 
 def test_ancillify_measure_and_reset():
@@ -24,18 +24,18 @@ def test_cnotify_XX(connection):
 
       """
     cursor = connection.cursor()
-    create_linked_table(connection=connection, clean=True)
+    drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
 
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.XX.on(q1, q2)])
     print(initial_circuit)
-    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit,
-                              last_id=0,
-                              add_margins=True,
-                              label='cnotify_XX')
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
+                                   last_id=0,
+                                   add_margins=True,
+                                   label='cnotify_XX')
 
-    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=100)
+    insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
     cursor.execute(f"call cnotify_XX(100, 1)")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
@@ -64,18 +64,18 @@ def test_cnotify_ZZ(connection):
 
       """
     cursor = connection.cursor()
-    create_linked_table(connection=connection, clean=True)
+    drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
 
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.ZZ.on(q1, q2)])
     print(initial_circuit)
-    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit,
-                              last_id=0,
-                              add_margins=True,
-                              label='cnotify_ZZ')
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
+                                   last_id=0,
+                                   add_margins=True,
+                                   label='cnotify_ZZ')
 
-    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=100)
+    insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_table')
     cursor.execute(f"call cnotify_ZZ(100, 1)")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
@@ -126,7 +126,7 @@ def test_simplify_erasure_error(connection):
 
       """
     cursor = connection.cursor()
-    create_linked_table(connection=connection, clean=True)
+    drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
 
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
@@ -134,12 +134,12 @@ def test_simplify_erasure_error(connection):
                                     cirq.Z.on(q2),
                                     cirq.XX.on(q1, q2)])
     print(initial_circuit)
-    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit,
-                              last_id=0,
-                              add_margins=True,
-                              label='see')
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
+                                   last_id=0,
+                                   add_margins=True,
+                                   label='see')
 
-    insert_in_batches(db_tuples=db_tuples, connection=connection)
+    insert_in_batches(pandora_gates=db_tuples, connection=connection, table_name='linked_circuit')
     cursor.execute(f"call simplify_erasure_error('XXPowGate', '_PauliZ', 100, 1)")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
@@ -166,19 +166,19 @@ def test_simplify_two_parity_check(connection):
 
     """
 
-    create_linked_table(connection=connection, clean=True)
+    drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
 
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.XX.on(q1, q2),
                                     cirq.XX.on(q1, q2)])
     print(initial_circuit)
-    db_tuples, _ = cirq_to_db(cirq_circuit=initial_circuit,
-                              last_id=0,
-                              add_margins=True,
-                              label='stpc')
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
+                                   last_id=0,
+                                   add_margins=True,
+                                   label='stpc')
 
-    insert_in_batches(db_tuples=db_tuples, connection=connection, reset_id=100)
+    insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
     cursor = connection.cursor()
     cursor.execute(f"call simplify_two_parity_check('XXPowGate', 'XXPowGate', 100, 1)")
 

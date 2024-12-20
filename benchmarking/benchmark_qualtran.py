@@ -1,6 +1,6 @@
 import csv
 
-from tests.cirq2db_test import *
+from tests.cirq_to_pandora_test import test_qualtran_adder_reconstruction
 
 if __name__ == "__main__":
     times = test_qualtran_adder_reconstruction()
