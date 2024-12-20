@@ -102,9 +102,9 @@ class Pandora:
 
         print('Done fh_circuit!')
 
-    def build_mg_coating_walk_op(self):
+    def build_mg_coating_walk_op(self, data_path="."):
         print("Making mg circuit...")
-        mg_circuit = make_mg_coating_walk_op(EC=13)
+        mg_circuit = make_mg_coating_walk_op(EC=13, data_path=data_path)
         print(type(mg_circuit))
 
         decomposed_circuit = get_pandora_compatible_circuit(circuit=mg_circuit, decompose_from_high_level=True)

@@ -55,7 +55,7 @@ def make_transverse_ising_circuit(N=3):
     return make_qsvt_circuit(model, encoding=getEncoding(VALID_ENCODINGS.PauliLCU))
 
 
-def make_mg_coating_walk_op(EC=13):
+def make_mg_coating_walk_op(EC=13, data_path="."):
     """Adapted from Notebook sent on May 27th from Nam H Nguyen (Boeing).
 
     Requirements: Unzip the 'mgcoating_data.zip' archive alongside this notebook.
@@ -63,7 +63,7 @@ def make_mg_coating_walk_op(EC=13):
     Original source code and data provided by HRL and Boeing as part of the DARPA Quantum
     Benchmarking program. Reproduced with permission.
     """
-    data_dir = 'mgcoating_data/'
+    data_dir = f"{data_path}/mgcoating_data/"
     hamhdf5 = f"{data_dir}mg_dimer_{EC}_ham.hdf5"
     gridhdf5 = f"{data_dir}mg_dimer_{EC}_grid.hdf5"
     slab = getInstance('ElectronicStructure', filenameH=hamhdf5, filenameG=gridhdf5)
