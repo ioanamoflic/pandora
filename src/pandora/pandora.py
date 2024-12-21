@@ -166,9 +166,9 @@ class Pandora:
                           table_name='linked_circuit')
         print('Done mg_circuit!')
 
-    def build_cyclic_o3(self):
+    def build_cyclic_o3(self, data_path="."):
         print("Making o3 circuit...")
-        o3_circuit = make_cyclic_o3_circuit()
+        o3_circuit = make_cyclic_o3_circuit(data_path=data_path)
 
         decomposed_circuit = get_pandora_compatible_circuit(circuit=o3_circuit, decompose_from_high_level=True)
         db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='o', add_margins=True)
@@ -182,9 +182,9 @@ class Pandora:
 
         print('Done o3_circuit!')
 
-    def build_hc_circuit(self):
+    def build_hc_circuit(self, data_path='.'):
         print("Making hc circuit...")
-        hc_circuit = make_hc_circuit()
+        hc_circuit = make_hc_circuit(data_path=data_path)
 
         decomposed_circuit = get_pandora_compatible_circuit(circuit=hc_circuit, decompose_from_high_level=True)
         db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='h', add_margins=True)
