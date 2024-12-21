@@ -1,3 +1,5 @@
+import psycopg2
+
 from .pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
     make_cyclic_o3_circuit, make_hc_circuit
 from .qualtran_to_pandora_util import *
@@ -35,10 +37,10 @@ class PandoraConfig:
 class Pandora:
 
     def __init__(self, pandora_config=PandoraConfig(), max_time=3600):
+        self.pandora_config = pandora_config
+
         self.connection = self.get_connection()
         self.stop_after = max_time
-
-        self.pandora_config = pandora_config
 
     def __del__(self):
         self.connection.close()
