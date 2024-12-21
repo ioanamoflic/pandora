@@ -4,3 +4,4 @@ pgdata/
 pgrun/
 trace*
 circuitsharing/
+__pycache__
