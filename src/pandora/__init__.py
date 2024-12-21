@@ -1,2 +1,2 @@
 # Import the Pandora class
-from .pandora import Pandora
+from .pandora import Pandora, PandoraConfig

@@ -8,16 +8,28 @@ from pandora.qualtran_to_pandora_util import get_pandora_compatible_circuit
 
 
 class PandoraConfig:
-    # Module variables
     database = "postgres"
     user = None
     host = "localhost"
-    # host = "192.168.172.114"
     port = 5432
     password = "1234"
 
     def __init__(self):
         pass
+
+    def update_from_file(self, path):
+        import json
+        with open(path, "r") as file:
+            data = json.load(file)
+
+            self.database = data["database"]
+            self.user = data["user"]
+            self.host = data["host"]
+            self.port = data["port"]
+            self.password = data["password"]
+        CRED = '\033[91m'
+        CEND = '\033[0m'
+        print(f"{CRED}Loaded Pandora config from file: {path}", self.__dict__, f"{CEND}")
 
 
 class Pandora:
