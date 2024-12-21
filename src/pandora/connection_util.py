@@ -3,34 +3,18 @@ import os
 import sys
 from itertools import cycle
 from multiprocessing import Process
-import psycopg2
 
-from pandora.cirq_to_pandora_util import *
-from pandora.db_config import *
 import cirq
 
+from pandora.cirq_to_pandora_util import *
 from pandora.gate_translator import PANDORA_TO_READABLE
 
 
 def get_connection():
-    """
-    Creates and returns a database connection object.
-    """
-    connection = psycopg2.connect(
-        database=database,
-        user=user,
-        host=host,
-        port=port,
-        password=password)
 
-    connection.set_session(autocommit=True)
-
-    if connection:
-        print("Connection to the PostgreSQL established successfully.")
-    else:
-        print("Connection to the PostgreSQL encountered and error.")
-
-    return connection
+    from pandora import Pandora
+    p = Pandora()
+    return p.get_connection()
 
 
 def stop_all_lurking_procedures(connection) -> None:

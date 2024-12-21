@@ -7,15 +7,49 @@ from pandora.connection_util import *
 from pandora.qualtran_to_pandora_util import get_pandora_compatible_circuit
 
 
+class PandoraConfig:
+    # Module variables
+    database = "postgres"
+    user = None
+    host = "localhost"
+    # host = "192.168.172.114"
+    port = 5432
+    password = "1234"
+
+    def __init__(self):
+        pass
+
+
 class Pandora:
 
-    def __init__(self, max_time):
-        self.connection = get_connection()
-        self.cursor = self.connection.cursor()
+    def __init__(self, pandora_config=PandoraConfig(), max_time=3600):
+        self.connection = self.get_connection()
         self.stop_after = max_time
+
+        self.pandora_config = pandora_config
 
     def __del__(self):
         self.connection.close()
+
+    def get_connection(self):
+        """
+        Creates and returns a database connection object.
+        """
+        connection = psycopg2.connect(
+            database=self.pandora_config.database,
+            user=self.pandora_config.user,
+            host=self.pandora_config.host,
+            port=self.pandora_config.port,
+            password=self.pandora_config.password)
+
+        connection.set_session(autocommit=True)
+
+        if connection:
+            print("Connection to the PostgreSQL established successfully.")
+        else:
+            print("Connection to the PostgreSQL encountered and error.")
+
+        return connection
 
     def build_pandora(self):
         """
@@ -28,7 +62,7 @@ class Pandora:
         """
         Decomposes all existing Toffoli gates in the Pandora into Clifford+T.
         """
-        self.cursor.execute("call linked_toffoli_decomp()")
+        self.connection.cursor().execute("call linked_toffoli_decomp()")
 
     def build_qualtran_adder(self, bitsize):
         """
