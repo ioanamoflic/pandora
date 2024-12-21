@@ -4,7 +4,7 @@ INITDBPORT=""
 if [[ $2 == *json ]]
 then
     # Read the port number from JSON config
-    PYTHONPORT="import json;file=open('default_config.json', 'r');print(json.load(file)['port'])"
+    PYTHONPORT="import json;file=open('$2', 'r');print(json.load(file)['port'])"
     PORT=$(echo $PYTHONPORT | python3)
     INITDBPORT="-p $PORT"
 
@@ -20,7 +20,6 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 echo -e "${RED}$SLURM_JOBID <- $@ ${NC}"
 echo "$@" >> trace_$SLURM_JOBID.txt
-
 
 # This is the script to run in the Pandora Apptainer
 SCRIPTTORUN="
