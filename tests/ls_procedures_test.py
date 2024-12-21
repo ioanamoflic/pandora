@@ -33,13 +33,13 @@ def test_cnotify_XX(connection):
     db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                    last_id=0,
                                    add_margins=True,
-                                   label='cnotify_XX')
+                                   label='t')
 
     insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
     cursor.execute(f"call cnotify_XX(100, 1)")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='cnotify_XX',
+                                             circuit_label='t',
                                              remove_io_gates=False)
     print(extracted_circuit)
     assert len(extracted_circuit) == 4
@@ -73,13 +73,13 @@ def test_cnotify_ZZ(connection):
     db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                    last_id=0,
                                    add_margins=True,
-                                   label='cnotify_ZZ')
+                                   label='t')
 
     insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_table')
     cursor.execute(f"call cnotify_ZZ(100, 1)")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='cnotify_ZZ',
+                                             circuit_label='t',
                                              remove_io_gates=False)
     print(extracted_circuit)
     assert len(extracted_circuit) == 4
@@ -137,13 +137,13 @@ def test_simplify_erasure_error(connection):
     db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                    last_id=0,
                                    add_margins=True,
-                                   label='see')
+                                   label='t')
 
     insert_in_batches(pandora_gates=db_tuples, connection=connection, table_name='linked_circuit')
     cursor.execute(f"call simplify_erasure_error('XXPowGate', '_PauliZ', 100, 1)")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='see',
+                                             circuit_label='t',
                                              remove_io_gates=True)
     print(extracted_circuit)
     assert len(extracted_circuit) == 1
@@ -176,14 +176,14 @@ def test_simplify_two_parity_check(connection):
     db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                    last_id=0,
                                    add_margins=True,
-                                   label='stpc')
+                                   label='t')
 
     insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
     cursor = connection.cursor()
     cursor.execute(f"call simplify_two_parity_check('XXPowGate', 'XXPowGate', 100, 1)")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='stpc',
+                                             circuit_label='t',
                                              remove_io_gates=True)
     print(extracted_circuit)
     assert len(extracted_circuit) == 1

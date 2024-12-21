@@ -1,5 +1,6 @@
 from typing import Optional
 import cirq
+import json
 
 from pandora.exceptions import *
 from pandora.gate_translator import In, Out, PandoraGateTranslator, \
@@ -31,7 +32,7 @@ def remove_measurements(circuit: cirq.Circuit) -> cirq.Circuit:
     return new_circuit
 
 
-def cirq_operation_to_pandora_gate(operation: cirq.Operation) -> PandoraGate:
+def cirq_operation_to_pandora_gate(operation: cirq.Operation, meas_key_dict: dict) -> PandoraGate:
     """
     This method will partially convert a cirq.Operation object to a Pandora gate by populating the
     * gate_code
@@ -53,7 +54,10 @@ def cirq_operation_to_pandora_gate(operation: cirq.Operation) -> PandoraGate:
 
     # cirq gate class name will be used by the pandora gate translator
     if isinstance(cirq_gate, cirq.MeasurementGate):
-        pandora_gate_code, measurement_key = PandoraGateTranslator.M.value, cirq_gate.key
+        keys = meas_key_dict.keys()
+        if cirq_gate.key not in keys:
+            meas_key_dict[cirq_gate.key] = len(keys)
+        pandora_gate_code, measurement_key = PandoraGateTranslator.M.value, meas_key_dict[cirq_gate.key]
     else:
         """
             Translation between Cirq and Pandora:
@@ -267,6 +271,9 @@ def cirq_to_pandora(cirq_circuit: cirq.Circuit,
     # * (3) for target
     latest_conc_on_qubit = {}
 
+    # dictionary of keys
+    meas_key_dict = {}
+
     # the permutation of the qubits depends on the ordering of the In gates
     # sorting works for now
     if add_margins:
@@ -288,7 +295,7 @@ def cirq_to_pandora(cirq_circuit: cirq.Circuit,
                 continue
 
             current_op_qubits = current_operation.qubits
-            current_pandora_gate = cirq_operation_to_pandora_gate(current_operation)
+            current_pandora_gate = cirq_operation_to_pandora_gate(current_operation, meas_key_dict=meas_key_dict)
             current_pandora_gate.id = last_id
             current_pandora_gate.label = label
 
@@ -316,5 +323,8 @@ def cirq_to_pandora(cirq_circuit: cirq.Circuit,
 
             pandora_gates[last_id] = current_pandora_gate
             last_id += 1
+
+    with open(f'meas_keys_{label}.json', 'w') as fp:
+        json.dump(meas_key_dict, fp)
 
     return pandora_gates.values(), last_id

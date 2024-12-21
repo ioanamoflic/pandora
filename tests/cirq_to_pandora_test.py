@@ -20,7 +20,7 @@ def test_random_reconstruction(n_circuits=100):
         print(f'Time for create_random_circuit: {time.time() - start_time}')
 
         start_time = time.time()
-        db_tuples, last_id = cirq_to_pandora(cirq_circuit=initial_circuit, last_id=0, label='test', add_margins=False)
+        db_tuples, last_id = cirq_to_pandora(cirq_circuit=initial_circuit, last_id=0, label='t', add_margins=False)
         print(f'Time for cirq_to_db: {time.time() - start_time}')
 
         start_time = time.time()
@@ -49,7 +49,7 @@ def test_qualtran_adder_reconstruction():
         initial_circuit = get_adder(n_bits=n_bits)
 
         start_cirq_to_db = time.time()
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit, last_id=0, label='adder', add_margins=True)
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit, last_id=0, label='a', add_margins=True)
         time_cirq_to_db = time.time() - start_cirq_to_db
 
         start_db_to_cirq = time.time()
@@ -93,7 +93,7 @@ def test_qualtran_qrom_reconstruction():
         initial_circuit = get_qrom(data=data)
 
         start_cirq_to_db = time.time()
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit, last_id=0, label='qrom', add_margins=True)
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit, last_id=0, label='r', add_margins=True)
         time_cirq_to_db = time.time() - start_cirq_to_db
 
         start_db_to_cirq = time.time()
@@ -140,7 +140,7 @@ def test_qualtran_qpe_reconstruction():
             print(f'Reached {n_s} and {bits}')
             start_global = time.time()
             qpe_circuit = get_qpe_of_1d_ising_model(num_sites=n_s, m_bits=bits)
-            db_tuples, _ = cirq_to_pandora(cirq_circuit=qpe_circuit, last_id=0, label='qpe', add_margins=True)
+            db_tuples, _ = cirq_to_pandora(cirq_circuit=qpe_circuit, last_id=0, label='q', add_margins=True)
 
             connection = get_connection()
             drop_and_replace_tables(connection=connection, clean=True)

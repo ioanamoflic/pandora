@@ -22,7 +22,7 @@ class PandoraGate:
                  visited: bool = False,
                  label: str = None,
                  is_classically_controlled: bool = False,
-                 measurement_key: str = None):
+                 measurement_key: int = None):
         self.id = gate_id
         self.prev_q1 = prev_q1
         self.prev_q2 = prev_q2
@@ -139,7 +139,7 @@ class PandoraGateWrapper:
         if self.pandora_gate.type in CAN_HAVE_KEY and self.pandora_gate.meas_key is not None:
             if self.pandora_gate.type == PandoraGateTranslator.M.value:
                 # Measurement gate has no setter for key --> could use .with_key(key)
-                cirq_op = cirq.MeasurementGate(num_qubits=1, key=self.pandora_gate.meas_key)
+                cirq_op = cirq.MeasurementGate(num_qubits=1, key=str(self.pandora_gate.meas_key))
             else:
                 cirq_op.key = self.pandora_gate.meas_key
 

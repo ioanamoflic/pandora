@@ -39,7 +39,7 @@ class Pandora:
         cirq_adder: cirq.Circuit() = get_adder(n_bits=bitsize)
         db_tuples, _ = cirq_to_pandora(cirq_circuit=cirq_adder,
                                        last_id=0,
-                                       label=f'Adder{bitsize}',
+                                       label=f'a',
                                        add_margins=True)
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
@@ -58,7 +58,7 @@ class Pandora:
         cirq_qrom = get_qrom(data=data)
         db_tuples, _ = cirq_to_pandora(cirq_circuit=cirq_qrom,
                                        last_id=0,
-                                       label=f'QROM',
+                                       label=f'r',
                                        add_margins=True)
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
@@ -92,7 +92,7 @@ class Pandora:
 
         self.build_pandora()
         decomposed_circuit = get_pandora_compatible_circuit(circuit=fh_circuit, decompose_from_high_level=True)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='fh', add_margins=True)
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='f', add_margins=True)
 
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
         insert_in_batches(pandora_gates=db_tuples,
@@ -108,7 +108,7 @@ class Pandora:
         print(type(mg_circuit))
 
         decomposed_circuit = get_pandora_compatible_circuit(circuit=mg_circuit, decompose_from_high_level=True)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='mg_coating', add_margins=True)
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='m', add_margins=True)
 
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
@@ -123,7 +123,7 @@ class Pandora:
         o3_circuit = make_cyclic_o3_circuit()
 
         decomposed_circuit = get_pandora_compatible_circuit(circuit=o3_circuit, decompose_from_high_level=True)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='cyclic_o3', add_margins=True)
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='o', add_margins=True)
 
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
@@ -139,7 +139,7 @@ class Pandora:
         hc_circuit = make_hc_circuit()
 
         decomposed_circuit = get_pandora_compatible_circuit(circuit=hc_circuit, decompose_from_high_level=True)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='hc', add_margins=True)
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='h', add_margins=True)
 
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
@@ -156,7 +156,7 @@ class Pandora:
         print(type(ti_circuit))
 
         decomposed_circuit = get_pandora_compatible_circuit(circuit=ti_circuit, decompose_from_high_level=True)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='ising', add_margins=True)
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='i', add_margins=True)
 
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
