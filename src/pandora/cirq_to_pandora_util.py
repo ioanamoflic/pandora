@@ -324,7 +324,7 @@ def cirq_to_pandora(cirq_circuit: cirq.Circuit,
             pandora_gates[last_id] = current_pandora_gate
             last_id += 1
 
-    with open(f'meas_keys_{label}.json', 'w') as fp:
-        json.dump(meas_key_dict, fp)
+    #with open(f'meas_keys_{label}.json', 'w') as fp:
+     #   json.dump(meas_key_dict, fp)
 
     return pandora_gates.values(), last_id
