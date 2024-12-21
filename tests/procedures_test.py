@@ -24,13 +24,13 @@ def test_cancel_single_qubit(connection):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_csq')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
     cursor.execute(f"call cancel_single_qubit({myH}, {myH}, 1, 1, 10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_csq',
+                                             circuit_label='t',
                                              table_name='linked_circuit',
                                              remove_io_gates=True)
 
@@ -50,13 +50,13 @@ def test_cancel_two_qubit(connection):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_ctq')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
     cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1.0, 10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_ctq',
+                                             circuit_label='t',
                                              table_name='linked_circuit',
                                              remove_io_gates=True)
 
@@ -77,13 +77,13 @@ def test_commute_single_control_right(connection):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_cscr')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
     cursor.execute(f"call commute_single_control_right({myZPow}, 0.25,  10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_cscr',
+                                             circuit_label='t',
                                              table_name='linked_circuit',
                                              remove_io_gates=True)
 
@@ -112,13 +112,13 @@ def test_commute_single_control_left(connection):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_cscl')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
     cursor.execute(f"call commute_single_control_left({myZPow}, 0.25,  10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_cscl',
+                                             circuit_label='t',
                                              table_name='linked_circuit',
                                              remove_io_gates=True)
 
@@ -147,13 +147,13 @@ def test_cx_to_hhcxhh_a(connection):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_cscl')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
     cursor.execute(f"call linked_cx_to_hhcxhh(10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_cscl',
+                                             circuit_label='t',
                                              table_name='linked_circuit',
                                              remove_io_gates=True)
 
@@ -182,13 +182,13 @@ def test_cx_to_hhcxhh_b(connection):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_cscl')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
     cursor.execute(f"call linked_cx_to_hhcxhh(10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_cscl',
+                                             circuit_label='t',
                                              table_name='linked_circuit',
                                              remove_io_gates=True)
 
@@ -217,13 +217,13 @@ def test_hhcxhh_to_cx_a(connection):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_cscl')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
     cursor.execute(f"call linked_hhcxhh_to_cx(10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_cscl',
+                                             circuit_label='t',
                                              table_name='linked_circuit',
                                              remove_io_gates=True)
 
@@ -252,13 +252,13 @@ def test_hhcxhh_to_cx_b(connection):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_cscl')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
     cursor.execute(f"call linked_hhcxhh_to_cx(10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_cscl',
+                                             circuit_label='t',
                                              table_name='linked_circuit',
                                              remove_io_gates=True)
 
@@ -287,13 +287,13 @@ def test_replace_two_sq_with_one(connection):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_rtswo')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
     cursor.execute(f"call replace_two_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, 10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_rtswo',
+                                             circuit_label='t',
                                              table_name='linked_circuit',
                                              remove_io_gates=True)
 
@@ -330,13 +330,13 @@ def test_commute_cx_ctrl_target_case_1(connection):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_cct')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
     cursor.execute(f"call commute_cx_ctrl_target_bernoulli(10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_cct',
+                                             circuit_label='t',
                                              table_name='linked_circuit',
                                              remove_io_gates=True)
 
@@ -364,13 +364,13 @@ def test_commute_cx_ctrl_target_case_2(connection):
 
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0, add_margins=True,
-                                       label='test_cct_2')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
     cursor.execute(f"call commute_cx_ctrl_target_bernoulli(10, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_cct_2',
+                                             circuit_label='t',
                                              table_name='linked_circuit',
                                              remove_io_gates=True)
 
@@ -407,7 +407,7 @@ def test_case_1(connection):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_case_1')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
@@ -415,7 +415,7 @@ def test_case_1(connection):
     cursor.execute(f"call cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, 5, 1)")
     cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 5, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_case_1',
+                                             circuit_label='t',
                                              table_name='linked_circuit',
                                              remove_io_gates=True)
 
@@ -453,7 +453,7 @@ def test_case_1_repeated(connection, n):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_case_1_r')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
@@ -463,7 +463,7 @@ def test_case_1_repeated(connection, n):
     cursor.execute(f"call cancel_two_qubit_bernoulli({myCX}, {myCX}, 1, 5, {n})")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_case_1_r',
+                                             circuit_label='t',
                                              remove_io_gates=True,
                                              table_name='linked_circuit',
                                              )
@@ -494,12 +494,12 @@ def test_case_2(connection):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_case_2')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_case_2',
+                                             circuit_label='t',
                                              remove_io_gates=False,
                                              table_name='linked_circuit',
                                              )
@@ -507,7 +507,7 @@ def test_case_2(connection):
     cursor.execute(f"call commute_single_control_right({myZPow}, -0.25, 100, 1)")
     cursor.execute(f"call cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, 100, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_case_2',
+                                             circuit_label='t',
                                              remove_io_gates=False,
                                              table_name='linked_circuit',
 
@@ -517,7 +517,7 @@ def test_case_2(connection):
     cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 100, 1)")
     cursor.execute(f"call cancel_single_qubit({myH}, {myH}, 1, 1, 100, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_case_2',
+                                             circuit_label='t',
                                              remove_io_gates=True,
                                              table_name='linked_circuit',
                                              )
@@ -561,7 +561,7 @@ def test_case_2_repeated(connection, n):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='test_case_2_r')
+                                       label='t')
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
                       table_name='linked_circuit')
@@ -572,7 +572,7 @@ def test_case_2_repeated(connection, n):
     cursor.execute(f"call cancel_two_qubit_bernoulli({myCX}, {myCX}, 1, 5, {n})")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='test_case_2_r',
+                                             circuit_label='t',
                                              remove_io_gates=True,
                                              table_name='linked_circuit',
                                              )
@@ -594,13 +594,11 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
         refresh_all_stored_procedures(connection=connection)
         reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
 
-        bloq = Add(QUInt(bit_size))
-        circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
-        assert_circuit_in_clifford_plus_t(circuit)
+        circuit = get_adder(bit_size)
 
         pandora_gates, _ = cirq_to_pandora(cirq_circuit=circuit,
                                            last_id=0,
-                                           label=f'Adder{bit_size}',
+                                           label='t',
                                            add_margins=True)
         insert_in_batches(pandora_gates=pandora_gates,
                           connection=connection,
@@ -625,7 +623,7 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
         db_multi_threaded(thread_proc=thread_procedures)
         stop_all_lurking_procedures(connection)
         extracted_circuit: cirq.Circuit = extract_cirq_circuit(connection=connection,
-                                                               circuit_label=f'Adder{bit_size}',
+                                                               circuit_label='t',
                                                                remove_io_gates=True,
                                                                table_name='linked_circuit',
                                                                )
@@ -659,7 +657,7 @@ def check_logical_correctness_random(connection, stop_after: int):
 
             pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                                last_id=0,
-                                               label=f'Test {n_qubits}',
+                                               label='t',
                                                add_margins=True)
             insert_in_batches(pandora_gates=pandora_gates,
                               connection=connection,
@@ -690,7 +688,7 @@ def check_logical_correctness_random(connection, stop_after: int):
             db_multi_threaded(thread_proc=thread_procedures)
             stop_all_lurking_procedures(connection)
             extracted_circuit = extract_cirq_circuit(connection=connection,
-                                                     circuit_label=f'Test {n_qubits}',
+                                                     circuit_label='t',
                                                      remove_io_gates=False,
                                                      table_name='linked_circuit',
                                                      )
@@ -711,7 +709,7 @@ def test_BVZ_optimization(connection, stop_after):
             initial_circuit = benchmark_cirq.bernstein_vazirani(nr_bits=n_bits, secret=secret_bin)
             pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                                last_id=0,
-                                               label=f'Test {n_bits}',
+                                               label='t',
                                                add_margins=True)
             insert_in_batches(pandora_gates=pandora_gates,
                               connection=connection,
@@ -727,7 +725,7 @@ def test_BVZ_optimization(connection, stop_after):
             db_multi_threaded(thread_proc=thread_procedures)
             stop_all_lurking_procedures(connection)
             extracted_circuit = extract_cirq_circuit(connection=connection,
-                                                     circuit_label=f'Test {n_bits}',
+                                                     circuit_label='t',
                                                      remove_io_gates=False,
                                                      table_name='linked_circuit',
                                                      )

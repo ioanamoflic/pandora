@@ -12,9 +12,9 @@ create table IF NOT EXISTS public.linked_circuit
     next_q2 bigint,
     next_q3 bigint,
     visited boolean,
-    label   varchar(20),
+    label   char,
     cl_ctrl boolean,
-    meas_key varchar(20)
+    meas_key smallint
 );
 
 create index IF NOT EXISTS btree_id

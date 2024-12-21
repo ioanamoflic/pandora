@@ -6,11 +6,11 @@ from pandora.qualtran_to_pandora_util import get_pandora_compatible_circuit
 
 def test_fh_circuit(N=10, p_algo=0.9999999904, times=0.01):
     print("Making fh circuit...")
-    fh_circuit = make_fh_circuit(N=3, p_algo=0.9999999904, times=0.01)
+    fh_circuit = make_fh_circuit(N=2, p_algo=0.9999999904, times=0.01)
     print(type(fh_circuit))
 
     decomposed_circuit = get_pandora_compatible_circuit(circuit=fh_circuit, decompose_from_high_level=True)
-    db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='fh', add_margins=True)
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='f', add_margins=True)
 
     connection = get_connection()
     drop_and_replace_tables(connection=connection, clean=True)
@@ -30,7 +30,7 @@ def test_mg_coating_walk_op():
     print(type(mg_circuit))
 
     decomposed_circuit = get_pandora_compatible_circuit(circuit=mg_circuit, decompose_from_high_level=True)
-    db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='mg_coating', add_margins=True)
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='m', add_margins=True)
 
     connection = get_connection()
     drop_and_replace_tables(connection=connection, clean=True)
@@ -50,7 +50,7 @@ def test_cyclic_o3():
     print(type(o3_circuit))
 
     decomposed_circuit = get_pandora_compatible_circuit(circuit=o3_circuit, decompose_from_high_level=True)
-    db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='cyclic_o3', add_margins=True)
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='o', add_margins=True)
 
     connection = get_connection()
     drop_and_replace_tables(connection=connection, clean=True)
@@ -71,7 +71,7 @@ def test_hc_circuit():
     print(type(hc_circuit))
 
     decomposed_circuit = get_pandora_compatible_circuit(circuit=hc_circuit, decompose_from_high_level=True)
-    db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='hc', add_margins=True)
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='h', add_margins=True)
 
     connection = get_connection()
     drop_and_replace_tables(connection=connection, clean=True)
@@ -92,7 +92,7 @@ def test_traverse_ising():
     print(type(ti_circuit))
 
     decomposed_circuit = get_pandora_compatible_circuit(circuit=ti_circuit, decompose_from_high_level=True)
-    db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='ising', add_margins=True)
+    db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='i', add_margins=True)
 
     connection = get_connection()
     drop_and_replace_tables(connection=connection, clean=True)
