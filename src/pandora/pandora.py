@@ -27,7 +27,7 @@ class PandoraConfig:
             self.database = data["database"]
             self.user = data["user"]
             self.host = data["host"]
-            self.port = data["port"]
+            self.port = int(data["port"])
             self.password = data["password"]
         CRED = '\033[91m'
         CEND = '\033[0m'

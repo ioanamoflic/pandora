@@ -5,6 +5,7 @@ from pandora import Pandora, PandoraConfig
 if __name__ == "__main__":
 
     if len(sys.argv) == 1:
+        print("!!!")
         sys.exit(0)
 
     next_arg = 1
@@ -15,7 +16,11 @@ if __name__ == "__main__":
             config.update_from_file(sys.argv[1])
             next_arg = 2
 
+    sys.stdout.flush()
+
     pandora = Pandora(pandora_config=config, max_time=3600)
+
+    sys.stdout.flush()
 
     import os
     hrl_data_path = os.path.abspath("./circuitsharing")
