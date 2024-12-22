@@ -79,7 +79,7 @@ def make_mg_coating_walk_op(EC=13, data_path="."):
     return walk_circuit
 
 
-def make_cyclic_o3_circuit():
+def make_cyclic_o3_circuit(data_path="."):
     """Adapted from notebook sent on November 8th, 2024 from Nam H Nguyen (Boeing).
 
     Requirements: Ensure the 'c60.fcidump' file is downloaded alongside this notebook.
@@ -106,7 +106,7 @@ def make_cyclic_o3_circuit():
         h2_so = np.transpose(h2_so, (1, 2, 3, 0))
         return InteractionOperator(constant=ecore, one_body_tensor=h1_so, two_body_tensor=h2_so)
 
-    filename = 'c60.fcidump'
+    filename = f'{data_path}/c60.fcidump'
     fci_data = tools.fcidump.read(filename)
     eri = ao2mo.restore('s1', fci_data['H2'], fci_data['NORB'])
     hamiltonian_op = integrals2intop(h1=fci_data['H1'], eri=eri, ecore=fci_data['ECORE'])
@@ -128,7 +128,7 @@ def make_cyclic_o3_circuit():
     return walk_circuit
 
 
-def make_hc_circuit():
+def make_hc_circuit(data_path="."):
     """Adapted from L3Harris contributions to open source repository maintained by USC/ISI.
 
     Requirements: Obtain 'darpa-qb-key.ppk' from Basecamp and place alongside this notebook. See:
@@ -142,10 +142,10 @@ def make_hc_circuit():
     Data file retrieval from SFTP uses code adapted from:
     https://github.com/isi-usc-edu/qb-gsee-benchmark/blob/main/examples/get_problem_lqre.py
     """
-    ppk_path = 'darpa-qb-key.ppk'
+    ppk_path = f'{data_path}/darpa-qb-key.ppk'
     username = "darpa-qb"
 
-    with open('problem_instance.mn_mono.cb40f3f7-ffe8-40e8-4544-f26aad5a8bd8.json', 'r') as f:
+    with open(f'{data_path}/problem_instance.mn_mono.cb40f3f7-ffe8-40e8-4544-f26aad5a8bd8.json', 'r') as f:
         problem_instance = json.load(f)
     solution_data: list[dict[str, Any]] = []
     results = {}

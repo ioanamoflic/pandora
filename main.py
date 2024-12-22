@@ -35,9 +35,9 @@ if __name__ == "__main__":
     elif sys.argv[next_arg] == "mg":
         pandora.build_mg_coating_walk_op(data_path=hrl_data_path)
     elif sys.argv[next_arg] == "o3":
-        pandora.build_cyclic_o3()
+        pandora.build_cyclic_o3(data_path=hrl_data_path)
     elif sys.argv[next_arg] == "hc":
-        pandora.build_hc_circuit()
+        pandora.build_hc_circuit(data_path=hrl_data_path)
     elif sys.argv[next_arg] == "ising":
         N = int(sys.argv[next_arg + 1])
         pandora.build_traverse_ising(N=N)
