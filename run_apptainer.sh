@@ -46,6 +46,6 @@ export EXEC="apptainer exec -B $PGDATA:/var/lib/postgresql/data -B $PGRUN:/var/r
 $EXEC bash -c "$SCRIPTTORUN"
 
 # Do not delete, we want to keep the circuit databases for later
-rm -irf $PGDATA $PGRUN
+# rm -irf $PGDATA $PGRUN
 
 # apptainer exec -B $(pwd):/pandora -e -C apptainer/images/pandora.sif bash -c "$SCRIPTTORUN"
