@@ -1,3 +1,5 @@
+import time
+
 import psycopg2
 
 from .pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
@@ -135,36 +137,76 @@ class Pandora:
         # subprocess.Popen.kill(proc)
 
     def build_fh_circuit(self, N=10, p_algo=0.9999999904, times=0.01):
-        print("Making fh circuit...")
+        print("Making FERMI-HUBBARD circuit...")
+        sys.stdout.flush()
+        start_make = time.time()
         fh_circuit = make_fh_circuit(N=N, p_algo=p_algo, times=times)
+        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
+        sys.stdout.flush()
 
-        self.build_pandora()
+        print("Decomposing circuit for pandora...")
+        sys.stdout.flush()
+        start_decomp = time.time()
         decomposed_circuit = get_pandora_compatible_circuit(circuit=fh_circuit, decompose_from_high_level=True)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='f', add_margins=True)
+        print(f"Decomposing circuit took: {time.time() - start_decomp}")
+        sys.stdout.flush()
 
+        start_cirq_to_pandora = time.time()
+        print("cirq_to_pandora...")
+        sys.stdout.flush()
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='f', add_margins=True)
+        print(f"cirq_to_pandora took: {time.time() - start_cirq_to_pandora}")
+        print(f'Number of final circuit ops: {len(db_tuples)}')
+        sys.stdout.flush()
+
+        print("Starting to insert...")
+        sys.stdout.flush()
+        start_insert = time.time()
+        self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit')
-
+        print(f"DB insert took: {time.time() - start_insert}")
         print('Done fh_circuit!')
+        sys.stdout.flush()
 
     def build_mg_coating_walk_op(self, data_path="."):
-        print("Making mg circuit...")
+        print("Making MG circuit...")
+        sys.stdout.flush()
+        start_make = time.time()
         mg_circuit = make_mg_coating_walk_op(EC=13, data_path=data_path)
-        print(type(mg_circuit))
+        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
+        sys.stdout.flush()
 
+        print("Decomposing circuit for pandora...")
+        sys.stdout.flush()
+        start_decomp = time.time()
         decomposed_circuit = get_pandora_compatible_circuit(circuit=mg_circuit, decompose_from_high_level=True)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='m', add_margins=True)
+        print(f"Decomposing circuit took: {time.time() - start_decomp}")
+        sys.stdout.flush()
 
+        start_cirq_to_pandora = time.time()
+        print("cirq_to_pandora...")
+        sys.stdout.flush()
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='m', add_margins=True)
+        print(f"cirq_to_pandora took: {time.time() - start_cirq_to_pandora}")
+        print(f'Number of final circuit ops: {len(db_tuples)}')
+        sys.stdout.flush()
+
+        print("Starting to insert...")
+        sys.stdout.flush()
+        start_insert = time.time()
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit')
+        print(f"DB insert took: {time.time() - start_insert}")
         print('Done mg_circuit!')
+        sys.stdout.flush()
 
     def build_cyclic_o3(self, data_path="."):
         print("Making o3 circuit...")
@@ -199,17 +241,37 @@ class Pandora:
         print('Done hc_circuit!')
 
     def build_traverse_ising(self, N=2):
-        print("Making ti circuit...")
+        print("Making ISING circuit...")
+        sys.stdout.flush()
+        start_make = time.time()
         ti_circuit = make_transverse_ising_circuit(N=N)
-        print(type(ti_circuit))
+        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
+        sys.stdout.flush()
 
+        print("Decomposing circuit for pandora...")
+        sys.stdout.flush()
+        start_decomp = time.time()
         decomposed_circuit = get_pandora_compatible_circuit(circuit=ti_circuit, decompose_from_high_level=True)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='i', add_margins=True)
+        print(f"Decomposing circuit took: {time.time() - start_decomp}")
+        sys.stdout.flush()
 
+        start_cirq_to_pandora = time.time()
+        print("cirq_to_pandora...")
+        sys.stdout.flush()
+        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='i', add_margins=True)
+        print(f"cirq_to_pandora took: {time.time() - start_cirq_to_pandora}")
+        print(f'Number of final circuit ops: {len(db_tuples)}')
+        sys.stdout.flush()
+
+        print("Starting to insert...")
+        sys.stdout.flush()
+        start_insert = time.time()
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit')
+        print(f"DB insert took: {time.time() - start_insert}")
         print('Done ti_circuit!')
+        sys.stdout.flush()
