@@ -135,11 +135,11 @@ class Pandora:
         # db_multi_threaded(thread_proc=thread_procedures)
         # subprocess.Popen.kill(proc)
 
-    def build_fh_circuit(self, N=10, p_algo=0.9999999904, times=0.01):
+    def build_fh_circuit(self, N, times, p_algo):
         print("Making FERMI-HUBBARD circuit...")
         sys.stdout.flush()
         start_make = time.time()
-        fh_circuit = make_fh_circuit(N=N, p_algo=p_algo, times=times)
+        fh_circuit = make_fh_circuit(N=N, times=times, p_algo=p_algo)
         print(f"Building pyliqtr circuit took: {time.time() - start_make}")
         sys.stdout.flush()
 
