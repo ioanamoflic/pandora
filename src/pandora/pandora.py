@@ -2,13 +2,12 @@ import time
 
 import psycopg2
 
-from .pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
+from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
     make_cyclic_o3_circuit, make_hc_circuit
 from .qualtran_to_pandora_util import *
 from benchmarking.benchmark_adders import get_maslov_adder
 
 from pandora.connection_util import *
-from pandora.qualtran_to_pandora_util import get_pandora_compatible_circuit
 
 
 class PandoraConfig:
@@ -147,7 +146,7 @@ class Pandora:
         print("Decomposing circuit for pandora...")
         sys.stdout.flush()
         start_decomp = time.time()
-        decomposed_circuit = get_pandora_compatible_circuit(circuit=fh_circuit, decompose_from_high_level=True)
+        decomposed_circuit = get_pandora_compatible_circuit_via_pyliqtr(circuit=fh_circuit)
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
         sys.stdout.flush()
 
@@ -183,7 +182,7 @@ class Pandora:
         print("Decomposing circuit for pandora...")
         sys.stdout.flush()
         start_decomp = time.time()
-        decomposed_circuit = get_pandora_compatible_circuit(circuit=mg_circuit, decompose_from_high_level=True)
+        decomposed_circuit = get_pandora_compatible_circuit_via_pyliqtr(circuit=mg_circuit)
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
         sys.stdout.flush()
 
@@ -212,7 +211,7 @@ class Pandora:
         print("Making o3 circuit...")
         o3_circuit = make_cyclic_o3_circuit(data_path=data_path)
 
-        decomposed_circuit = get_pandora_compatible_circuit(circuit=o3_circuit, decompose_from_high_level=True)
+        decomposed_circuit = get_pandora_compatible_circuit_via_pyliqtr(circuit=o3_circuit)
         db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='o', add_margins=True)
 
         self.build_pandora()
@@ -228,7 +227,7 @@ class Pandora:
         print("Making hc circuit...")
         hc_circuit = make_hc_circuit(data_path=data_path)
 
-        decomposed_circuit = get_pandora_compatible_circuit(circuit=hc_circuit, decompose_from_high_level=True)
+        decomposed_circuit = get_pandora_compatible_circuit_via_pyliqtr(circuit=hc_circuit)
         db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='h', add_margins=True)
 
         self.build_pandora()
@@ -251,7 +250,7 @@ class Pandora:
         print("Decomposing circuit for pandora...")
         sys.stdout.flush()
         start_decomp = time.time()
-        decomposed_circuit = get_pandora_compatible_circuit(circuit=ti_circuit, decompose_from_high_level=True)
+        decomposed_circuit = get_pandora_compatible_circuit_via_pyliqtr(circuit=ti_circuit)
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
         sys.stdout.flush()
 

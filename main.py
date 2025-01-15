@@ -1,6 +1,14 @@
 import sys
+import time
+
+from pyLIQTR.BlockEncodings import VALID_ENCODINGS
+from pyLIQTR.BlockEncodings.getEncoding import getEncoding
+from pyLIQTR.ProblemInstances.getInstance import getInstance
+from pyLIQTR.clam.lattice_definitions import SquareLattice
 
 from pandora import Pandora, PandoraConfig
+from pandora.qualtran_to_pandora_util import assert_circuit_is_pandora_ingestible, \
+    get_pandora_compatible_circuit_via_pyliqtr, get_pandora_compatible_circuit
 
 if __name__ == "__main__":
 
@@ -29,6 +37,20 @@ if __name__ == "__main__":
     if sys.argv[next_arg] == "adder":
         n_bits = int(sys.argv[next_arg + 1])
         pandora.build_qualtran_adder(n_bits)
+    elif sys.argv[next_arg] == "hub2d":
+        N = int(sys.argv[next_arg + 1])
+        J = -1.0
+        U = 4.0
+        shape = (N, N)
+        model = getInstance('FermiHubbard', shape=shape, J=J, U=U, cell=SquareLattice)
+        block_encoding = getEncoding(VALID_ENCODINGS.FermiHubbardSquare)(model)
+        circuit = block_encoding.circuit
+
+        start = time.time()
+        final_cirq = get_pandora_compatible_circuit(circuit=circuit, decompose_from_high_level=True)
+        print(f'Time to decompose circuit {time.time() - start}')
+        assert_circuit_is_pandora_ingestible(final_cirq)
+        print(f'Number of operations: {len(list(final_cirq.all_operations()))}')
     elif sys.argv[next_arg] == "fh":
         N = int(sys.argv[next_arg + 1])
         pandora.build_fh_circuit(N=N)

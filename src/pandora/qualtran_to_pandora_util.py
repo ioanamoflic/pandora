@@ -1,16 +1,20 @@
 import cirq
 import sys
 import numpy as np
+
 from qualtran import Bloq, QUInt
 from qualtran.bloqs.arithmetic import Add
 from qualtran.bloqs.mod_arithmetic import ModAddK
-from qualtran._infra.adjoint import Adjoint
 from qualtran.bloqs.data_loading import QROM
 from qualtran.bloqs.basic_gates import CNOT, TwoBitCSwap, XGate
 from qualtran.cirq_interop import BloqAsCirqGate
 from qualtran._infra.gate_with_registers import get_named_qubits
 from qualtran.bloqs.qubitization import QubitizationWalkOperator
 from qualtran.bloqs.qubitization.qubitization_walk_operator_test import get_walk_operator_for_1d_ising_model
+
+from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
+from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
+from pyLIQTR.utils.circuit_decomposition import generator_decompose
 
 sys.setrecursionlimit(10000)  # Increase recursion limit from default since adder bloq has a recursive implementation.
 
@@ -19,8 +23,7 @@ cirq_and_bloq_gate_set = cirq.Gateset(
     cirq.GlobalPhaseGate, cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
     cirq.CZPowGate, cirq.CXPowGate, cirq.ZZPowGate, cirq.XXPowGate, cirq.CCXPowGate,
     cirq.X, cirq.Y, cirq.Z,
-    # ModAddK,
-    # Adjoint,
+    ModAddK,
     BloqAsCirqGate,
 )
 
@@ -55,6 +58,9 @@ def assert_circuit_is_decomposable(circuit: cirq.Circuit):
 
 def assert_circuit_is_pandora_ingestible(circuit: cirq.Circuit):
     # Assert that all operations in the decomposed circuit are part of the target gate set.
+    for op in circuit.all_operations():
+        if op.without_classical_controls() not in pandora_ingestible_gate_set:
+            print(op.without_classical_controls().gate)
     assert all(op.without_classical_controls() in pandora_ingestible_gate_set for op in circuit.all_operations())
 
 
@@ -98,6 +104,8 @@ def get_pandora_compatible_circuit(circuit: cirq.Circuit, decompose_from_high_le
     """
     Takes a Cirq circuit as input and outputs a logically equivalent circuit with operations acting on at most three
     qubits which can be ingested into Pandora.
+
+    This is the SLOW method.
     """
     if decompose_from_high_level:
         context = cirq.DecompositionContext(qubit_manager=cirq.SimpleQubitManager())
@@ -117,6 +125,40 @@ def get_pandora_compatible_circuit(circuit: cirq.Circuit, decompose_from_high_le
 
     decomposed_circuit = cirq.Circuit(final_ops)
     return decomposed_circuit
+
+
+def get_pandora_compatible_circuit_via_pyliqtr(circuit: cirq.Circuit):
+    """
+    Takes a Cirq circuit as input and outputs a logically equivalent circuit with operations acting on at most three
+    qubits which can be ingested into Pandora. Uses the generator-based decompose function from pyLIQTR.
+    """
+    total_ops = []
+    for dop in generator_decompose(circuit, keep=keep):
+        if isinstance(dop.gate, cirq.GlobalPhaseGate):
+            print(f'Encountered GlobalPhaseGate with qubits = {dop.qubits}')
+            pass
+        elif isinstance(dop.gate, BloqAsCirqGate):
+            atomic_ops = list(decompose_qualtran_bloq_gate(dop.gate.bloq))
+            total_ops.extend(atomic_ops)
+        elif isinstance(dop.gate, ModAddK):
+            top = pyLAM(bitsize=dop.gate.bitsize,
+                        add_val=dop.gate.add_val,
+                        mod=dop.gate.mod,
+                        cvs=dop.gate.cvs).on(*dop.qubits)
+            for d_top in generator_decompose(top):
+                atomic_ops = _perop_clifford_plus_t_direct_transform(d_top,
+                                                                     use_rotation_decomp_gates=False,
+                                                                     use_random_decomp=True,
+                                                                     warn_if_not_decomposed=True)
+                total_ops.extend(atomic_ops)
+        else:
+            atomic_ops = _perop_clifford_plus_t_direct_transform(dop,
+                                                                 use_rotation_decomp_gates=False,
+                                                                 use_random_decomp=True,
+                                                                 warn_if_not_decomposed=True)
+            total_ops.extend(atomic_ops)
+
+    return cirq.Circuit(total_ops)
 
 
 def get_resource_state(m: int):
@@ -193,7 +235,7 @@ def get_qrom(data) -> cirq.Circuit:
     """
     bloq = QROM.build_from_data(data)
     qrom_circuit = get_cirq_circuit_for_bloq(bloq)
-    return get_pandora_compatible_circuit(circuit=qrom_circuit, decompose_from_high_level=False)
+    return get_pandora_compatible_circuit_via_pyliqtr(circuit=qrom_circuit)
 
 
 def get_qpe_of_1d_ising_model(num_sites=1, eps=1e-5, m_bits=1) -> cirq.Circuit:
@@ -204,7 +246,7 @@ def get_qpe_of_1d_ising_model(num_sites=1, eps=1e-5, m_bits=1) -> cirq.Circuit:
     """
     walk_op = get_walk_operator_for_1d_ising_model(num_sites, eps)
     circuit = cirq.Circuit(phase_estimation(walk_op, m=m_bits))
-    return get_pandora_compatible_circuit(circuit=circuit, decompose_from_high_level=True)
+    return get_pandora_compatible_circuit_via_pyliqtr(circuit=circuit)
 
 
 def get_qpe_of_2d_hubbard_model() -> cirq.Circuit:
