@@ -1,7 +1,7 @@
 import inspect
 import os
 import sys
-from time import time
+import time
 from itertools import cycle
 from multiprocessing import Process, cpu_count
 from typing import Any
