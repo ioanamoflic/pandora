@@ -2,7 +2,8 @@ import inspect
 import os
 import sys
 from itertools import cycle
-from multiprocessing import Process
+from multiprocessing import Process, cpu_count
+from typing import Any
 
 import cirq
 
@@ -11,7 +12,6 @@ from pandora.gate_translator import PANDORA_TO_READABLE
 
 
 def get_connection():
-
     from pandora import Pandora
     p = Pandora()
     return p.get_connection()
@@ -128,6 +128,15 @@ def create_batches(pandora_gates: list[PandoraGate],
         yield pandora_gates[i:i + batch_size]
 
 
+def create_batch_of_batches(batches: list[Any],
+                            batch_of_batch_size: int) -> list:
+    """
+       Create batches of lists. One batch will be inserted into the database at a time.
+    """
+    for i in range(0, len(list(batches)), batch_of_batch_size):
+        yield batches[i:i + batch_of_batch_size]
+
+
 def reset_database_id(connection,
                       table_name: str,
                       large_buffer_value: int = None) -> None:
@@ -184,7 +193,8 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
         #     cursor.execute(sql_statement)
         #     connection.commit()
         args = ','.join(
-            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple()).decode('utf-8')
+            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple()).decode(
+                'utf-8')
             for tup
             in
             batch)
@@ -198,6 +208,23 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
 
     if reset_id is True:
         reset_database_id(connection, table_name=table_name)
+
+
+def insert_single_batch(connection, batch):
+    """
+    Insert a single batch of entries into the database.
+    """
+    cursor = connection.cursor()
+    args = ','.join(
+        cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple()).decode('utf-8')
+        for tup in batch)
+    sql_statement = \
+        ("INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
+         "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
+
+    # execute the sql statement
+    cursor.execute(sql_statement)
+    connection.commit()
 
 
 def remove_io_gates_from_circuit(circuit: cirq.Circuit) -> cirq.Circuit:
@@ -286,6 +313,38 @@ def get_gate_types(connection,
         types.append((pandora_gate.id, PANDORA_TO_READABLE[pandora_gate.type]))
 
     return types
+
+
+def insert_hack(batch: list[list[Any]]) -> None:
+    """
+    TODO
+    """
+    connection = get_connection()
+    connection.set_session(autocommit=True)
+    insert_single_batch(connection, batch=batch)
+
+
+def parallel_insert(pandora_gates: list[PandoraGate]) -> None:
+    """
+    TODO
+    VERY memory intensive. Hopefully faster?
+    """
+    my_cpu_count: int = cpu_count()
+    pandora_gates = list(pandora_gates)
+    process_batch_size: int = len(pandora_gates) // my_cpu_count
+    batches = create_batches(pandora_gates, batch_size=int(process_batch_size))
+
+    n_batches = my_cpu_count
+
+    process_list = []
+    for i, batch_of_inserts in enumerate(batches):
+        p = Process(target=insert_hack, args=(batch_of_inserts,))
+        process_list.append(p)
+
+    for i in range(n_batches):
+        process_list[i].start()
+    for i in range(n_batches):
+        process_list[i].join()
 
 
 def map_hack(aff,

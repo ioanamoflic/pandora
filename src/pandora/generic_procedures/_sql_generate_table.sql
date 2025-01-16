@@ -17,26 +17,26 @@ create table IF NOT EXISTS public.linked_circuit
     meas_key smallint
 );
 
-create index IF NOT EXISTS btree_id
-    on public.linked_circuit (id);
-
-create index IF NOT EXISTS btree_prev_q1
-    on public.linked_circuit (prev_q1);
-
-create index IF NOT EXISTS btree_prev_q2
-    on public.linked_circuit (prev_q2);
-
-create index IF NOT EXISTS btree_prev_q3
-    on public.linked_circuit (prev_q3);
-
-create index IF NOT EXISTS btree_next_q1
-    on public.linked_circuit (next_q1);
-
-create index IF NOT EXISTS btree_next_q2
-    on public.linked_circuit (next_q2);
-
-create index IF NOT EXISTS btree_next_q3
-    on public.linked_circuit (next_q3);
+-- create index IF NOT EXISTS btree_id
+--     on public.linked_circuit (id);
+--
+-- create index IF NOT EXISTS btree_prev_q1
+--     on public.linked_circuit (prev_q1);
+--
+-- create index IF NOT EXISTS btree_prev_q2
+--     on public.linked_circuit (prev_q2);
+--
+-- create index IF NOT EXISTS btree_prev_q3
+--     on public.linked_circuit (prev_q3);
+--
+-- create index IF NOT EXISTS btree_next_q1
+--     on public.linked_circuit (next_q1);
+--
+-- create index IF NOT EXISTS btree_next_q2
+--     on public.linked_circuit (next_q2);
+--
+-- create index IF NOT EXISTS btree_next_q3
+--     on public.linked_circuit (next_q3);
 
 create extension IF NOT EXISTS tsm_system_rows;
 

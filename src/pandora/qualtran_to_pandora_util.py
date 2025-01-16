@@ -1,6 +1,9 @@
+from typing import Tuple, List, Any, Iterable, Set
+
 import cirq
 import sys
 import numpy as np
+from cirq import Operation, Qid
 
 from qualtran import Bloq, QUInt
 from qualtran.bloqs.arithmetic import Add
@@ -62,6 +65,16 @@ def assert_circuit_is_pandora_ingestible(circuit: cirq.Circuit):
         if op.without_classical_controls() not in pandora_ingestible_gate_set:
             print(op.without_classical_controls().gate)
     assert all(op.without_classical_controls() in pandora_ingestible_gate_set for op in circuit.all_operations())
+
+
+def assert_op_list_is_pandora_ingestible(op_list: list):
+    # Assert that all operations are part of the target gate set.
+    for op in op_list:
+        if isinstance(op, list):
+            op = op[0]
+        if op.without_classical_controls() not in pandora_ingestible_gate_set:
+            print(op.without_classical_controls().gate)
+    assert all(op.without_classical_controls() in pandora_ingestible_gate_set for op in op_list)
 
 
 def decompose_fredkin(op: cirq.Operation):
@@ -127,18 +140,28 @@ def get_pandora_compatible_circuit(circuit: cirq.Circuit, decompose_from_high_le
     return decomposed_circuit
 
 
-def get_pandora_compatible_circuit_via_pyliqtr(circuit: cirq.Circuit):
+def flatten(nested: list):
+    for i in nested:
+        if isinstance(i, list):
+            for j in flatten(i):
+                yield j
+        else:
+            yield i
+
+
+def get_pandora_compatible_circuit_via_pyliqtr(circuit: cirq.Circuit) -> tuple[list[Any], set[Any]]:
     """
-    Takes a Cirq circuit as input and outputs a logically equivalent circuit with operations acting on at most three
+    Takes a pyLIQTR circuit as input and outputs a logically equivalent circuit with operations acting on at most three
     qubits which can be ingested into Pandora. Uses the generator-based decompose function from pyLIQTR.
     """
+    qubit_set = set()
     total_ops = []
     for dop in generator_decompose(circuit, keep=keep):
         if isinstance(dop.gate, cirq.GlobalPhaseGate):
             print(f'Encountered GlobalPhaseGate with qubits = {dop.qubits}')
             pass
         elif isinstance(dop.gate, BloqAsCirqGate):
-            atomic_ops = list(decompose_qualtran_bloq_gate(dop.gate.bloq))
+            atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq)
             total_ops.extend(atomic_ops)
         elif isinstance(dop.gate, ModAddK):
             top = pyLAM(bitsize=dop.gate.bitsize,
@@ -158,7 +181,12 @@ def get_pandora_compatible_circuit_via_pyliqtr(circuit: cirq.Circuit):
                                                                  warn_if_not_decomposed=True)
             total_ops.extend(atomic_ops)
 
-    return cirq.Circuit(total_ops)
+    total_ops = list(flatten(total_ops))
+    for op in total_ops:
+        qubit_set.update(set(list(op.qubits)))
+
+    assert_op_list_is_pandora_ingestible(total_ops)
+    return total_ops, qubit_set
 
 
 def get_resource_state(m: int):
