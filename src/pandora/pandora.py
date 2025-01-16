@@ -170,7 +170,6 @@ class Pandora:
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit',
                           large_buffer_value=1000)
-        # parallel_insert(pandora_gates=db_tuples)
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
                           batch_size=1000000,
@@ -190,14 +189,19 @@ class Pandora:
         print("Decomposing circuit for pandora...")
         sys.stdout.flush()
         start_decomp = time.time()
-        decomposed_circuit = get_pandora_compatible_circuit_via_pyliqtr(circuit=mg_circuit)
+        decomposed_ops, qubit_set = get_pandora_compatible_circuit_via_pyliqtr(circuit=mg_circuit)
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
         sys.stdout.flush()
 
         start_cirq_to_pandora = time.time()
         print("cirq_to_pandora...")
         sys.stdout.flush()
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='m', add_margins=True)
+
+        db_tuples, _ = cirq_to_pandora_from_op_list(op_list=decomposed_ops,
+                                                    qubit_set=qubit_set,
+                                                    last_id=0,
+                                                    label='f',
+                                                    add_margins=True)
         print(f"cirq_to_pandora took: {time.time() - start_cirq_to_pandora}")
         print(f'Number of final circuit ops: {len(db_tuples)}')
         sys.stdout.flush()
@@ -219,9 +223,12 @@ class Pandora:
         print("Making o3 circuit...")
         o3_circuit = make_cyclic_o3_circuit(data_path=data_path)
 
-        decomposed_circuit = get_pandora_compatible_circuit_via_pyliqtr(circuit=o3_circuit)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='o', add_margins=True)
-
+        decomposed_ops, qubit_set = get_pandora_compatible_circuit_via_pyliqtr(circuit=o3_circuit)
+        db_tuples, _ = cirq_to_pandora_from_op_list(op_list=decomposed_ops,
+                                                    qubit_set=qubit_set,
+                                                    last_id=0,
+                                                    label='f',
+                                                    add_margins=True)
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
         insert_in_batches(pandora_gates=db_tuples,
@@ -235,9 +242,12 @@ class Pandora:
         print("Making hc circuit...")
         hc_circuit = make_hc_circuit(data_path=data_path)
 
-        decomposed_circuit = get_pandora_compatible_circuit_via_pyliqtr(circuit=hc_circuit)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='h', add_margins=True)
-
+        decomposed_ops, qubit_set = get_pandora_compatible_circuit_via_pyliqtr(circuit=hc_circuit)
+        db_tuples, _ = cirq_to_pandora_from_op_list(op_list=decomposed_ops,
+                                                    qubit_set=qubit_set,
+                                                    last_id=0,
+                                                    label='f',
+                                                    add_margins=True)
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
         insert_in_batches(pandora_gates=db_tuples,
@@ -258,14 +268,18 @@ class Pandora:
         print("Decomposing circuit for pandora...")
         sys.stdout.flush()
         start_decomp = time.time()
-        decomposed_circuit = get_pandora_compatible_circuit_via_pyliqtr(circuit=ti_circuit)
+        decomposed_ops, qubit_set = get_pandora_compatible_circuit_via_pyliqtr(circuit=ti_circuit)
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
         sys.stdout.flush()
 
         start_cirq_to_pandora = time.time()
         print("cirq_to_pandora...")
         sys.stdout.flush()
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=decomposed_circuit, last_id=0, label='i', add_margins=True)
+        db_tuples, _ = cirq_to_pandora_from_op_list(op_list=decomposed_ops,
+                                                    qubit_set=qubit_set,
+                                                    last_id=0,
+                                                    label='f',
+                                                    add_margins=True)
         print(f"cirq_to_pandora took: {time.time() - start_cirq_to_pandora}")
         print(f'Number of final circuit ops: {len(db_tuples)}')
         sys.stdout.flush()
