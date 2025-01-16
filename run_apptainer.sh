@@ -15,7 +15,7 @@ fi
 
 # Outside of Slurm use the PROCESSID and save it for later reference
 # Use $PORT for the postgre port
-SLURM_JOBID=$$
+SLURM_JOBID='sqlscript' #$$
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 echo -e "${RED}$SLURM_JOBID <- $@ ${NC}"
