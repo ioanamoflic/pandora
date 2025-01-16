@@ -119,22 +119,13 @@ def drop_and_replace_tables(connection,
         connection.commit()
 
 
-def create_batches(pandora_gates: list[PandoraGate],
+def create_batches(pandora_gates: list[Any],
                    batch_size: int) -> list:
     """
     Create batches of lists. One batch will be inserted into the database at a time.
     """
     for i in range(0, len(pandora_gates), batch_size):
         yield pandora_gates[i:i + batch_size]
-
-
-def create_batch_of_batches(batches: list[Any],
-                            batch_of_batch_size: int) -> list:
-    """
-       Create batches of lists. One batch will be inserted into the database at a time.
-    """
-    for i in range(0, len(list(batches)), batch_of_batch_size):
-        yield batches[i:i + batch_of_batch_size]
 
 
 def reset_database_id(connection,
@@ -315,35 +306,35 @@ def get_gate_types(connection,
     return types
 
 
-def insert_hack(batch: list[list[Any]]) -> None:
+def insert_hack(batches: list[list[Any]], bs_per_process: int) -> None:
     """
     TODO
     """
     connection = get_connection()
     connection.set_session(autocommit=True)
-    insert_single_batch(connection, batch=batch)
+    process_batches = create_batches(batches, batch_size=int(bs_per_process))
+
+    for batch in process_batches:
+        insert_single_batch(connection, batch=batch)
 
 
-def parallel_insert(pandora_gates: list[PandoraGate]) -> None:
+def parallel_insert(pandora_gates: list[PandoraGate], nprocs: int, bs_per_process: int) -> None:
     """
     TODO
     VERY memory intensive. Hopefully faster?
     """
-    my_cpu_count: int = cpu_count()
     pandora_gates = list(pandora_gates)
-    process_batch_size: int = len(pandora_gates) // my_cpu_count
+    process_batch_size: int = len(pandora_gates) // nprocs
     batches = create_batches(pandora_gates, batch_size=int(process_batch_size))
-
-    n_batches = my_cpu_count
 
     process_list = []
     for i, batch_of_inserts in enumerate(batches):
-        p = Process(target=insert_hack, args=(batch_of_inserts,))
+        p = Process(target=insert_hack, args=(batch_of_inserts, bs_per_process))
         process_list.append(p)
 
-    for i in range(n_batches):
+    for i in range(nprocs):
         process_list[i].start()
-    for i in range(n_batches):
+    for i in range(nprocs):
         process_list[i].join()
 
 

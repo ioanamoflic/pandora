@@ -170,10 +170,11 @@ class Pandora:
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit',
                           large_buffer_value=1000)
-        insert_in_batches(pandora_gates=db_tuples,
-                          connection=self.connection,
-                          batch_size=1000000,
-                          table_name='linked_circuit')
+        # insert_in_batches(pandora_gates=db_tuples,
+        #                   connection=self.connection,
+        #                   batch_size=1000000,
+        #                   table_name='linked_circuit')
+        parallel_insert(pandora_gates=db_tuples, nprocs=4, bs_per_process=10000)
         print(f"DB insert took: {time.time() - start_insert}")
         print('Done fh_circuit!')
         sys.stdout.flush()
