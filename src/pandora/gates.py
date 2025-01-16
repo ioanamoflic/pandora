@@ -54,21 +54,23 @@ class PandoraGate:
         return mogrify_arg, psql_insert
 
     def to_tuple(self):
-        return (self.id,
-                self.prev_q1,
-                self.prev_q2,
-                self.prev_q3,
-                self.type,
-                self.param,
-                self.global_shift,
-                self.switch,
-                self.next_q1,
-                self.next_q2,
-                self.next_q3,
-                self.visited,
-                self.label,
-                self.cl_ctrl,
-                self.meas_key)
+        tup = (self.id,
+               self.prev_q1,
+               self.prev_q2,
+               self.prev_q3,
+               self.type,
+               self.param,
+               self.global_shift,
+               self.switch,
+               self.next_q1,
+               self.next_q2,
+               self.next_q3,
+               self.visited,
+               self.label,
+               self.cl_ctrl,
+               self.meas_key)
+
+        return str(tup)
 
 
 class PandoraGateWrapper:

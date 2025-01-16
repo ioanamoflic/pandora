@@ -194,42 +194,30 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
         #     cursor.execute(sql_statement)
         #     connection.commit()
 
-        start = time.time()
-        args = ','.join(
-            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple()).decode(
-                'utf-8')
-            for tup
-            in
-            batch)
-
-        joint = time.time()
-        print(f'--- Join time: {joint - start}')
-
-        sql_statement = \
-            ("INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
-             "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
-
-        print(f'--- Statement time: {time.time() - joint}')
-
-        # execute the sql statement
-        cursor.execute(sql_statement)
-        connection.commit()
+        insert_single_batch(connection, cursor, batch)
 
     if reset_id is True:
         reset_database_id(connection, table_name=table_name)
 
 
-def insert_single_batch(connection, batch):
+def insert_single_batch(connection, cursor, batch):
     """
     Insert a single batch of entries into the database.
     """
-    cursor = connection.cursor()
+    start = time.time()
     args = ','.join(
-        cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple()).decode('utf-8')
-        for tup in batch)
+        # cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", el.to_tuple()).decode(
+        #    'utf-8')
+        el.to_tuple().decode('utf-8') for el in batch)
+
+    joint = time.time()
+    print(f'--- Join time: {joint - start}')
+
     sql_statement = \
         ("INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
          "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
+
+    print(f'--- Statement time: {time.time() - joint}')
 
     # execute the sql statement
     cursor.execute(sql_statement)
