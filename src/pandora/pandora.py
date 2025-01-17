@@ -174,7 +174,7 @@ class Pandora:
         print("Start insert in batches...")
         insert_in_batches(pandora_gates_it=iter(db_tuples_view),
                           connection=self.connection,
-                          batch_size=10,#00000,
+                          batch_size=1000000,
                           table_name='linked_circuit')
         print(f"DB insert took: {time.time() - start_insert}")
         print('Done fh_circuit!')
