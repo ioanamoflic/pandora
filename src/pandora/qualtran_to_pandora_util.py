@@ -19,6 +19,9 @@ from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
 from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
 from pyLIQTR.utils.circuit_decomposition import generator_decompose
 
+from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list, streamed_cirq_to_pandora_from_op_list
+from pandora.connection_util import insert_single_batch, get_connection
+
 sys.setrecursionlimit(10000)  # Increase recursion limit from default since adder bloq has a recursive implementation.
 
 cirq_and_bloq_gate_set = cirq.Gateset(
@@ -187,6 +190,102 @@ def get_pandora_compatible_circuit_via_pyliqtr(circuit: cirq.Circuit) -> tuple[l
 
     assert_op_list_is_pandora_ingestible(total_ops)
     return total_ops, qubit_set
+
+
+def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit, window_size: int, qubit_set: set):
+    """
+
+    Args:
+        qubit_set:
+        window_size:
+        circuit:
+
+    Returns:
+
+    """
+    window_ops = []
+
+    for dop in generator_decompose(circuit, keep=keep):
+        if isinstance(dop.gate, cirq.GlobalPhaseGate):
+            print(f'Encountered GlobalPhaseGate with qubits = {dop.qubits}')
+            pass
+        elif isinstance(dop.gate, BloqAsCirqGate):
+            atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq)
+            window_ops.extend(atomic_ops)
+        elif isinstance(dop.gate, ModAddK):
+            top = pyLAM(bitsize=dop.gate.bitsize,
+                        add_val=dop.gate.add_val,
+                        mod=dop.gate.mod,
+                        cvs=dop.gate.cvs).on(*dop.qubits)
+            for d_top in generator_decompose(top):
+                atomic_ops = _perop_clifford_plus_t_direct_transform(d_top,
+                                                                     use_rotation_decomp_gates=False,
+                                                                     use_random_decomp=True,
+                                                                     warn_if_not_decomposed=True)
+                window_ops.extend(atomic_ops)
+        else:
+            atomic_ops = _perop_clifford_plus_t_direct_transform(dop,
+                                                                 use_rotation_decomp_gates=False,
+                                                                 use_random_decomp=True,
+                                                                 warn_if_not_decomposed=True)
+            window_ops.extend(atomic_ops)
+
+        if len(window_ops) >= window_size:
+            window_ops = list(flatten(window_ops))
+            for op in window_ops:
+                qubit_set.update(set(list(op.qubits)))
+
+            assert_op_list_is_pandora_ingestible(window_ops)
+            yield window_ops, qubit_set
+            window_ops = []
+
+
+def streamed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int, circuit_label: str):
+    """
+
+    Args:
+        window_size:
+        circuit_label:
+        circuit:
+
+    Returns:
+
+    """
+    qubit_set = set()
+    pandora_dictionary = dict()
+    latest_conc_on_qubit = dict()
+
+    last_id = 0
+    is_first = False
+    is_last = False
+
+    batches = generator_get_pandora_compatible_batch_via_pyliqtr(circuit=circuit,
+                                                                 window_size=window_size,
+                                                                 qubit_set=qubit_set)
+    for i, (current_batch, qubit_set) in enumerate(batches):
+        if i == 0:
+            is_first = True
+            # the idea is to add anything that is not null on "next link" from the pandora gates dictionary
+        pandora_dictionary, latest_conc_on_qubit, last_id = streamed_cirq_to_pandora_from_op_list(
+                op_list=current_batch,
+                qubit_set=qubit_set,
+                pandora_dictionary=pandora_dictionary,
+                latest_conc_on_qubit=latest_conc_on_qubit,
+                last_id=last_id,
+                label='x',
+                add_left_margin=is_first,
+                add_right_margin=is_last
+        )
+        dictionary_copy = pandora_dictionary.copy()
+        batch_elements = []
+        for pandora_gate in dictionary_copy.values():
+            if pandora_gate.next_q1 is not None:
+                batch_elements.append(pandora_gate)
+                pandora_dictionary.pop(pandora_gate.id)
+
+        yield batch_elements
+
+        # insert_single_batch(connection=get_connection(), batch=batch_elements)
 
 
 def get_resource_state(m: int):
