@@ -360,9 +360,9 @@ def cirq_to_pandora_from_op_list(op_list: list[cirq.GateOperation],
 
     # the permutation of the qubits depends on the ordering of the In gates
     # sorting works for now
-    sorted_qubits = list(sorted(qubit_set))
 
     if add_margins:
+        sorted_qubits = list(sorted(qubit_set))
         in_gates = [In().on(q) for q in sorted_qubits]
         out_gates = [Out().on(q) for q in sorted_qubits]
         op_list = in_gates + op_list + out_gates
