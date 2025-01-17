@@ -164,15 +164,17 @@ class Pandora:
         print(f'Number of final circuit ops: {len(db_tuples_view)}')
         sys.stdout.flush()
 
-        print("Starting to insert...")
+        print("Initialize Pandora...")
         sys.stdout.flush()
         start_insert = time.time()
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit',
                           large_buffer_value=1000)
+
+        print("Start insert in batches...")
         insert_in_batches(pandora_gates_it=iter(db_tuples_view),
                           connection=self.connection,
-                          batch_size=1000000,
+                          batch_size=10,#00000,
                           table_name='linked_circuit')
         print(f"DB insert took: {time.time() - start_insert}")
         print('Done fh_circuit!')

@@ -120,8 +120,8 @@ def drop_and_replace_tables(connection,
         connection.commit()
 
 
-def create_batches(pandora_gates: list[PandoraGate],
-                   batch_size: int) -> list:
+def slice_into_batches(pandora_gates: list[PandoraGate],
+                       batch_size: int) -> list:
     """
     Create batches of lists. One batch will be inserted into the database at a time.
     """
@@ -129,7 +129,7 @@ def create_batches(pandora_gates: list[PandoraGate],
     #     yield pandora_gates[i:i + batch_size]
     import itertools
     # slices the iterator for at most batch_size elements
-    yield itertools.islice(pandora_gates, batch_size)
+    return itertools.islice(pandora_gates, batch_size)
 
 
 # def create_batch_of_batches(batches: list[Any],
@@ -193,7 +193,7 @@ def insert_in_batches(pandora_gates_it: list[PandoraGate],
 
     # mogrify_arg, insert_query = pandora_gates[0].get_insert_query(table_name=table_name)
     batch_idx = 0
-    for batch in create_batches(pandora_gates_it, batch_size=int(batch_size)):
+    for batch in slice_into_batches(pandora_gates_it, batch_size=int(batch_size)):
         insert_single_batch(connection, cursor, batch)
         batch_idx += 1
 
@@ -329,7 +329,7 @@ def parallel_insert(pandora_gates: list[PandoraGate]) -> None:
     my_cpu_count: int = cpu_count()
     pandora_gates = list(pandora_gates)
     process_batch_size: int = len(pandora_gates) // my_cpu_count
-    batches = create_batches(pandora_gates, batch_size=int(process_batch_size))
+    batches = slice_into_batches(pandora_gates, batch_size=int(process_batch_size))
 
     n_batches = my_cpu_count
 
