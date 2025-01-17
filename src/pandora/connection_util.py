@@ -125,17 +125,21 @@ def create_batches(pandora_gates: list[PandoraGate],
     """
     Create batches of lists. One batch will be inserted into the database at a time.
     """
-    for i in range(0, len(pandora_gates), batch_size):
-        yield pandora_gates[i:i + batch_size]
+    # for i in range(0, len(pandora_gates), batch_size):
+    #     yield pandora_gates[i:i + batch_size]
+    import itertools
+    # slices the iterator for at most batch_size elements
+    itertools.islice(pandora_gates, batch_size)
 
 
-def create_batch_of_batches(batches: list[Any],
-                            batch_of_batch_size: int) -> list:
-    """
-       Create batches of lists. One batch will be inserted into the database at a time.
-    """
-    for i in range(0, len(list(batches)), batch_of_batch_size):
-        yield batches[i:i + batch_of_batch_size]
+# def create_batch_of_batches(batches: list[Any],
+#                             batch_of_batch_size: int) -> list:
+#     """
+#        Create batches of lists. One batch will be inserted into the database at a time.
+#     """
+#
+#     for i in range(0, len(list(batches)), batch_of_batch_size):
+#         yield batches[i:i + batch_of_batch_size]
 
 
 def reset_database_id(connection,
@@ -156,7 +160,7 @@ def reset_database_id(connection,
     cursor.execute(f"ALTER SEQUENCE {table_name}_id_seq RESTART WITH 1")
 
 
-def insert_in_batches(pandora_gates: list[PandoraGate],
+def insert_in_batches(pandora_gates_it: list[PandoraGate],
                       connection,
                       table_name: str,
                       batch_size: int = 1000,
@@ -178,23 +182,15 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
     Returns:
             None.
     """
-    pandora_gates = list(pandora_gates)
-    batches = create_batches(pandora_gates, batch_size=int(batch_size))
     cursor = connection.cursor()
 
-    # mogrify_arg, insert_query = pandora_gates[0].get_insert_query(table_name=table_name)
-    for i, batch in enumerate(batches):
-        # TODO fix this to avid hard coding
-        #     args = ','.join(cursor.mogrify(mogrify_arg, pandora_gate.to_tuple()).decode('utf-8')
-        #                     for pandora_gate in batch)
-        #     print(args)
-        #     sql_statement = (insert_query + args)
-        #     print('SQL statement:')
-        #     print(sql_statement)
-        #     cursor.execute(sql_statement)
-        #     connection.commit()
+    # pandora_gates_iterator = list(pandora_gates_iterator)
 
+    # mogrify_arg, insert_query = pandora_gates[0].get_insert_query(table_name=table_name)
+    batch_idx = 0
+    for batch in create_batches(pandora_gates_it, batch_size=int(batch_size)):
         insert_single_batch(connection, cursor, batch)
+        batch_idx += 1
 
     if reset_id is True:
         reset_database_id(connection, table_name=table_name)
@@ -205,10 +201,9 @@ def insert_single_batch(connection, cursor, batch):
     Insert a single batch of entries into the database.
     """
     start = time.time()
-    args = ','.join(
-        # cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", el.to_tuple()).decode(
-        #    'utf-8')
-        el.to_tuple().decode('utf-8') for el in batch)
+    args = b','.join(
+        cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", el.to_tuple())
+        for el in batch)
 
     joint = time.time()
     print(f'--- Join time: {joint - start}')

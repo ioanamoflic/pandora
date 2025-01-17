@@ -265,7 +265,7 @@ class WidgetUtils:
                                        label=f'Adder{bit_size}',
                                        add_margins=True)
 
-        insert_in_batches(pandora_gates=db_tuples,
+        insert_in_batches(pandora_gates_it=db_tuples,
                           connection=connection,
                           batch_size=1000000,
                           table_name='linked_circuit',

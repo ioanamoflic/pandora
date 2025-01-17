@@ -35,7 +35,7 @@ def test_cnotify_XX(connection):
                                    add_margins=True,
                                    label='t')
 
-    insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
+    insert_in_batches(pandora_gates_it=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
     cursor.execute(f"call cnotify_XX(100, 1)")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
@@ -75,7 +75,7 @@ def test_cnotify_ZZ(connection):
                                    add_margins=True,
                                    label='t')
 
-    insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_table')
+    insert_in_batches(pandora_gates_it=db_tuples, connection=connection, reset_id=True, table_name='linked_table')
     cursor.execute(f"call cnotify_ZZ(100, 1)")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
@@ -139,7 +139,7 @@ def test_simplify_erasure_error(connection):
                                    add_margins=True,
                                    label='t')
 
-    insert_in_batches(pandora_gates=db_tuples, connection=connection, table_name='linked_circuit')
+    insert_in_batches(pandora_gates_it=db_tuples, connection=connection, table_name='linked_circuit')
     cursor.execute(f"call simplify_erasure_error('XXPowGate', '_PauliZ', 100, 1)")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
@@ -178,7 +178,7 @@ def test_simplify_two_parity_check(connection):
                                    add_margins=True,
                                    label='t')
 
-    insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
+    insert_in_batches(pandora_gates_it=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
     cursor = connection.cursor()
     cursor.execute(f"call simplify_two_parity_check('XXPowGate', 'XXPowGate', 100, 1)")
 

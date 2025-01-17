@@ -16,7 +16,7 @@ def test_fh_circuit(N=10, p_algo=0.9999999904, times=0.01):
     drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
     reset_database_id(connection, table_name='linked_circuit', large_buffer_value=1000)
-    insert_in_batches(pandora_gates=db_tuples,
+    insert_in_batches(pandora_gates_it=db_tuples,
                       connection=connection,
                       batch_size=1000000,
                       table_name='linked_circuit')
@@ -36,7 +36,7 @@ def test_mg_coating_walk_op():
     drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
     reset_database_id(connection, table_name='linked_circuit', large_buffer_value=1000)
-    insert_in_batches(pandora_gates=db_tuples,
+    insert_in_batches(pandora_gates_it=db_tuples,
                       connection=connection,
                       batch_size=1000000,
                       table_name='linked_circuit')
@@ -56,7 +56,7 @@ def test_cyclic_o3():
     drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
     reset_database_id(connection, table_name='linked_circuit', large_buffer_value=1000)
-    insert_in_batches(pandora_gates=db_tuples,
+    insert_in_batches(pandora_gates_it=db_tuples,
                       connection=connection,
                       batch_size=1000000,
                       table_name='linked_circuit')
@@ -77,7 +77,7 @@ def test_hc_circuit():
     drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
     reset_database_id(connection, table_name='linked_circuit', large_buffer_value=1000)
-    insert_in_batches(pandora_gates=db_tuples,
+    insert_in_batches(pandora_gates_it=db_tuples,
                       connection=connection,
                       batch_size=1000000,
                       table_name='linked_circuit')
@@ -98,7 +98,7 @@ def test_traverse_ising():
     drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
     reset_database_id(connection, table_name='linked_circuit', large_buffer_value=1000)
-    insert_in_batches(pandora_gates=db_tuples,
+    insert_in_batches(pandora_gates_it=db_tuples,
                       connection=connection,
                       batch_size=1000000,
                       table_name='linked_circuit')

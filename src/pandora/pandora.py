@@ -90,7 +90,7 @@ class Pandora:
                                        last_id=0,
                                        label=f'a',
                                        add_margins=True)
-        insert_in_batches(pandora_gates=db_tuples,
+        insert_in_batches(pandora_gates_it=db_tuples,
                           connection=self.connection,
                           table_name='linked_circuit',
                           batch_size=1000000,
@@ -109,7 +109,7 @@ class Pandora:
                                        last_id=0,
                                        label=f'r',
                                        add_margins=True)
-        insert_in_batches(pandora_gates=db_tuples,
+        insert_in_batches(pandora_gates_it=db_tuples,
                           connection=self.connection,
                           table_name='linked_circuit',
                           batch_size=1000000,
@@ -121,7 +121,7 @@ class Pandora:
         self.build_pandora()
 
         db_tuples = get_maslov_adder(conn=self.connection, n_bits=m_bits)
-        insert_in_batches(pandora_gates=db_tuples,
+        insert_in_batches(pandora_gates_it=db_tuples,
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit',
@@ -155,13 +155,13 @@ class Pandora:
         start_cirq_to_pandora = time.time()
         print("cirq_to_pandora...")
         sys.stdout.flush()
-        db_tuples, _ = cirq_to_pandora_from_op_list(op_list=decomposed_ops,
+        db_tuples_view, _ = cirq_to_pandora_from_op_list(op_list=decomposed_ops,
                                                     qubit_set=qubit_set,
                                                     last_id=0,
                                                     label='f',
                                                     add_margins=True)
         print(f"cirq_to_pandora took: {time.time() - start_cirq_to_pandora}")
-        print(f'Number of final circuit ops: {len(db_tuples)}')
+        print(f'Number of final circuit ops: {len(db_tuples_view)}')
         sys.stdout.flush()
 
         print("Starting to insert...")
@@ -170,7 +170,7 @@ class Pandora:
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit',
                           large_buffer_value=1000)
-        insert_in_batches(pandora_gates=db_tuples,
+        insert_in_batches(pandora_gates_it=iter(db_tuples_view),
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit')
@@ -211,7 +211,7 @@ class Pandora:
         start_insert = time.time()
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
-        insert_in_batches(pandora_gates=db_tuples,
+        insert_in_batches(pandora_gates_it=db_tuples,
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit')
@@ -231,7 +231,7 @@ class Pandora:
                                                     add_margins=True)
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
-        insert_in_batches(pandora_gates=db_tuples,
+        insert_in_batches(pandora_gates_it=db_tuples,
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit')
@@ -250,7 +250,7 @@ class Pandora:
                                                     add_margins=True)
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
-        insert_in_batches(pandora_gates=db_tuples,
+        insert_in_batches(pandora_gates_it=db_tuples,
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit')
@@ -289,7 +289,7 @@ class Pandora:
         start_insert = time.time()
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
-        insert_in_batches(pandora_gates=db_tuples,
+        insert_in_batches(pandora_gates_it=db_tuples,
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit')

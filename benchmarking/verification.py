@@ -11,7 +11,7 @@ def concatenate(connection, init_circ, cnt, bernoulli_percentage=10):
     refresh_all_stored_procedures(connection=connection)
 
     db_tuples, _ = cirq_to_pandora(cirq_circuit=init_circ, last_id=0, add_margins=True, label='verification')
-    insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
+    insert_in_batches(pandora_gates_it=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
 
     thread_procedures = [
         (1, f"call linked_cx_to_hhcxhh_bernoulli({bernoulli_percentage}, {cnt})"),
@@ -40,7 +40,7 @@ def verify_C_Ct_eq_I(connection, concatenated_circuit, cnt, bernoulli_percentage
     refresh_all_stored_procedures(connection=connection)
 
     db_tuples, _ = cirq_to_pandora(cirq_circuit=concatenated_circuit, last_id=0, add_margins=True, label='verification')
-    insert_in_batches(pandora_gates=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
+    insert_in_batches(pandora_gates_it=db_tuples, connection=connection, reset_id=True, table_name='linked_circuit')
 
     if single_threaded is True:
         thread_procedures = [

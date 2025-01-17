@@ -146,7 +146,7 @@ def test_qualtran_qpe_reconstruction():
             drop_and_replace_tables(connection=connection, clean=True)
             refresh_all_stored_procedures(connection=connection)
             reset_database_id(connection, table_name='linked_circuit', large_buffer_value=1000)
-            insert_in_batches(pandora_gates=db_tuples,
+            insert_in_batches(pandora_gates_it=db_tuples,
                               connection=connection,
                               batch_size=1000000,
                               table_name='linked_circuit')

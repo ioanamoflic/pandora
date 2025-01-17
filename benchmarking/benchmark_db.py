@@ -29,7 +29,7 @@ def test_cx_to_hhcxhh(connection, initial_circuit, n_CX):
     refresh_all_stored_procedures(connection=connection)
 
     db_tuples, _ = cirq_to_pandora(cirq_circuit=initial_circuit, last_id=0, add_margins=True, label='test_random')
-    insert_in_batches(pandora_gates=db_tuples,
+    insert_in_batches(pandora_gates_it=db_tuples,
                       connection=connection,
                       table_name='linked_circuit',
                       reset_id=True)

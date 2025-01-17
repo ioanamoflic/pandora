@@ -70,7 +70,7 @@ class PandoraGate:
                self.cl_ctrl,
                self.meas_key)
 
-        return str(tup)
+        return tup
 
 
 class PandoraGateWrapper:
