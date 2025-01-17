@@ -129,7 +129,15 @@ def slice_into_batches(pandora_gates: list[PandoraGate],
     #     yield pandora_gates[i:i + batch_size]
     import itertools
     # slices the iterator for at most batch_size elements
-    return itertools.islice(pandora_gates, batch_size)
+    while pandora_gates:
+        # for the moment, i am creating a list a returning it
+        # TODO: keept it as an iterator...
+        mylist = list(itertools.islice(pandora_gates, batch_size))
+        if len(mylist) == 0:
+            # if there is nothing to return (i.e. the top iterator is finished)
+            return
+
+        yield mylist
 
 
 # def create_batch_of_batches(batches: list[Any],
@@ -185,7 +193,7 @@ def insert_in_batches(pandora_gates_it: list[PandoraGate],
 
     from collections.abc import Iterable
     if not isinstance(pandora_gates_it, Iterable):
-        raise Exception("This is not an iterator!")
+        raise Exception("This is not an Iterable!")
 
     cursor = connection.cursor()
 
