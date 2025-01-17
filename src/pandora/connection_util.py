@@ -136,7 +136,8 @@ def slice_into_batches(pandora_gates: list[PandoraGate],
         if len(mylist) == 0:
             # if there is nothing to return (i.e. the top iterator is finished)
             return
-
+        else:
+            print(f"batch has {len(mylist)}")
         yield mylist
 
 
