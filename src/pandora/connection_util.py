@@ -166,7 +166,7 @@ def insert_in_batches(pandora_gates_it: list[PandoraGate],
                       batch_size: int = 1000,
                       reset_id: bool = False) -> None:
     """
-    This method is used for inserting a list of PanoraGate objects into the database in batches.
+    This method is used for inserting a list of PandoraGate objects into the database in batches.
     The batched version of the insertion is faster than inserting gates one by one. The idea is to create
     a huge string of insert statements which is processed as a single one.
 
@@ -182,6 +182,11 @@ def insert_in_batches(pandora_gates_it: list[PandoraGate],
     Returns:
             None.
     """
+
+    from collections.abc import Iterable
+    if not isinstance(pandora_gates_it, Iterable):
+        raise Exception("This is not an iterator!")
+
     cursor = connection.cursor()
 
     # pandora_gates_iterator = list(pandora_gates_iterator)
@@ -209,8 +214,8 @@ def insert_single_batch(connection, cursor, batch):
     print(f'--- Join time: {joint - start}')
 
     sql_statement = \
-        ("INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
-         "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
+        (b"INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
+         b"next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
 
     print(f'--- Statement time: {time.time() - joint}')
 
