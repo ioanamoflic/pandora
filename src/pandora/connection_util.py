@@ -129,7 +129,7 @@ def create_batches(pandora_gates: list[PandoraGate],
     #     yield pandora_gates[i:i + batch_size]
     import itertools
     # slices the iterator for at most batch_size elements
-    itertools.islice(pandora_gates, batch_size)
+    yield itertools.islice(pandora_gates, batch_size)
 
 
 # def create_batch_of_batches(batches: list[Any],
