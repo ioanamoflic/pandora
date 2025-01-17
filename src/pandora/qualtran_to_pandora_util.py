@@ -1,4 +1,4 @@
-from typing import Tuple, List, Any, Iterable, Set
+from typing import Tuple, List, Any, Iterable, Set, Iterator
 
 import cirq
 import sys
@@ -21,6 +21,8 @@ from pyLIQTR.utils.circuit_decomposition import generator_decompose
 
 from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list, streamed_cirq_to_pandora_from_op_list
 from pandora.connection_util import insert_single_batch, get_connection
+from pandora.gate_translator import In, Out
+from pandora.gates import PandoraGate
 
 sys.setrecursionlimit(10000)  # Increase recursion limit from default since adder bloq has a recursive implementation.
 
@@ -192,16 +194,22 @@ def get_pandora_compatible_circuit_via_pyliqtr(circuit: cirq.Circuit) -> tuple[l
     return total_ops, qubit_set
 
 
-def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit, window_size: int, qubit_set: set):
+def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit,
+                                                       window_size: int,
+                                                       qubit_set: set) \
+        -> Iterator[tuple[list[cirq.Operation], set[cirq.Qid]]]:
     """
-
+    This is a generator-based (windowed) decomposition into Clifford+T build on top of pyLIQTR's generator
+    decomposition method. The set of qubits needs to be updated at every iteration (is there a way to not do this?)
+    The method yields a batch of window_size elements.
     Args:
-        qubit_set:
-        window_size:
-        circuit:
+        circuit: the high-level cirq circuit
+        window_size: size of the window
+        qubit_set: the set of the qubits encountered so far in the decomposition
 
     Returns:
-
+        Generator over the tuples consisting of the cirq operations contained in the batch and the updated set of qubits
+        encountered so far while decomposing. Note that the set includes qubits from previous iterations as well.
     """
     window_ops = []
 
@@ -240,41 +248,34 @@ def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit, wi
             window_ops = []
 
 
-def streamed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int, circuit_label: str):
+def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int) -> Iterator[list[PandoraGate]]:
     """
-
+    This method traverses a cirq circuit in windows of arbitrary size and returns the PandoraGate operations equivalent
+    to the cirq operations in the window. Especially useful for very large circuits which do not fit into memory.
     Args:
-        window_size:
-        circuit_label:
-        circuit:
-
+        circuit: the high-level cirq circuit
+        window_size: the size of each decomposition window
     Returns:
-
+        Generator over the PandoraGate objects of each batch.
     """
     qubit_set = set()
     pandora_dictionary = dict()
     latest_conc_on_qubit = dict()
 
     last_id = 0
-    is_first = False
-    is_last = False
 
     batches = generator_get_pandora_compatible_batch_via_pyliqtr(circuit=circuit,
                                                                  window_size=window_size,
                                                                  qubit_set=qubit_set)
+
     for i, (current_batch, qubit_set) in enumerate(batches):
-        if i == 0:
-            is_first = True
-            # the idea is to add anything that is not null on "next link" from the pandora gates dictionary
+        # the idea is to add anything that is not null on "next link" from the pandora gates dictionary
         pandora_dictionary, latest_conc_on_qubit, last_id = streamed_cirq_to_pandora_from_op_list(
                 op_list=current_batch,
-                qubit_set=qubit_set,
                 pandora_dictionary=pandora_dictionary,
                 latest_conc_on_qubit=latest_conc_on_qubit,
                 last_id=last_id,
-                label='x',
-                add_left_margin=is_first,
-                add_right_margin=is_last
+                label='x'
         )
         dictionary_copy = pandora_dictionary.copy()
         batch_elements = []
@@ -285,7 +286,15 @@ def streamed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int, circuit_la
 
         yield batch_elements
 
-        # insert_single_batch(connection=get_connection(), batch=batch_elements)
+    final_batch: list[cirq.Operation] = [Out().on(q) for q in qubit_set]
+    pandora_out_gates, _, _ = streamed_cirq_to_pandora_from_op_list(
+                op_list=final_batch,
+                pandora_dictionary=pandora_dictionary,
+                latest_conc_on_qubit=latest_conc_on_qubit,
+                last_id=last_id,
+                label='x'
+    )
+    yield list(pandora_out_gates.values())
 
 
 def get_resource_state(m: int):

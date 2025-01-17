@@ -331,15 +331,13 @@ def cirq_to_pandora_from_op_list(op_list: list[cirq.GateOperation],
                                  qubit_set: set[cirq.NamedQubit],
                                  last_id: int,
                                  label: Optional[str] = None,
-                                 add_left_margin=True,
-                                 add_right_margin=True,
+                                 add_margins=True,
                                  ) -> tuple[[PandoraGate], int]:
     """
     Fast method which converts a cirq circuit into a list of tuples which can be used as database entries.
 
     Args:
-        add_right_margin:
-        add_left_margin:
+        add_margins:
         op_list: list of operations which need to be inserted into the database
         qubit_set: set containing all the qubits that ops from op_list operate on
         last_id: the id of the first tuple that is inserted in the database.
@@ -365,13 +363,10 @@ def cirq_to_pandora_from_op_list(op_list: list[cirq.GateOperation],
     # sorting works for now
     sorted_qubits = list(sorted(qubit_set))
 
-    if add_left_margin:
+    if add_margins:
         in_gates = [In().on(q) for q in sorted_qubits]
-        op_list = in_gates + op_list
-
-    if add_right_margin:
         out_gates = [Out().on(q) for q in sorted_qubits]
-        op_list = op_list + out_gates
+        op_list = in_gates + op_list + out_gates
 
     # iterate through the cirq operations of the cirq circuit
     for i, current_operation in enumerate(op_list):
@@ -414,14 +409,11 @@ def cirq_to_pandora_from_op_list(op_list: list[cirq.GateOperation],
     return pandora_gates.values(), last_id
 
 
-def streamed_cirq_to_pandora_from_op_list(op_list: list[cirq.GateOperation],
-                                          qubit_set: set[cirq.NamedQubit],
+def streamed_cirq_to_pandora_from_op_list(op_list: list[cirq.Operation],
                                           pandora_dictionary: dict[int, PandoraGate],
                                           latest_conc_on_qubit: dict[cirq.Qid, int],
                                           last_id: int,
                                           label: Optional[str] = None,
-                                          add_left_margin=True,
-                                          add_right_margin=True,
                                           ) -> tuple[dict[int, PandoraGate], dict[Qid, int], int]:
     """
     Fast method which converts a cirq circuit into a list of tuples which can be used as database entries.
@@ -434,10 +426,7 @@ def streamed_cirq_to_pandora_from_op_list(op_list: list[cirq.GateOperation],
                 * (2) for target or second control
                 * (3) for target (three qubit gates)
         pandora_dictionary: dict of pandora gates; key is the gate_id, value is the PandoraGate object
-        add_right_margin:
-        add_left_margin:
         op_list: list of operations which need to be inserted into the database
-        qubit_set: set containing all the qubits that ops from op_list operate on
         last_id: the id of the first tuple that is inserted in the database.
         label: a string which describes the circuit and can be later used for retrieving the circuit from the database
 
@@ -447,31 +436,17 @@ def streamed_cirq_to_pandora_from_op_list(op_list: list[cirq.GateOperation],
 
     # dictionary of keys
     meas_key_dict = {}
-
-    # the permutation of the qubits depends on the ordering of the In gates
-    # sorting works for now
-    sorted_qubits = list(sorted(qubit_set))
-
-    if add_left_margin:
-        in_gates = [In().on(q) for q in sorted_qubits]
-        op_list = in_gates + op_list
-
-    if add_right_margin:
-        out_gates = [Out().on(q) for q in sorted_qubits]
-        op_list = op_list + out_gates
-
     # iterate through the cirq operations of the cirq circuit
     for i, current_operation in enumerate(op_list):
-        # current gate is an initial gate with no prev values
-        if isinstance(current_operation.gate, type(In())):
-            latest_conc_on_qubit[current_operation.qubits[0]] = last_id * 10
-            pandora_dictionary[last_id] = PandoraGate(gate_id=last_id,
-                                                      gate_code=PandoraGateTranslator.In.value,
-                                                      label=label)
-            last_id += 1
-            continue
-
         current_op_qubits = current_operation.qubits
+        for qub in current_op_qubits:
+            if latest_conc_on_qubit[qub] is None:
+                pandora_dictionary[last_id] = PandoraGate(gate_id=last_id,
+                                                          gate_code=PandoraGateTranslator.In.value,
+                                                          label=label)
+                latest_conc_on_qubit[qub] = last_id * 10
+                last_id += 1
+
         current_pandora_gate = cirq_operation_to_pandora_gate(current_operation, meas_key_dict=meas_key_dict)
         current_pandora_gate.id = last_id
         current_pandora_gate.label = label
