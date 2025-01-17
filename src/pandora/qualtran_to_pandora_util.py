@@ -19,9 +19,8 @@ from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
 from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
 from pyLIQTR.utils.circuit_decomposition import generator_decompose
 
-from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list, streamed_cirq_to_pandora_from_op_list
-from pandora.connection_util import insert_single_batch, get_connection
-from pandora.gate_translator import In, Out
+from pandora.cirq_to_pandora_util import streamed_cirq_to_pandora_from_op_list
+from pandora.gate_translator import In, Out, SINGLE_QUBIT_GATES, TWO_QUBIT_GATES
 from pandora.gates import PandoraGate
 
 sys.setrecursionlimit(10000)  # Increase recursion limit from default since adder bloq has a recursive implementation.
@@ -280,7 +279,9 @@ def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int) -> Iterato
         dictionary_copy = pandora_dictionary.copy()
         batch_elements = []
         for pandora_gate in dictionary_copy.values():
-            if pandora_gate.next_q1 is not None:
+            if pandora_gate.type in SINGLE_QUBIT_GATES and pandora_gate.next_q1 is not None\
+                    or pandora_gate.type in TWO_QUBIT_GATES and pandora_gate.next_q1 is not \
+                    None and pandora_gate.next_q2 is not None:
                 batch_elements.append(pandora_gate)
                 pandora_dictionary.pop(pandora_gate.id)
 

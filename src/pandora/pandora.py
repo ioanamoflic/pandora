@@ -137,47 +137,23 @@ class Pandora:
 
     def build_fh_circuit(self, N, times, p_algo):
         print("Making FERMI-HUBBARD circuit...")
-        sys.stdout.flush()
         start_make = time.time()
         fh_circuit = make_fh_circuit(N=N,
                                      times=times,
                                      p_algo=p_algo)
         print(f"Building pyliqtr circuit took: {time.time() - start_make}")
-        sys.stdout.flush()
 
         print("Decomposing circuit for pandora...")
-        sys.stdout.flush()
         start_decomp = time.time()
-        decomposed_ops, qubit_set = get_pandora_compatible_circuit_via_pyliqtr(circuit=fh_circuit)
-        print(f"Decomposing circuit took: {time.time() - start_decomp}")
-        sys.stdout.flush()
-
-        start_cirq_to_pandora = time.time()
-        print("cirq_to_pandora...")
-        sys.stdout.flush()
-        db_tuples, _ = cirq_to_pandora_from_op_list(op_list=decomposed_ops,
-                                                    qubit_set=qubit_set,
-                                                    last_id=0,
-                                                    label='f',
-                                                    add_margins=True)
-        print(f"cirq_to_pandora took: {time.time() - start_cirq_to_pandora}")
-        print(f'Number of final circuit ops: {len(db_tuples)}')
-        sys.stdout.flush()
-
-        print("Starting to insert...")
-        sys.stdout.flush()
-        start_insert = time.time()
+        batches = windowed_cirq_to_pandora(circuit=fh_circuit,
+                                           window_size=10000)
         self.build_pandora()
-        reset_database_id(self.connection, table_name='linked_circuit',
-                          large_buffer_value=1000)
-        # insert_in_batches(pandora_gates=db_tuples,
-        #                   connection=self.connection,
-        #                   batch_size=1000000,
-        #                   table_name='linked_circuit')
-        parallel_insert(pandora_gates=db_tuples, nprocs=4, bs_per_process=10000)
-        print(f"DB insert took: {time.time() - start_insert}")
-        print('Done fh_circuit!')
-        sys.stdout.flush()
+        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
+
+        for _, batch in enumerate(batches):
+            insert_single_batch(connection=self.connection, batch=batch)
+
+        print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
     def build_mg_coating_walk_op(self, data_path="."):
         print("Making MG circuit...")

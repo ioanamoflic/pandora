@@ -1,5 +1,4 @@
-from builtins import _dict_values
-from typing import Optional, Tuple, Dict
+from typing import Optional
 import cirq
 import json
 
@@ -440,7 +439,7 @@ def streamed_cirq_to_pandora_from_op_list(op_list: list[cirq.Operation],
     for i, current_operation in enumerate(op_list):
         current_op_qubits = current_operation.qubits
         for qub in current_op_qubits:
-            if latest_conc_on_qubit[qub] is None:
+            if qub not in latest_conc_on_qubit.keys():
                 pandora_dictionary[last_id] = PandoraGate(gate_id=last_id,
                                                           gate_code=PandoraGateTranslator.In.value,
                                                           label=label)

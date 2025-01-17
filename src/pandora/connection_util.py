@@ -201,7 +201,7 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
         reset_database_id(connection, table_name=table_name)
 
 
-def insert_single_batch(connection, batch):
+def insert_single_batch(connection, batch: list[PandoraGate]):
     """
     Insert a single batch of entries into the database.
     """
