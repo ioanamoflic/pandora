@@ -194,21 +194,16 @@ def get_pandora_compatible_circuit_via_pyliqtr(circuit: cirq.Circuit) -> tuple[l
 
 
 def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit,
-                                                       window_size: int,
-                                                       qubit_set: set) \
-        -> Iterator[tuple[list[cirq.Operation], set[cirq.Qid]]]:
+                                                       window_size: int) -> Iterator[list[cirq.Operation]]:
     """
     This is a generator-based (windowed) decomposition into Clifford+T build on top of pyLIQTR's generator
-    decomposition method. The set of qubits needs to be updated at every iteration (is there a way to not do this?)
-    The method yields a batch of window_size elements.
+    decomposition method. The method yields a batch of window_size elements.
     Args:
         circuit: the high-level cirq circuit
         window_size: size of the window
-        qubit_set: the set of the qubits encountered so far in the decomposition
 
     Returns:
-        Generator over the tuples consisting of the cirq operations contained in the batch and the updated set of qubits
-        encountered so far while decomposing. Note that the set includes qubits from previous iterations as well.
+        Generator over the tuples consisting of the cirq operations contained in the batch.
     """
     window_ops = []
 
@@ -239,12 +234,14 @@ def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit,
 
         if len(window_ops) >= window_size:
             window_ops = list(flatten(window_ops))
-            for op in window_ops:
-                qubit_set.update(set(list(op.qubits)))
-
             assert_op_list_is_pandora_ingestible(window_ops)
-            yield window_ops, qubit_set
+            yield window_ops
             window_ops = []
+
+    if len(window_ops) > 0:
+        window_ops = list(flatten(window_ops))
+        assert_op_list_is_pandora_ingestible(window_ops)
+        yield window_ops
 
 
 def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int) -> Iterator[list[PandoraGate]]:
@@ -260,28 +257,29 @@ def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int) -> Iterato
     qubit_set = set()
     pandora_dictionary = dict()
     latest_conc_on_qubit = dict()
-
     last_id = 0
 
     batches = generator_get_pandora_compatible_batch_via_pyliqtr(circuit=circuit,
-                                                                 window_size=window_size,
-                                                                 qubit_set=qubit_set)
-
-    for i, (current_batch, qubit_set) in enumerate(batches):
+                                                                 window_size=window_size)
+    for i, current_batch in enumerate(batches):
+        for op in current_batch:
+            qubit_set.update(set(list(op.qubits)))
         # the idea is to add anything that is not null on "next link" from the pandora gates dictionary
         pandora_dictionary, latest_conc_on_qubit, last_id = streamed_cirq_to_pandora_from_op_list(
-                op_list=current_batch,
-                pandora_dictionary=pandora_dictionary,
-                latest_conc_on_qubit=latest_conc_on_qubit,
-                last_id=last_id,
-                label='x'
+            op_list=current_batch,
+            pandora_dictionary=pandora_dictionary,
+            latest_conc_on_qubit=latest_conc_on_qubit,
+            last_id=last_id,
+            label='x'
         )
         dictionary_copy = pandora_dictionary.copy()
-        batch_elements = []
+        batch_elements: list[PandoraGate] = []
         for pandora_gate in dictionary_copy.values():
-            if pandora_gate.type in SINGLE_QUBIT_GATES and pandora_gate.next_q1 is not None\
-                    or pandora_gate.type in TWO_QUBIT_GATES and pandora_gate.next_q1 is not \
-                    None and pandora_gate.next_q2 is not None:
+            if (pandora_gate.type in SINGLE_QUBIT_GATES
+                and pandora_gate.next_q1 is not None) \
+                    or (pandora_gate.type in TWO_QUBIT_GATES
+                        and pandora_gate.next_q1 is not None
+                        and pandora_gate.next_q2 is not None):
                 batch_elements.append(pandora_gate)
                 pandora_dictionary.pop(pandora_gate.id)
 
@@ -289,11 +287,11 @@ def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int) -> Iterato
 
     final_batch: list[cirq.Operation] = [Out().on(q) for q in qubit_set]
     pandora_out_gates, _, _ = streamed_cirq_to_pandora_from_op_list(
-                op_list=final_batch,
-                pandora_dictionary=pandora_dictionary,
-                latest_conc_on_qubit=latest_conc_on_qubit,
-                last_id=last_id,
-                label='x'
+        op_list=final_batch,
+        pandora_dictionary=pandora_dictionary,
+        latest_conc_on_qubit=latest_conc_on_qubit,
+        last_id=last_id,
+        label='x'
     )
     yield list(pandora_out_gates.values())
 
