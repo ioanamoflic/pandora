@@ -7,13 +7,11 @@ from pyLIQTR.ProblemInstances.getInstance import getInstance
 from pyLIQTR.clam.lattice_definitions import SquareLattice
 
 from pandora import Pandora, PandoraConfig
-from pandora.qualtran_to_pandora_util import assert_circuit_is_pandora_ingestible, \
-    get_pandora_compatible_circuit_via_pyliqtr, get_pandora_compatible_circuit
+from pandora.qualtran_to_pandora_util import assert_circuit_is_pandora_ingestible, get_pandora_compatible_circuit
 
 if __name__ == "__main__":
 
     if len(sys.argv) == 1:
-        print("!!!")
         sys.exit(0)
 
     next_arg = 1
@@ -26,7 +24,9 @@ if __name__ == "__main__":
 
     sys.stdout.flush()
 
-    pandora = Pandora(pandora_config=config, max_time=3600)
+    pandora = Pandora(pandora_config=config,
+                      max_time=3600,
+                      decomposition_window_size=1000000)
 
     sys.stdout.flush()
 

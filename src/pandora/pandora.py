@@ -1,5 +1,5 @@
 import time
-
+import datetime
 import psycopg2
 
 from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
@@ -37,11 +37,12 @@ class PandoraConfig:
 
 class Pandora:
 
-    def __init__(self, pandora_config=PandoraConfig(), max_time=3600):
+    def __init__(self, pandora_config=PandoraConfig(), max_time=3600, decomposition_window_size=1000000):
         self.pandora_config = pandora_config
 
         self.connection = self.get_connection()
         self.stop_after = max_time
+        self.decomposition_window_size = decomposition_window_size
 
     def __del__(self):
         self.connection.close()
@@ -93,7 +94,7 @@ class Pandora:
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
                           table_name='linked_circuit',
-                          batch_size=1000000,
+                          batch_size=self.decomposition_window_size,
                           reset_id=True)
 
         self.decompose_toffolis()
@@ -112,7 +113,7 @@ class Pandora:
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
                           table_name='linked_circuit',
-                          batch_size=1000000,
+                          batch_size=self.decomposition_window_size,
                           reset_id=True)
 
         self.decompose_toffolis()
@@ -123,7 +124,7 @@ class Pandora:
         db_tuples = get_maslov_adder(conn=self.connection, n_bits=m_bits)
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
-                          batch_size=1000000,
+                          batch_size=self.decomposition_window_size,
                           table_name='linked_circuit',
                           reset_id=False)
 
@@ -136,6 +137,9 @@ class Pandora:
         # subprocess.Popen.kill(proc)
 
     def build_fh_circuit(self, N, times, p_algo):
+        CRED = '\033[91m'
+        CEND = '\033[0m'
+
         print("Making FERMI-HUBBARD circuit...")
         start_make = time.time()
         fh_circuit = make_fh_circuit(N=N,
@@ -146,12 +150,14 @@ class Pandora:
         print("Decomposing circuit for pandora...")
         start_decomp = time.time()
         batches = windowed_cirq_to_pandora(circuit=fh_circuit,
-                                           window_size=10000)
+                                           window_size=self.decomposition_window_size)
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
 
-        for _, batch in enumerate(batches):
+        for i, batch in enumerate(batches):
             insert_single_batch(connection=self.connection, batch=batch)
+            ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
 
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
@@ -190,7 +196,7 @@ class Pandora:
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
-                          batch_size=1000000,
+                          batch_size=self.decomposition_window_size,
                           table_name='linked_circuit')
         print(f"DB insert took: {time.time() - start_insert}")
         print('Done mg_circuit!')
@@ -210,7 +216,7 @@ class Pandora:
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
-                          batch_size=1000000,
+                          batch_size=self.decomposition_window_size,
                           table_name='linked_circuit')
 
         print('Done o3_circuit!')
@@ -229,7 +235,7 @@ class Pandora:
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
-                          batch_size=1000000,
+                          batch_size=self.decomposition_window_size,
                           table_name='linked_circuit')
 
         print('Done hc_circuit!')
@@ -268,7 +274,7 @@ class Pandora:
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
-                          batch_size=1000000,
+                          batch_size=self.decomposition_window_size,
                           table_name='linked_circuit')
         print(f"DB insert took: {time.time() - start_insert}")
         print('Done ti_circuit!')
