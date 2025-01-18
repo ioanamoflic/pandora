@@ -2,6 +2,7 @@ import inspect
 import os
 import sys
 import time
+import itertools
 from itertools import cycle
 from multiprocessing import Process, cpu_count
 from typing import Any
@@ -125,19 +126,16 @@ def slice_into_batches(pandora_gates: list[PandoraGate],
     """
     Create batches of lists. One batch will be inserted into the database at a time.
     """
-    # for i in range(0, len(pandora_gates), batch_size):
-    #     yield pandora_gates[i:i + batch_size]
-    import itertools
     # slices the iterator for at most batch_size elements
     while pandora_gates:
         # for the moment, i am creating a list a returning it
-        # TODO: keept it as an iterator...
+        # TODO: use an iterator instead of the list
         mylist = list(itertools.islice(pandora_gates, batch_size))
         if len(mylist) == 0:
             # if there is nothing to return (i.e. the top iterator is finished)
             return
-        else:
-            print(f"batch has {len(mylist)}")
+        # else:
+        #     print(f"batch has {len(mylist)}")
         yield mylist
 
 
@@ -332,8 +330,9 @@ def insert_hack(batch: list[list[Any]]) -> None:
 
 def parallel_insert(pandora_gates: list[PandoraGate]) -> None:
     """
-    TODO
-    VERY memory intensive. Hopefully faster?
+    TODO: VERY memory intensive. Hopefully faster?
+    This is because the batches are lists and not iterators.
+    After slice_into_batches will return iterators, the memory footprint will be lower
     """
     my_cpu_count: int = cpu_count()
     pandora_gates = list(pandora_gates)
