@@ -15,7 +15,7 @@ fi
 
 # Outside of Slurm use the PROCESSID and save it for later reference
 # Use $PORT for the postgre port
-SLURM_JOBID=$$
+SLURM_JOBID='TEST_DB_2'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 echo -e "${RED}$SLURM_JOBID <- $@ ${NC}"
@@ -33,12 +33,15 @@ export PYTHONPATH=$PYTHONPATH:/pandora/src:/pandora
 cd /pandora
 
 python3 $@
+bash
 "
 
 
 # Create the local storage of a Pandora
-PGDATA="/tmp/$SLURM_JOBID/pgdata"
+PGDATA="/tmp/$SLURM_JOBID/pgdata"+
+rm -rf $PGDATA
 PGRUN="/tmp/$SLURM_JOBID/pgrun"
+rm -rf $PGRUN
 mkdir -p $PGDATA $PGRUN
 
 # Run Pandora in the apptainer
