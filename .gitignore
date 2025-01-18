@@ -1,1 +1,8 @@
+*.err
+*.out
+pgdata/
+pgrun/
+trace*
 circuitsharing/
+__pycache__
+venv

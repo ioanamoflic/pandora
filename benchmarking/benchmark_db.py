@@ -47,6 +47,7 @@ if __name__ == "__main__":
     n_CX = [1000, 10000, 100000, 1000000, 10000000]
 
     times = []
+
     for cx_count in n_CX:
         print('cx count:', cx_count)
         input_circ = generate_random_CX_circuit(n_templates=cx_count, n_qubits=50)
@@ -56,9 +57,12 @@ if __name__ == "__main__":
         times.append(tot_time)
 
     rows = zip(n_CX, times)
+
     with open('results/db_random.csv', 'w') as f:
         writer = csv.writer(f)
         for row in rows:
             writer.writerow(row)
+
+
     conn.close()
 

@@ -1,17 +1,9 @@
 from typing import Any
 
 import numpy as np
-import time
 import cirq
 import qualtran as qt
-import requests
 import json
-import pandas as pd
-# from rigetti_resource_estimation import gs_equivalence as gseq
-# from rigetti_resource_estimation.estimation_pipeline import estimation_pipeline
-# from rigetti_resource_estimation import widgetization
-# from rigetti_resource_estimation import transpile
-# from rigetti_resource_estimation import translators
 
 # pyLIQTR 1.3.3
 from pyLIQTR.ProblemInstances.getInstance import getInstance
@@ -19,7 +11,6 @@ from pyLIQTR.clam.lattice_definitions import SquareLattice, TriangularLattice
 from pyLIQTR.BlockEncodings.getEncoding import getEncoding, VALID_ENCODINGS
 from pyLIQTR.qubitization.qsvt_dynamics import qsvt_dynamics, simulation_phases
 from pyLIQTR.qubitization.qubitized_gates import QubitizedWalkOperator
-from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
 
 # https://github.com/isi-usc-edu/qb-gsee-benchmark, commit 4c547e8
 from qb_gsee_benchmark.qre import get_df_qpe_circuit
@@ -32,6 +23,7 @@ from pyscf import ao2mo, tools
 from openfermion import InteractionOperator
 
 
+# real p_algo should be 0.999999
 def make_qsvt_circuit(model, encoding, times=1.0, p_algo=0.95):
     """Make a QSVT based circuit from pyLIQTR"""
     eps = (1 - p_algo) / 2
@@ -55,7 +47,7 @@ def make_transverse_ising_circuit(N=3):
     return make_qsvt_circuit(model, encoding=getEncoding(VALID_ENCODINGS.PauliLCU))
 
 
-def make_mg_coating_walk_op(EC=13):
+def make_mg_coating_walk_op(EC=13, data_path="."):
     """Adapted from Notebook sent on May 27th from Nam H Nguyen (Boeing).
 
     Requirements: Unzip the 'mgcoating_data.zip' archive alongside this notebook.
@@ -63,7 +55,7 @@ def make_mg_coating_walk_op(EC=13):
     Original source code and data provided by HRL and Boeing as part of the DARPA Quantum
     Benchmarking program. Reproduced with permission.
     """
-    data_dir = 'mgcoating_data/'
+    data_dir = f"{data_path}/mgcoating_data/"
     hamhdf5 = f"{data_dir}mg_dimer_{EC}_ham.hdf5"
     gridhdf5 = f"{data_dir}mg_dimer_{EC}_grid.hdf5"
     slab = getInstance('ElectronicStructure', filenameH=hamhdf5, filenameG=gridhdf5)
@@ -79,7 +71,7 @@ def make_mg_coating_walk_op(EC=13):
     return walk_circuit
 
 
-def make_cyclic_o3_circuit():
+def make_cyclic_o3_circuit(data_path="."):
     """Adapted from notebook sent on November 8th, 2024 from Nam H Nguyen (Boeing).
 
     Requirements: Ensure the 'c60.fcidump' file is downloaded alongside this notebook.
@@ -106,7 +98,7 @@ def make_cyclic_o3_circuit():
         h2_so = np.transpose(h2_so, (1, 2, 3, 0))
         return InteractionOperator(constant=ecore, one_body_tensor=h1_so, two_body_tensor=h2_so)
 
-    filename = 'c60.fcidump'
+    filename = f'{data_path}/c60.fcidump'
     fci_data = tools.fcidump.read(filename)
     eri = ao2mo.restore('s1', fci_data['H2'], fci_data['NORB'])
     hamiltonian_op = integrals2intop(h1=fci_data['H1'], eri=eri, ecore=fci_data['ECORE'])
@@ -128,7 +120,7 @@ def make_cyclic_o3_circuit():
     return walk_circuit
 
 
-def make_hc_circuit():
+def make_hc_circuit(data_path="."):
     """Adapted from L3Harris contributions to open source repository maintained by USC/ISI.
 
     Requirements: Obtain 'darpa-qb-key.ppk' from Basecamp and place alongside this notebook. See:
@@ -142,10 +134,10 @@ def make_hc_circuit():
     Data file retrieval from SFTP uses code adapted from:
     https://github.com/isi-usc-edu/qb-gsee-benchmark/blob/main/examples/get_problem_lqre.py
     """
-    ppk_path = 'darpa-qb-key.ppk'
+    ppk_path = f'{data_path}/darpa-qb-key.ppk'
     username = "darpa-qb"
 
-    with open('problem_instance.mn_mono.cb40f3f7-ffe8-40e8-4544-f26aad5a8bd8.json', 'r') as f:
+    with open(f'{data_path}/problem_instance.mn_mono.cb40f3f7-ffe8-40e8-4544-f26aad5a8bd8.json', 'r') as f:
         problem_instance = json.load(f)
     solution_data: list[dict[str, Any]] = []
     results = {}
@@ -158,3 +150,4 @@ def make_hc_circuit():
                                                                                  df_threshold=1e-3
                                                                                  )
     return circuit.circuit
+
