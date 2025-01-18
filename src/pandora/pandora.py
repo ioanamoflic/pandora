@@ -140,7 +140,7 @@ class Pandora:
         CRED = '\033[91m'
         CEND = '\033[0m'
 
-        print("Making FERMI-HUBBARD circuit...")
+        print(f"Making FERMI-HUBBARD circuit...with window_size = {self.decomposition_window_size}")
         start_make = time.time()
         fh_circuit = make_fh_circuit(N=N,
                                      times=times,
