@@ -3,10 +3,10 @@ from typing import Tuple, List, Any, Iterable, Set, Iterator
 import cirq
 import sys
 import numpy as np
-from cirq import Operation, Qid
 
 from qualtran import Bloq, QUInt
 from qualtran.bloqs.arithmetic import Add
+from qualtran.bloqs.chemistry.hubbard_model.qubitization import PrepareHubbard
 from qualtran.bloqs.mod_arithmetic import ModAddK
 from qualtran.bloqs.data_loading import QROM
 from qualtran.bloqs.basic_gates import CNOT, TwoBitCSwap, XGate
@@ -19,7 +19,7 @@ from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
 from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
 from pyLIQTR.utils.circuit_decomposition import generator_decompose
 
-from pandora.cirq_to_pandora_util import streamed_cirq_to_pandora_from_op_list
+from pandora.cirq_to_pandora_util import windowed_cirq_to_pandora_from_op_list
 from pandora.gate_translator import In, Out, SINGLE_QUBIT_GATES, TWO_QUBIT_GATES
 from pandora.gates import PandoraGate
 
@@ -40,6 +40,15 @@ pandora_ingestible_gate_set = cirq.Gateset(
     cirq.CZPowGate, cirq.CXPowGate, cirq.ZZPowGate, cirq.XXPowGate, cirq.CCXPowGate,
     cirq.X, cirq.Y, cirq.Z,
 )
+
+
+def flatten(nested: list):
+    for i in nested:
+        if isinstance(i, list):
+            for j in flatten(i):
+                yield j
+        else:
+            yield i
 
 
 def keep(op: cirq.Operation):
@@ -122,7 +131,7 @@ def get_pandora_compatible_circuit(circuit: cirq.Circuit, decompose_from_high_le
     Takes a Cirq circuit as input and outputs a logically equivalent circuit with operations acting on at most three
     qubits which can be ingested into Pandora.
 
-    This is the SLOW method.
+    This is the SLOW method. For small circuits only.
     """
     if decompose_from_high_level:
         context = cirq.DecompositionContext(qubit_manager=cirq.SimpleQubitManager())
@@ -142,55 +151,6 @@ def get_pandora_compatible_circuit(circuit: cirq.Circuit, decompose_from_high_le
 
     decomposed_circuit = cirq.Circuit(final_ops)
     return decomposed_circuit
-
-
-def flatten(nested: list):
-    for i in nested:
-        if isinstance(i, list):
-            for j in flatten(i):
-                yield j
-        else:
-            yield i
-
-
-def get_pandora_compatible_circuit_via_pyliqtr(circuit: cirq.Circuit) -> tuple[list[Any], set[Any]]:
-    """
-    Takes a pyLIQTR circuit as input and outputs a logically equivalent circuit with operations acting on at most three
-    qubits which can be ingested into Pandora. Uses the generator-based decompose function from pyLIQTR.
-    """
-    qubit_set = set()
-    total_ops = []
-    for dop in generator_decompose(circuit, keep=keep):
-        if isinstance(dop.gate, cirq.GlobalPhaseGate):
-            print(f'Encountered GlobalPhaseGate with qubits = {dop.qubits}')
-            pass
-        elif isinstance(dop.gate, BloqAsCirqGate):
-            atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq)
-            total_ops.extend(atomic_ops)
-        elif isinstance(dop.gate, ModAddK):
-            top = pyLAM(bitsize=dop.gate.bitsize,
-                        add_val=dop.gate.add_val,
-                        mod=dop.gate.mod,
-                        cvs=dop.gate.cvs).on(*dop.qubits)
-            for d_top in generator_decompose(top):
-                atomic_ops = _perop_clifford_plus_t_direct_transform(d_top,
-                                                                     use_rotation_decomp_gates=False,
-                                                                     use_random_decomp=True,
-                                                                     warn_if_not_decomposed=True)
-                total_ops.extend(atomic_ops)
-        else:
-            atomic_ops = _perop_clifford_plus_t_direct_transform(dop,
-                                                                 use_rotation_decomp_gates=False,
-                                                                 use_random_decomp=True,
-                                                                 warn_if_not_decomposed=True)
-            total_ops.extend(atomic_ops)
-
-    total_ops = list(flatten(total_ops))
-    for op in total_ops:
-        qubit_set.update(set(list(op.qubits)))
-
-    assert_op_list_is_pandora_ingestible(total_ops)
-    return total_ops, qubit_set
 
 
 def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit,
@@ -265,7 +225,7 @@ def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int) -> Iterato
         for op in current_batch:
             qubit_set.update(set(list(op.qubits)))
         # the idea is to add anything that is not null on "next link" from the pandora gates dictionary
-        pandora_dictionary, latest_conc_on_qubit, last_id = streamed_cirq_to_pandora_from_op_list(
+        pandora_dictionary, latest_conc_on_qubit, last_id = windowed_cirq_to_pandora_from_op_list(
             op_list=current_batch,
             pandora_dictionary=pandora_dictionary,
             latest_conc_on_qubit=latest_conc_on_qubit,
@@ -286,7 +246,7 @@ def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int) -> Iterato
         yield batch_elements
 
     final_batch: list[cirq.Operation] = [Out().on(q) for q in qubit_set]
-    pandora_out_gates, _, _ = streamed_cirq_to_pandora_from_op_list(
+    pandora_out_gates, _, _ = windowed_cirq_to_pandora_from_op_list(
         op_list=final_batch,
         pandora_dictionary=pandora_dictionary,
         latest_conc_on_qubit=latest_conc_on_qubit,
@@ -354,26 +314,25 @@ def phase_estimation(walk: QubitizationWalkOperator, m: int) -> cirq.OP_TREE:
     yield cirq.qft(*m_qubits, inverse=True)
 
 
-def get_adder(n_bits) -> cirq.Circuit:
+def get_adder(n_bits) -> Iterator[list[PandoraGate]]:
     """
     Returns a decomposed Qualtran Adder into a Pandora compatible gate format.
     """
     bloq = Add(QUInt(n_bits))
-    clifford_t_circuit = get_cirq_circuit_for_bloq(bloq)
-    assert_circuit_is_pandora_ingestible(clifford_t_circuit)
-    return clifford_t_circuit
+    circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts())).unfreeze()
+    return windowed_cirq_to_pandora(circuit=circuit, window_size=1000000)
 
 
-def get_qrom(data) -> cirq.Circuit:
+def get_qrom(data) -> Iterator[list[PandoraGate]]:
     """
     Returns a decomposed Qualtran QROM into a Pandora compatible gate format.
     """
     bloq = QROM.build_from_data(data)
-    qrom_circuit = get_cirq_circuit_for_bloq(bloq)
-    return get_pandora_compatible_circuit_via_pyliqtr(circuit=qrom_circuit)
+    circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts())).unfreeze()
+    return windowed_cirq_to_pandora(circuit=circuit, window_size=1000000)
 
 
-def get_qpe_of_1d_ising_model(num_sites=1, eps=1e-5, m_bits=1) -> cirq.Circuit:
+def get_qpe_of_1d_ising_model(num_sites=1, eps=1e-5, m_bits=1) -> Iterator[list[PandoraGate]]:
     """
     Returns a decomposed Qualtran QPE of a 1d ising model into a Pandora compatible gate format.
 
@@ -381,9 +340,22 @@ def get_qpe_of_1d_ising_model(num_sites=1, eps=1e-5, m_bits=1) -> cirq.Circuit:
     """
     walk_op = get_walk_operator_for_1d_ising_model(num_sites, eps)
     circuit = cirq.Circuit(phase_estimation(walk_op, m=m_bits))
-    return get_pandora_compatible_circuit_via_pyliqtr(circuit=circuit)
+    return windowed_cirq_to_pandora(circuit=circuit, window_size=1000000)
 
 
-def get_qpe_of_2d_hubbard_model() -> cirq.Circuit:
-    # TODO figure out a way to decompose ModAddK
-    raise NotImplementedError
+def get_2d_hubbard_model(dim: tuple[int, int] = (2, 2), t=1.0, u=4) -> Iterator[list[PandoraGate]]:
+    """
+    PREPARE bloq taken from https://github.com/quantumlib/Qualtran/blob/main/qualtran/bloqs/chemistry/hubbard_model/qubitization/hubbard_model.ipynb
+    Args:
+        dim: the number of sites along the x/y-axis.
+        t: coefficient for hopping terms in the Hubbard model hamiltonian.
+        u: coefficient for single body Z term and two-body ZZ terms in the Hubbard model hamiltonian.
+
+    Returns:
+        A decomposed PREPARE operation optimized for the 2D Hubbard model into a Pandora compatible gate format.
+
+    """
+    x_dim, y_dim = dim
+    bloq = PrepareHubbard(x_dim, y_dim, t=t, u=u)
+    circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts())).unfreeze()
+    return windowed_cirq_to_pandora(circuit=circuit, window_size=1000000)

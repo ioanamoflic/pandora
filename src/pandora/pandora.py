@@ -86,16 +86,10 @@ class Pandora:
         Clifford+T into a fresh Pandora table instance.
         """
         self.build_pandora()
-        cirq_adder: cirq.Circuit() = get_adder(n_bits=bitsize)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=cirq_adder,
-                                       last_id=0,
-                                       label=f'a',
-                                       add_margins=True)
-        insert_in_batches(pandora_gates=db_tuples,
-                          connection=self.connection,
-                          table_name='linked_circuit',
-                          batch_size=self.decomposition_window_size,
-                          reset_id=True)
+        adder_batches: cirq.Circuit() = get_adder(n_bits=bitsize)
+
+        for _, batch in enumerate(adder_batches):
+            insert_single_batch(connection=self.connection, batch=batch)
 
         self.decompose_toffolis()
 
@@ -105,18 +99,26 @@ class Pandora:
         Clifford+T into a fresh Pandora table instance.
         """
         self.build_pandora()
-        cirq_qrom = get_qrom(data=data)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=cirq_qrom,
-                                       last_id=0,
-                                       label=f'r',
-                                       add_margins=True)
-        insert_in_batches(pandora_gates=db_tuples,
-                          connection=self.connection,
-                          table_name='linked_circuit',
-                          batch_size=self.decomposition_window_size,
-                          reset_id=True)
+        qrom_batches = get_qrom(data=data)
+
+        for _, batch in enumerate(qrom_batches):
+            insert_single_batch(connection=self.connection, batch=batch)
 
         self.decompose_toffolis()
+
+    def build_qualtran_qpe(self, num_sites=2, eps=1e-5, m_bits=1):
+        self.build_pandora()
+        qpe_batches = get_qpe_of_1d_ising_model(num_sites=num_sites, eps=eps, m_bits=m_bits)
+
+        for _, batch in enumerate(qpe_batches):
+            insert_single_batch(connection=self.connection, batch=batch)
+
+    def build_qualtran_hubbard_2d(self, dim=(2, 2), t=1, u=4):
+        self.build_pandora()
+        qpe_batches = get_2d_hubbard_model(dim=dim, t=t, u=u)
+
+        for _, batch in enumerate(qpe_batches):
+            insert_single_batch(connection=self.connection, batch=batch)
 
     def build_maslov_adder(self, m_bits):
         self.build_pandora()
@@ -129,12 +131,6 @@ class Pandora:
                           reset_id=False)
 
         self.decompose_toffolis()
-
-        # TODO: This should be cleaned
-        #  There is a collector.py the results branch
-        # proc = subprocess.Popen([f'./readout_epyc.sh results_{m_bits}.csv'], shell=True, executable="/bin/bash")
-        # db_multi_threaded(thread_proc=thread_procedures)
-        # subprocess.Popen.kill(proc)
 
     def build_fh_circuit(self, N, times, p_algo):
         CRED = '\033[91m'
@@ -162,120 +158,93 @@ class Pandora:
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
     def build_mg_coating_walk_op(self, data_path="."):
-        print("Making MG circuit...")
-        sys.stdout.flush()
+        CRED = '\033[91m'
+        CEND = '\033[0m'
+
+        print(f"Making MG circuit...with window_size = {self.decomposition_window_size}")
         start_make = time.time()
         mg_circuit = make_mg_coating_walk_op(EC=13, data_path=data_path)
         print(f"Building pyliqtr circuit took: {time.time() - start_make}")
-        sys.stdout.flush()
 
         print("Decomposing circuit for pandora...")
-        sys.stdout.flush()
         start_decomp = time.time()
-        decomposed_ops, qubit_set = get_pandora_compatible_circuit_via_pyliqtr(circuit=mg_circuit)
-        print(f"Decomposing circuit took: {time.time() - start_decomp}")
-        sys.stdout.flush()
-
-        start_cirq_to_pandora = time.time()
-        print("cirq_to_pandora...")
-        sys.stdout.flush()
-
-        db_tuples, _ = cirq_to_pandora_from_op_list(op_list=decomposed_ops,
-                                                    qubit_set=qubit_set,
-                                                    last_id=0,
-                                                    label='f',
-                                                    add_margins=True)
-        print(f"cirq_to_pandora took: {time.time() - start_cirq_to_pandora}")
-        print(f'Number of final circuit ops: {len(db_tuples)}')
-        sys.stdout.flush()
-
-        print("Starting to insert...")
-        sys.stdout.flush()
-        start_insert = time.time()
+        batches = windowed_cirq_to_pandora(circuit=mg_circuit,
+                                           window_size=self.decomposition_window_size)
         self.build_pandora()
-        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
-        insert_in_batches(pandora_gates=db_tuples,
-                          connection=self.connection,
-                          batch_size=self.decomposition_window_size,
-                          table_name='linked_circuit')
-        print(f"DB insert took: {time.time() - start_insert}")
-        print('Done mg_circuit!')
-        sys.stdout.flush()
+        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
+
+        for i, batch in enumerate(batches):
+            insert_single_batch(connection=self.connection, batch=batch)
+            ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
+
+        print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
     def build_cyclic_o3(self, data_path="."):
-        print("Making o3 circuit...")
+        CRED = '\033[91m'
+        CEND = '\033[0m'
+
+        print(f"Making o3 circuit...with window_size = {self.decomposition_window_size}")
+        start_make = time.time()
         o3_circuit = make_cyclic_o3_circuit(data_path=data_path)
+        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
 
-        decomposed_ops, qubit_set = get_pandora_compatible_circuit_via_pyliqtr(circuit=o3_circuit)
-        db_tuples, _ = cirq_to_pandora_from_op_list(op_list=decomposed_ops,
-                                                    qubit_set=qubit_set,
-                                                    last_id=0,
-                                                    label='f',
-                                                    add_margins=True)
+        print("Decomposing circuit for pandora...")
+        start_decomp = time.time()
+        batches = windowed_cirq_to_pandora(circuit=o3_circuit,
+                                           window_size=self.decomposition_window_size)
         self.build_pandora()
-        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
-        insert_in_batches(pandora_gates=db_tuples,
-                          connection=self.connection,
-                          batch_size=self.decomposition_window_size,
-                          table_name='linked_circuit')
+        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
 
-        print('Done o3_circuit!')
+        for i, batch in enumerate(batches):
+            insert_single_batch(connection=self.connection, batch=batch)
+            ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
+
+        print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
     def build_hc_circuit(self, data_path='.'):
-        print("Making hc circuit...")
+        CRED = '\033[91m'
+        CEND = '\033[0m'
+
+        print(f"Making hc circuit...with window_size = {self.decomposition_window_size}")
+        start_make = time.time()
         hc_circuit = make_hc_circuit(data_path=data_path)
+        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
 
-        decomposed_ops, qubit_set = get_pandora_compatible_circuit_via_pyliqtr(circuit=hc_circuit)
-        db_tuples, _ = cirq_to_pandora_from_op_list(op_list=decomposed_ops,
-                                                    qubit_set=qubit_set,
-                                                    last_id=0,
-                                                    label='f',
-                                                    add_margins=True)
+        print("Decomposing circuit for pandora...")
+        start_decomp = time.time()
+        batches = windowed_cirq_to_pandora(circuit=hc_circuit,
+                                           window_size=self.decomposition_window_size)
         self.build_pandora()
-        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
-        insert_in_batches(pandora_gates=db_tuples,
-                          connection=self.connection,
-                          batch_size=self.decomposition_window_size,
-                          table_name='linked_circuit')
+        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
 
-        print('Done hc_circuit!')
+        for i, batch in enumerate(batches):
+            insert_single_batch(connection=self.connection, batch=batch)
+            ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
+
+        print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
     def build_traverse_ising(self, N=2):
-        print("Making ISING circuit...")
-        sys.stdout.flush()
+        CRED = '\033[91m'
+        CEND = '\033[0m'
+
+        print(f"Making ISING circuit...with window_size = {self.decomposition_window_size}")
         start_make = time.time()
         ti_circuit = make_transverse_ising_circuit(N=N)
         print(f"Building pyliqtr circuit took: {time.time() - start_make}")
-        sys.stdout.flush()
 
         print("Decomposing circuit for pandora...")
-        sys.stdout.flush()
         start_decomp = time.time()
-        decomposed_ops, qubit_set = get_pandora_compatible_circuit_via_pyliqtr(circuit=ti_circuit)
-        print(f"Decomposing circuit took: {time.time() - start_decomp}")
-        sys.stdout.flush()
-
-        start_cirq_to_pandora = time.time()
-        print("cirq_to_pandora...")
-        sys.stdout.flush()
-        db_tuples, _ = cirq_to_pandora_from_op_list(op_list=decomposed_ops,
-                                                    qubit_set=qubit_set,
-                                                    last_id=0,
-                                                    label='f',
-                                                    add_margins=True)
-        print(f"cirq_to_pandora took: {time.time() - start_cirq_to_pandora}")
-        print(f'Number of final circuit ops: {len(db_tuples)}')
-        sys.stdout.flush()
-
-        print("Starting to insert...")
-        sys.stdout.flush()
-        start_insert = time.time()
+        batches = windowed_cirq_to_pandora(circuit=ti_circuit,
+                                           window_size=self.decomposition_window_size)
         self.build_pandora()
-        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
-        insert_in_batches(pandora_gates=db_tuples,
-                          connection=self.connection,
-                          batch_size=self.decomposition_window_size,
-                          table_name='linked_circuit')
-        print(f"DB insert took: {time.time() - start_insert}")
-        print('Done ti_circuit!')
-        sys.stdout.flush()
+        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
+
+        for i, batch in enumerate(batches):
+            insert_single_batch(connection=self.connection, batch=batch)
+            ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
+
+        print(f"Decomposing circuit took: {time.time() - start_decomp}")
