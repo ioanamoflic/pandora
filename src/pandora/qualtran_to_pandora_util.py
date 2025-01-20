@@ -20,6 +20,7 @@ from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_tr
 from pyLIQTR.utils.circuit_decomposition import generator_decompose
 
 from pandora.cirq_to_pandora_util import windowed_cirq_to_pandora_from_op_list
+from pandora.exceptions import WindowSizeError
 from pandora.gate_translator import In, Out, SINGLE_QUBIT_GATES, TWO_QUBIT_GATES
 from pandora.gates import PandoraGate
 
@@ -214,6 +215,9 @@ def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int) -> Iterato
     Returns:
         Generator over the PandoraGate objects of each batch.
     """
+    if window_size <= 1:
+        raise WindowSizeError
+
     qubit_set = set()
     pandora_dictionary = dict()
     latest_conc_on_qubit = dict()
@@ -320,7 +324,7 @@ def get_adder(n_bits) -> Iterator[list[PandoraGate]]:
     """
     bloq = Add(QUInt(n_bits))
     circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts())).unfreeze()
-    return windowed_cirq_to_pandora(circuit=circuit, window_size=1000000)
+    return windowed_cirq_to_pandora(circuit=circuit, window_size=2)
 
 
 def get_qrom(data) -> Iterator[list[PandoraGate]]:
@@ -359,3 +363,22 @@ def get_2d_hubbard_model(dim: tuple[int, int] = (2, 2), t=1.0, u=4) -> Iterator[
     bloq = PrepareHubbard(x_dim, y_dim, t=t, u=u)
     circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts())).unfreeze()
     return windowed_cirq_to_pandora(circuit=circuit, window_size=1000000)
+
+
+def get_adder_as_cirq_circuit(n_bits) -> cirq.Circuit:
+    """
+    Used of testing.
+    """
+    bloq = Add(QUInt(n_bits))
+    clifford_t_circuit = get_cirq_circuit_for_bloq(bloq)
+    assert_circuit_is_pandora_ingestible(clifford_t_circuit)
+    return clifford_t_circuit
+
+
+def get_qrom_as_cirq_circuit(data) -> cirq.Circuit:
+    """
+    Used of testing.
+    """
+    bloq = QROM.build_from_data(data)
+    qrom_circuit = get_cirq_circuit_for_bloq(bloq)
+    return qrom_circuit

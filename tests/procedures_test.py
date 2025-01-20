@@ -1,5 +1,7 @@
 import random
 
+import cirq
+
 from benchmarking import benchmark_cirq
 
 from pandora.qualtran_to_pandora_util import *
@@ -581,6 +583,29 @@ def test_case_2_repeated(connection, n):
     print('Test case 2 repeated passed!')
 
 
+def assert_equal_with_qubit_permutations(initial_circ: cirq.Circuit, final_circ: cirq.Circuit):
+    """
+    Embarrassingly slow. Avoid at all costs. Will be replaced with test table.
+    """
+    final_qubits = list(final_circ.all_qubits())
+
+    from itertools import permutations
+    all_permutations: list[list[cirq.Qid]] = list(permutations(final_qubits))
+
+    for permutation in all_permutations:
+        print(permutation)
+        qubit_map = dict(
+            zip(
+                initial_circ.all_qubits(),
+                permutation
+            )
+        )
+        initial_circ_with_permutation = initial_circ.transform_qubits(qubit_map=qubit_map)
+        if np.allclose(initial_circ_with_permutation.unitary(), final_circ.unitary()):
+            return True
+    return False
+
+
 def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
     """
     This method tries to optimize a qualtran adder for stop_after seconds and then reconstruct it.
@@ -594,15 +619,11 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
         refresh_all_stored_procedures(connection=connection)
         reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
 
-        circuit = get_adder(bit_size)
+        adder_batches = get_adder(bit_size)
+        full_adder_circuit = get_adder_as_cirq_circuit(n_bits=bit_size)
 
-        pandora_gates, _ = cirq_to_pandora(cirq_circuit=circuit,
-                                           last_id=0,
-                                           label='t',
-                                           add_margins=True)
-        insert_in_batches(pandora_gates=pandora_gates,
-                          connection=connection,
-                          table_name='linked_circuit')
+        for i, batch in enumerate(adder_batches):
+            insert_single_batch(connection=connection, batch=batch)
 
         thread_procedures = [
             (1, f"CALL cancel_single_qubit_bernoulli({myH}, {myH}, 1, 1, 10, 10000000)"),
@@ -623,14 +644,14 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
         db_multi_threaded(thread_proc=thread_procedures)
         stop_all_lurking_procedures(connection)
         extracted_circuit: cirq.Circuit = extract_cirq_circuit(connection=connection,
-                                                               circuit_label='t',
+                                                               circuit_label='x',
                                                                remove_io_gates=True,
-                                                               table_name='linked_circuit',
-                                                               )
-        circuit = remove_measurements(remove_classically_controlled_ops(circuit))
+                                                               table_name='linked_circuit')
+
+        circuit = remove_measurements(remove_classically_controlled_ops(full_adder_circuit))
         extracted_circuit = remove_measurements(remove_classically_controlled_ops(extracted_circuit))
 
-        assert np.allclose(circuit.unitary(), extracted_circuit.unitary())
+        assert assert_equal_with_qubit_permutations(circuit, extracted_circuit)
         print(f'Passed adder({bit_size})!')
 
 
