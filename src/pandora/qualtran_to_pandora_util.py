@@ -205,11 +205,14 @@ def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit,
         yield window_ops
 
 
-def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int) -> Iterator[list[PandoraGate]]:
+def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int, is_test: bool = False) \
+        -> Iterator[list[PandoraGate]]:
     """
     This method traverses a cirq circuit in windows of arbitrary size and returns the PandoraGate operations equivalent
-    to the cirq operations in the window. Especially useful for very large circuits which do not fit into memory.
+    to the cirq operations in the window. Especially useful for very large circuits which do not fit into memory. The
+    list of qubits in the resulting circuit will be a permutation fo the original one.
     Args:
+        is_test: boolean which takes qubit ordering into account during testing for 1:1 reconstruction.
         circuit: the high-level cirq circuit
         window_size: the size of each decomposition window
     Returns:
@@ -234,7 +237,8 @@ def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int) -> Iterato
             pandora_dictionary=pandora_dictionary,
             latest_conc_on_qubit=latest_conc_on_qubit,
             last_id=last_id,
-            label='x'
+            label='x',
+            is_test=is_test
         )
         dictionary_copy = pandora_dictionary.copy()
         batch_elements: list[PandoraGate] = []
@@ -255,7 +259,8 @@ def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int) -> Iterato
         pandora_dictionary=pandora_dictionary,
         latest_conc_on_qubit=latest_conc_on_qubit,
         last_id=last_id,
-        label='x'
+        label='x',
+        is_test=is_test
     )
     yield list(pandora_out_gates.values())
 
@@ -318,22 +323,22 @@ def phase_estimation(walk: QubitizationWalkOperator, m: int) -> cirq.OP_TREE:
     yield cirq.qft(*m_qubits, inverse=True)
 
 
-def get_adder(n_bits) -> Iterator[list[PandoraGate]]:
+def get_adder(n_bits, window_size=100, is_test=False) -> Iterator[list[PandoraGate]]:
     """
     Returns a decomposed Qualtran Adder into a Pandora compatible gate format.
     """
     bloq = Add(QUInt(n_bits))
     circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts())).unfreeze()
-    return windowed_cirq_to_pandora(circuit=circuit, window_size=2)
+    return windowed_cirq_to_pandora(circuit=circuit, window_size=window_size, is_test=is_test)
 
 
-def get_qrom(data) -> Iterator[list[PandoraGate]]:
+def get_qrom(data, window_size=100, is_test=False) -> Iterator[list[PandoraGate]]:
     """
     Returns a decomposed Qualtran QROM into a Pandora compatible gate format.
     """
     bloq = QROM.build_from_data(data)
     circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts())).unfreeze()
-    return windowed_cirq_to_pandora(circuit=circuit, window_size=1000000)
+    return windowed_cirq_to_pandora(circuit=circuit, window_size=window_size, is_test=is_test)
 
 
 def get_qpe_of_1d_ising_model(num_sites=1, eps=1e-5, m_bits=1) -> Iterator[list[PandoraGate]]:

@@ -86,7 +86,7 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
 
 def drop_and_replace_tables(connection,
                             clean: bool = False,
-                            tables: tuple[str] = ('linked_circuit', 'stop_condition', 'edge_list'),
+                            tables: tuple[str] = ('linked_circuit', 'linked_circuit_test', 'stop_condition', 'edge_list'),
                             verbose=False) -> None:
     """
     This method drops all tables of Pandora and rebuilds them according to the configuration in
@@ -201,17 +201,27 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
         reset_database_id(connection, table_name=table_name)
 
 
-def insert_single_batch(connection, batch: list[PandoraGate]):
+def insert_single_batch(connection, batch: list[PandoraGate], is_test=False):
     """
     Insert a single batch of entries into the database.
     """
     cursor = connection.cursor()
-    args = ','.join(
-        cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple()).decode('utf-8')
-        for tup in batch)
-    sql_statement = \
-        ("INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
-         "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
+    if not is_test:
+        args = ','.join(
+            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple()).decode(
+                'utf-8')
+            for tup in batch)
+        sql_statement = \
+            ("INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
+             "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
+    else:
+        args = ','.join(
+            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple(is_test=True)).decode(
+                'utf-8')
+            for tup in batch)
+        sql_statement = \
+            ("INSERT INTO linked_circuit_test(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, "
+             "next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key, qubit_name) VALUES" + args)
 
     # execute the sql statement
     cursor.execute(sql_statement)
@@ -232,7 +242,9 @@ def remove_io_gates_from_circuit(circuit: cirq.Circuit) -> cirq.Circuit:
 def extract_cirq_circuit(connection,
                          circuit_label: str = None,
                          table_name: str = None,
-                         remove_io_gates: bool = False) -> cirq.Circuit:
+                         remove_io_gates: bool = False,
+                         original_qubits_test: dict[str, int] = None,
+                         is_test=True) -> cirq.Circuit:
     """
     Extracts a circuit with a given label from the database and returns the corresponding cirq circuit.
     Params:
@@ -256,7 +268,9 @@ def extract_cirq_circuit(connection,
     tuples: list[tuple] = cursor.fetchall()
 
     pandora_gates: list[PandoraGate] = [PandoraGate(*tup) for tup in tuples]
-    final_circ: cirq.Circuit = pandora_to_cirq(pandora_gates=pandora_gates)
+    final_circ: cirq.Circuit = pandora_to_cirq(pandora_gates=pandora_gates,
+                                               original_qubits_test=original_qubits_test,
+                                               is_test=is_test)
 
     if remove_io_gates:
         return remove_io_gates_from_circuit(final_circ)

@@ -106,7 +106,9 @@ def wrap_pandora_gates(pandora_gates: list[PandoraGate]) -> dict[int, PandoraGat
     return pandora_gate_id_map
 
 
-def sort_pandora_wrapped_by_moment(pandora_gate_id_map: dict[int, PandoraGateWrapper]):
+def sort_pandora_wrapped_by_moment(pandora_gate_id_map: dict[int, PandoraGateWrapper],
+                                   original_qubits_test: dict[str, int] = None,
+                                   is_test=False):
     """
     This method receives a dictionary of (id, PandoraGateWrapped) and returns a list of PandoraGateWrapped objects
     sorted by the moment each pandora gate would appear in the reconstructed cirq Circuit.
@@ -163,16 +165,24 @@ def sort_pandora_wrapped_by_moment(pandora_gate_id_map: dict[int, PandoraGateWra
                         all_are_marked = False
 
     assert all([wrapped.moment != default_moment for wrapped in pandora_gate_id_map.values()])
+    if is_test:
+        return sorted(pandora_gate_id_map.values(), key=lambda wrapped: (wrapped.moment,
+                                                                         original_qubits_test[
+                                                                             wrapped.pandora_gate.qubit_name]
+                                                                         if wrapped.pandora_gate.type
+                                                                            == PandoraGateTranslator.In.value
+                                                                         else wrapped.pandora_gate.id))
     return sorted(pandora_gate_id_map.values(), key=lambda wrapped: (wrapped.moment,
                                                                      wrapped.pandora_gate.id))
 
 
-def pandora_to_cirq(pandora_gates: list[PandoraGate]) -> cirq.Circuit:
+def pandora_to_cirq(pandora_gates: list[PandoraGate], original_qubits_test: dict[str, int] = None, is_test=False) \
+        -> cirq.Circuit:
     """
     Takes a list of Pandora gates (unwrapped) and returns the corresponding cirq Circuit.
     """
     pandora_gate_id_map = wrap_pandora_gates(pandora_gates=pandora_gates)
-    sorted_gates = sort_pandora_wrapped_by_moment(pandora_gate_id_map)
+    sorted_gates = sort_pandora_wrapped_by_moment(pandora_gate_id_map, original_qubits_test, is_test)
     sorted_ids = [wrapped.pandora_gate.id for wrapped in sorted_gates]
 
     rh = dict(zip(sorted_ids, sorted_gates))
@@ -328,11 +338,13 @@ def windowed_cirq_to_pandora_from_op_list(op_list: list[cirq.Operation],
                                           latest_conc_on_qubit: dict[cirq.Qid, int],
                                           last_id: int,
                                           label: Optional[str] = None,
+                                          is_test: bool = False
                                           ) -> tuple[dict[int, PandoraGate], dict[cirq.Qid, int], int]:
     """
     Fast method which converts a cirq circuit into a list of tuples which can be used as database entries.
 
     Args:
+        is_test: if test, keep initial qubit ordering in the test table to ensure reconstruction is perfect
         latest_conc_on_qubit: last id concatenated with gate wire on each qubit
                 last id concatenated with gate wire on each qubit
                 the convention is that we concatenate to the id a value between 1-3 as follows:
@@ -358,6 +370,9 @@ def windowed_cirq_to_pandora_from_op_list(op_list: list[cirq.Operation],
                 pandora_dictionary[last_id] = PandoraGate(gate_id=last_id,
                                                           gate_code=PandoraGateTranslator.In.value,
                                                           label=label)
+                if is_test:
+                    pandora_dictionary[last_id].qubit_name = str(qub)
+
                 latest_conc_on_qubit[qub] = last_id * 10
                 last_id += 1
 
@@ -383,8 +398,5 @@ def windowed_cirq_to_pandora_from_op_list(op_list: list[cirq.Operation],
 
         pandora_dictionary[last_id] = current_pandora_gate
         last_id += 1
-
-    # with open(f'meas_keys_{label}.json', 'w') as fp:
-    #   json.dump(meas_key_dict, fp)
 
     return pandora_dictionary, latest_conc_on_qubit, last_id
