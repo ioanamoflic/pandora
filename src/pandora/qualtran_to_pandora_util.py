@@ -5,9 +5,9 @@ import sys
 import numpy as np
 
 from qualtran import Bloq, QUInt
-from qualtran.bloqs.arithmetic import Add
 from qualtran.bloqs.chemistry.hubbard_model.qubitization import PrepareHubbard
 from qualtran.bloqs.mod_arithmetic import ModAddK
+from qualtran.bloqs.arithmetic.addition import Add
 from qualtran.bloqs.data_loading import QROM
 from qualtran.bloqs.basic_gates import CNOT, TwoBitCSwap, XGate
 from qualtran.cirq_interop import BloqAsCirqGate
@@ -16,6 +16,8 @@ from qualtran.bloqs.qubitization import QubitizationWalkOperator
 from qualtran.bloqs.qubitization.qubitization_walk_operator_test import get_walk_operator_for_1d_ising_model
 
 from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
+from pyLIQTR.circuits.operators.AddMod import Add
+
 from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
 from pyLIQTR.utils.circuit_decomposition import generator_decompose
 
@@ -24,7 +26,8 @@ from pandora.exceptions import WindowSizeError
 from pandora.gate_translator import In, Out, SINGLE_QUBIT_GATES, TWO_QUBIT_GATES
 from pandora.gates import PandoraGate
 
-sys.setrecursionlimit(10000)  # Increase recursion limit from default since adder bloq has a recursive implementation.
+sys.setrecursionlimit(10000000)
+# Increase recursion limit from default since adder bloq has a recursive implementation.
 
 cirq_and_bloq_gate_set = cirq.Gateset(
     cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel,
@@ -32,7 +35,7 @@ cirq_and_bloq_gate_set = cirq.Gateset(
     cirq.CZPowGate, cirq.CXPowGate, cirq.ZZPowGate, cirq.XXPowGate, cirq.CCXPowGate,
     cirq.X, cirq.Y, cirq.Z,
     ModAddK,
-    BloqAsCirqGate,
+    BloqAsCirqGate
 )
 
 pandora_ingestible_gate_set = cirq.Gateset(
@@ -205,7 +208,7 @@ def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit,
         yield window_ops
 
 
-def windowed_cirq_to_pandora(circuit: cirq.Circuit, window_size: int, is_test: bool = False) \
+def windowed_cirq_to_pandora(circuit: cirq.Circuit | Bloq, window_size: int, is_test: bool = False) \
         -> Iterator[list[PandoraGate]]:
     """
     This method traverses a cirq circuit in windows of arbitrary size and returns the PandoraGate operations equivalent

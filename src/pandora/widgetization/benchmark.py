@@ -2,7 +2,7 @@ import csv
 import random
 import time
 from pandora.connection_util import get_connection, get_edge_list, get_gate_types
-from union_find import UnionFindWidgetization, WidgetizationReturnCodes, BFSWidgetization, WidgetUtils, \
+from union_find import WidgetizationReturnCodes, BFSWidgetization, WidgetUtils, \
     UnionFindWidgetizer
 
 # from widget_plot import plot3dsurface
@@ -165,6 +165,10 @@ if __name__ == "__main__":
         pandora = Pandora(pandora_config=config,
                           max_time=3600,
                           decomposition_window_size=1000000)
+        pandora.build_pandora()
+        # pandora.build_fh_circuit(N=3, p_algo=0.9999999904, times=0.01)
+        pandora.build_example()
+        pandora.build_edge_list()
         edges = pandora.get_edge_list()
         ids = []
         for (s, t) in edges:
@@ -173,18 +177,21 @@ if __name__ == "__main__":
         pandora_gates = pandora.get_pandora_gates_by_id(list(set(ids)))
         uf = UnionFindWidgetizer(edges=edges,
                                  pandora_gates=pandora_gates,
-                                 max_t=5,
-                                 max_d=10)
+                                 max_t=1000,
+                                 max_d=100)
+
+        edges = sorted(edges, key=lambda x: (x[0], x[1]))
         for node1, node2 in edges:
             ret = uf.union(node1, node2)
             ret_code_stats[ret] = ret_code_stats[ret] + 1
 
         pandora_gate_dict = dict([(pandora_gate.id, pandora_gate) for pandora_gate in pandora_gates])
+        print(ret_code_stats)
 
-        nr_widgets, avd, avt = uf.compute_widgets_and_properties()
-        print(f"Avg. depth={avd},  Avg. T depth={avt} for Nr. widgets={nr_widgets}")
+        nr_widgets, avd, avt, full_count = uf.compute_widgets_and_properties()
+        print(f"Avg. depth={avd},  Avg. T depth={avt} for Nr. widgets={nr_widgets}, Full count={full_count}")
         wutils.generate_d3_json_for_uf(uf_widgetizer=uf,
                                        pandora_gate_dict=pandora_gate_dict,
-                                       file_path=".")
+                                       file_path="../../../vis")
 
 

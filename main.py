@@ -45,3 +45,5 @@ if __name__ == "__main__":
     elif sys.argv[next_arg] == "ising":
         N = int(sys.argv[next_arg + 1])
         pandora.build_traverse_ising(N=N)
+    elif sys.argv[next_arg] == "example":
+        pandora.build_example()

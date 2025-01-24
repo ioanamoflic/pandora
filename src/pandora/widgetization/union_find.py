@@ -151,7 +151,7 @@ class UnionFindWidgetizer:
         if depth_1 + depth_2 > self.max_depth:
             return WidgetizationReturnCodes.DEPTH
 
-        if self.parent[root_id_1].depth > self.parent[root_id_2].depth:
+        if self.parent[root_id_1].depth >= self.parent[root_id_2].depth:
             # Root1 is large
             self.update_properties(root_id_1, root_id_2)
         else:
@@ -184,15 +184,17 @@ class UnionFindWidgetizer:
 
         # Create a set of all the unique widgets
         widgets = set(self.parent.values())
-        self.widget_count = len(widgets) + 1
+        self.widget_count = len(widgets)
 
         depths = [w.depth for w in widgets]
+        full_widget_count = sum([1 for w in widgets if w.depth == self.max_depth])
+
         avg_depth = sum(depths) / len(depths)
 
         t_counts = [w.t_count for w in widgets]
         avg_t = sum(t_counts) / len(t_counts)
 
-        return self.widget_count, avg_depth, avg_t
+        return self.widget_count, avg_depth, avg_t, full_widget_count
 
     def print_components(self, verbose=False):
         components = {}

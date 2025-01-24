@@ -1,5 +1,7 @@
 import time
 import datetime
+
+import cirq
 import psycopg2
 
 from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
@@ -98,13 +100,34 @@ class Pandora:
         Inserts a Qualtran adder bloq of bitsize=bits decomposed into
         Clifford+T into a fresh Pandora table instance.
         """
+        CRED = '\033[91m'
+        CEND = '\033[0m'
+
         self.build_pandora()
-        adder_batches: cirq.Circuit() = get_adder(n_bits=bitsize)
+        adder_batches = get_adder(n_bits=bitsize, window_size=1000000)
 
-        for _, batch in enumerate(adder_batches):
+        for i, batch in enumerate(adder_batches):
             insert_single_batch(connection=self.connection, batch=batch)
+            ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
 
-        self.decompose_toffolis()
+    def build_example(self):
+        self.build_pandora()
+        q1, q2, q3, q4 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2'), cirq.NamedQubit('q3'), cirq.NamedQubit('q4')
+        initial_circuit = cirq.Circuit([cirq.CX(q1, q2),
+                                        cirq.CX(q2, q3),
+                                        cirq.CX(q3, q4),
+                                        cirq.CX(q2, q3),
+                                        cirq.CX(q1, q2)])
+        print(initial_circuit)
+        big_circuit = initial_circuit * 100
+        pandora_gates, _ = cirq_to_pandora(cirq_circuit=big_circuit,
+                                           last_id=0,
+                                           add_margins=True,
+                                           label='t')
+        insert_in_batches(pandora_gates=pandora_gates,
+                          connection=self.connection,
+                          table_name='linked_circuit')
 
     def build_qualtran_qrom(self, data):
         """

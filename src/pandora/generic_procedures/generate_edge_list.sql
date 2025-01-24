@@ -11,17 +11,17 @@ declare
    global_in bigint;
    global_out bigint;
 begin
-    global_in = -1;
-    global_out = -2;
+--     global_in = -1;
+--     global_out = -2;
 
     for t_row in t_curs loop
         source_id := t_row.id;
-        if t_row.type = 0 then
-            insert into edge_list values (global_in, source_id);
-        end if;
-        if t_row.type = 1 then
-            insert into edge_list values (source_id, global_out);
-        end if;
+--         if t_row.type = 0 then
+--             insert into edge_list values (global_in, source_id);
+--         end if;
+--         if t_row.type = 1 then
+--             insert into edge_list values (source_id, global_out);
+--         end if;
         --- single qubit gate
         if t_row.next_q1 is not null and t_row.next_q2 is null then
             target_q1_id := div(t_row.next_q1, 10);
