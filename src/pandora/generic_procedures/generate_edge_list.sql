@@ -11,8 +11,8 @@ declare
    global_in bigint;
    global_out bigint;
 begin
-    global_in = (select max(id) from linked_circuit) + 1;
-    global_out = (select max(id) from linked_circuit) + 2;
+    global_in = -1;
+    global_out = -2;
 
     for t_row in t_curs loop
         source_id := t_row.id;

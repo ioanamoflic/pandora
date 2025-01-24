@@ -74,6 +74,19 @@ class Pandora:
         drop_and_replace_tables(self.connection, clean=True, verbose=True)
         refresh_all_stored_procedures(self.connection, verbose=True)
 
+    def build_edge_list(self) -> None:
+        self.connection.cursor().execute("call generate_edge_list()")
+
+    def get_edge_list(self) -> list[tuple[int, int]]:
+        edges = get_edge_list(connection=self.connection)
+        return edges
+
+    def get_pandora_gates_by_id(self, ids: list[int]) -> list[PandoraGate]:
+        """
+            Returns the Pandora gates with id in ids.
+        """
+        return get_gates_by_id(connection=self.connection, ids=ids)
+
     def decompose_toffolis(self):
         """
         Decomposes all existing Toffoli gates in the Pandora into Clifford+T.

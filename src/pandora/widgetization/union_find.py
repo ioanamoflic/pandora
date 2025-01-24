@@ -1,14 +1,12 @@
 import random
-import time
-
-import igraph as ig
-from pandora.qualtran_to_pandora_util import *
-from pandora.connection_util import *
-import json
-
-sys.setrecursionlimit(1000000)
 
 from enum import Enum
+import igraph as ig
+
+from pandora.widgetization.widget import Widget
+from pandora.connection_util import *
+
+sys.setrecursionlimit(1000000)
 
 
 class WidgetizationReturnCodes(Enum):
@@ -43,7 +41,6 @@ class BFSWidgetization:
         return label == "Z**0.25" or label == "Z**-0.25"
 
     def widgetize(self, root, max_tcount, max_size):
-
         tcount = 0
         for vertex, dist, parent in self.g.bfsiter(root, advanced=True):
 
@@ -94,91 +91,115 @@ class BFSWidgetization:
         return self.widget_count, avg_size, avg_t
 
 
-class UnionFindWidgetization:
-    def __init__(self, num_elem, max_t, max_d, all_edges, node_labels):
-        self.widget = [x for x in range(num_elem)]
-        self.size = [1] * num_elem
-        self.depth = [1] * num_elem
-        self.t_count = [1 if t == "Z**0.25" or t == "Z**-0.25" else 0 for t in node_labels]
+class UnionFindWidgetizer:
+    def __init__(self, edges, pandora_gates, max_t, max_d):
+        self.n_gates: int = len(pandora_gates)
+        # initially, every node is its own widget, and the dictionary key = pandora_gate_root.id
+        # this will change during the execution of UF
+        # the widget count will be given by the number of unique pandora_gate_root values
+        self.parent = dict([(pandora_gate.id, Widget(depth=1,
+                                                     t_count=1 if
+                                                     pandora_gate.type == PandoraGateTranslator.ZPowGate.value and
+                                                     pandora_gate.param in [0.25, -0.25] else 0,
+                                                     root=pandora_gate))
+                            for pandora_gate in pandora_gates])
+
         self.widget_count = 0
         self.max_t_count = max_t
         self.max_depth = max_d
-        self.edges = all_edges
-        self.node_labels = node_labels
+        self.edges = edges
 
-    def find(self, node):
-        # Path compression. The union-find way
-        while node != self.widget[node]:
-            # path compression
-            self.widget[node] = self.widget[self.widget[node]]
-            node = self.widget[node]
+    def find(self, current_id: int) -> int:
+        """
+        Find step of union-find. Returns the root id of the current node id.
+        Args:
+            current_id: the id of the initial node
 
-        return node
+        Returns:
+            The id of the root.
+        """
 
-    def union(self, node1, node2):
-        root1 = self.find(node1)
-        root2 = self.find(node2)
+        root_of_current = self.parent[current_id].root.id
+        if root_of_current != current_id:
+            # path compression call
+            self.parent[current_id] = self.parent[self.find(root_of_current)]
+        return root_of_current
 
-        t_count1 = self.t_count[root1]
-        t_count2 = self.t_count[root2]
+    def union(self, node_id_1, node_id_2):
+        """
+        Union step of union-find.
+        Args:
+            node_id_1: id of the first node
+            node_id_2: id of the second node
 
-        depth1 = self.depth[root1]
-        depth2 = self.depth[root2]
+        Returns:
+
+        """
+        root_id_1 = self.find(node_id_1)
+        root_id_2 = self.find(node_id_2)
+
+        t_count_1, depth_1 = self.parent[root_id_1].t_count, self.parent[root_id_1].depth
+        t_count_2, depth_2 = self.parent[root_id_2].t_count, self.parent[root_id_2].depth
 
         # already in the same set
-        if root1 == root2:
+        if root_id_1 == root_id_2:
             return WidgetizationReturnCodes.EXIST
 
-        if t_count1 + t_count2 > self.max_t_count:
+        if t_count_1 + t_count_2 > self.max_t_count:
             return WidgetizationReturnCodes.TCOUNT
 
-        if depth1 + depth2 > self.max_depth:
+        if depth_1 + depth_2 > self.max_depth:
             return WidgetizationReturnCodes.DEPTH
 
-        if self.size[root1] > self.size[root2]:
+        if self.parent[root_id_1].depth > self.parent[root_id_2].depth:
             # Root1 is large
-            self.update_properties(root1, root2)
+            self.update_properties(root_id_1, root_id_2)
         else:
             # Root2 is large
-            self.update_properties(root2, root1)
+            self.update_properties(root_id_2, root_id_1)
 
         return WidgetizationReturnCodes.OK
 
-    def update_properties(self, root_large, root_small):
-        self.widget[root_small] = root_large
+    def update_properties(self, root_large_id: int, root_small_id: int) -> None:
+        """
+        Updates the properties of the merging cluster. The "big" cluster will take the additional T count and depth of
+        the small cluster.
 
-        self.size[root_large] += self.size[root_small]
-        self.depth[root_large] += self.depth[root_small]
-        self.t_count[root_large] += self.t_count[root_small]
+        Args:
+            root_large_id: id of the large cluster
+            root_small_id: if of the merged cluster
+
+        Returns:
+            None.
+        """
+        self.parent[root_large_id].depth += self.parent[root_small_id].depth
+        self.parent[root_large_id].t_count += self.parent[root_small_id].t_count
+
+        self.parent[root_small_id] = self.parent[root_large_id]
 
     def compute_widgets_and_properties(self):
-
-        # Compress all the possible paths
-        for node in range(len(self.widget)):
-            self.find(node)
+        # Compress all the possible paths -- not needed because the paths are already compressed in find?
+        # for node_id in self.parent.keys():
+        #     self.find(node_id)
 
         # Create a set of all the unique widgets
-        widgets = set(self.widget)
-
+        widgets = set(self.parent.values())
         self.widget_count = len(widgets) + 1
 
-        sss = [self.size[w] for w in widgets]
-        avg_size = sum(sss) / len(sss)
+        depths = [w.depth for w in widgets]
+        avg_depth = sum(depths) / len(depths)
 
-        ttt = [self.t_count[w] for w in widgets]
-        avg_t = sum(ttt) / len(ttt)
+        t_counts = [w.t_count for w in widgets]
+        avg_t = sum(t_counts) / len(t_counts)
 
-        return self.widget_count, avg_size, avg_t
+        return self.widget_count, avg_depth, avg_t
 
     def print_components(self, verbose=False):
         components = {}
-        for i, node in enumerate(self.widget):
-            if node == i:
-                components[node] = [node]
-
-        for i, parent in enumerate(self.widget):
-            if parent in components.keys():
-                components[parent].append(i)
+        for node_id, widget in self.parent.items():
+            if widget.root.id not in components.keys():
+                components[widget.root.id] = []
+            components[widget.root.id].append(node_id)
 
         if verbose:
             for (k, v) in components.items():
@@ -186,25 +207,10 @@ class UnionFindWidgetization:
 
         return components
 
-    def overlap_count(self):
-        n_overlapping = 0
-        component_types = {}
-        for i, node in enumerate(self.widget):
-            if node == i:
-                component_types[node] = [self.node_labels[node]]
-        for i, parent in enumerate(self.widget):
-            if parent in component_types.keys():
-                component_types[parent].append(self.node_labels[i])
-
-        all_components = component_types.values()
-        for i, c_i in enumerate(all_components):
-            for j, c_j in enumerate(all_components):
-                if i != j and set(c_i) == set(c_j) and len(c_i) == len(c_j):
-                    n_overlapping += 1
-
-        return n_overlapping
-
     def display_png_graph(self):
+        """
+        Deprecated and replaced with D3.
+        """
         components = self.print_components()
         color_map = {}
         g = ig.Graph(edges=self.edges, directed=True)
@@ -229,7 +235,8 @@ class UnionFindWidgetization:
 
 
 class WidgetUtils:
-    def generate_d3_json(self, widgetizer, file_path=""):
+    @staticmethod
+    def generate_d3_json(widgetizer: BFSWidgetization, file_path=""):
         json_dict = {}
         nodes = []
         links = []
@@ -249,29 +256,32 @@ class WidgetUtils:
         with open(f"{file_path}/circuit.json", "w") as f:
             f.write(json_data)
 
-    def build_pandora(self, bit_size=3000):
-        connection = get_connection()
-        cursor = connection.cursor()
+    @staticmethod
+    def generate_d3_json_for_uf(uf_widgetizer: UnionFindWidgetizer,
+                                pandora_gate_dict: dict[int, PandoraGate],
+                                file_path=""):
+        json_dict = {}
+        nodes = []
+        links = []
+        for node_id in uf_widgetizer.parent.keys():
+            readable = PANDORA_TO_READABLE[pandora_gate_dict[node_id].type]
+            d = {"id": f'{readable}*{pandora_gate_dict[node_id].param}({node_id})',
+                 "group": uf_widgetizer.parent[node_id].root.id}
+            nodes.append(d)
 
-        drop_and_replace_tables(connection, clean=True)
-        refresh_all_stored_procedures(connection)
+        json_dict["nodes"] = nodes
+        for source, target in uf_widgetizer.edges:
+            readable_source = PANDORA_TO_READABLE[pandora_gate_dict[source].type]
+            readable_target = PANDORA_TO_READABLE[pandora_gate_dict[target].type]
 
-        start_time = time.time()
-        bloq = Add(QUInt(bit_size))
-        circuit = get_clifford_plus_t_cirq_circuit_for_bloq(bloq)
-        assert_circuit_in_clifford_plus_t(circuit)
-        db_tuples, _ = cirq_to_pandora(cirq_circuit=circuit,
-                                       last_id=0,
-                                       label=f'Adder{bit_size}',
-                                       add_margins=True)
+            d = {
+                "source": f'{readable_source}*{pandora_gate_dict[source].param}({source})',
+                "target": f'{readable_target}*{pandora_gate_dict[target].param}({target})',
+                "value": 1
+            }
+            links.append(d)
+        json_dict["links"] = links
 
-        insert_in_batches(pandora_gates=db_tuples,
-                          connection=connection,
-                          batch_size=1000000,
-                          table_name='linked_circuit',
-                          reset_id=True)
-        print(f"Time needed for compiling {bit_size} bit adder {time.time() - start_time}")
-        cursor.execute("call linked_toffoli_decomp()")
-        thread_procedures = [(1, f"call generate_edge_list()")]
-        db_multi_threaded(thread_proc=thread_procedures)
-        print("done.")
+        json_data = json.dumps(json_dict)
+        with open(f"{file_path}/circuit.json", "w") as f:
+            f.write(json_data)

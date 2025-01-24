@@ -1,4 +1,4 @@
-from typing import Tuple, List, Any, Iterable, Set, Iterator
+from typing import Iterator
 
 import cirq
 import sys

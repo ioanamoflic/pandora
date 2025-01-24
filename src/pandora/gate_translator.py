@@ -80,9 +80,13 @@ class PandoraGateTranslator(Enum):
     Toffoli = 21
     And = 22
     CCXPowGate = 23
+    GlobalIn = 24
+    GlobalOut = 25
 
 
 MAX_QUBITS_PER_GATE = 3
+GLOBAL_IN_ID = -1
+GLOBAL_OUT_ID = -2
 
 PANDORA_TO_CIRQ = {
     PandoraGateTranslator.Rx.value: cirq.ops.common_gates.Rx,
@@ -115,10 +119,10 @@ PANDORA_TO_CIRQ = {
 PANDORA_TO_READABLE = {
     PandoraGateTranslator.Rx.value: "Rx",
     PandoraGateTranslator.Ry.value: "Ry",
-    PandoraGateTranslator.Rz.value: "Rx",
+    PandoraGateTranslator.Rz.value: "Rz",
     PandoraGateTranslator.XPowGate.value: "X",
-    PandoraGateTranslator.ZPowGate.value: "Y",
-    PandoraGateTranslator.YPowGate.value: "Z",
+    PandoraGateTranslator.ZPowGate.value: "Z",
+    PandoraGateTranslator.YPowGate.value: "Y",
     PandoraGateTranslator.HPowGate.value: "H",
     PandoraGateTranslator._PauliX.value: "X",
     PandoraGateTranslator._PauliY.value: "Y",
@@ -137,7 +141,8 @@ PANDORA_TO_READABLE = {
     PandoraGateTranslator.Toffoli.value: "CCX",
     PandoraGateTranslator.And.value: "And",
     PandoraGateTranslator.CCXPowGate.value: "CCXp",
-
+    PandoraGateTranslator.GlobalIn.value: "G_In",
+    PandoraGateTranslator.GlobalOut.value: "G_Out",
 }
 
 SINGLE_QUBIT_GATES = [PandoraGateTranslator.Rx.value,

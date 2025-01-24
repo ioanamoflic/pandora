@@ -8,7 +8,7 @@ from typing import Any
 import cirq
 
 from pandora.cirq_to_pandora_util import *
-from pandora.gate_translator import PANDORA_TO_READABLE
+from pandora.gate_translator import PANDORA_TO_READABLE, GLOBAL_IN_ID, GLOBAL_OUT_ID
 
 
 def get_connection():
@@ -288,6 +288,33 @@ def get_edge_list(connection) -> list[tuple[int, int]]:
     tuples = cursor.fetchall()
 
     return tuples
+
+
+def get_gates_by_id(connection, ids: list[int]) -> list[PandoraGate]:
+    """
+    Returns the Pandora gates with id in ids.
+    """
+    pandora_gates: list[PandoraGate] = []
+    for gid in ids:
+        if gid == GLOBAL_IN_ID:
+            pandora_gates.append(PandoraGate(gate_id=gid,
+                                             gate_code=PandoraGateTranslator.GlobalIn.value))
+            continue
+        if gid == GLOBAL_OUT_ID:
+            pandora_gates.append(PandoraGate(gate_id=gid,
+                                             gate_code=PandoraGateTranslator.GlobalOut.value))
+            continue
+        args = (gid,)
+        sql = "select * from linked_circuit where id=%s;"
+        cursor = connection.cursor()
+        cursor.execute(sql, args)
+        gate_tuple = cursor.fetchone()
+        if gate_tuple is None:
+            print(gid)
+            raise TupleNotFound
+        pandora_gates.append(PandoraGate(*gate_tuple))
+
+    return pandora_gates
 
 
 def get_gate_types(connection,
