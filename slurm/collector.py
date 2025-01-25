@@ -1,5 +1,5 @@
 import sys
-import psycopg2
+import psycopg
 
 connection_list = []
 
@@ -7,7 +7,7 @@ connection_list = []
 def create_connections(file_name, user_name):
     with open(file_name, 'r') as file:
         for i, host_name in enumerate(file):
-            connection = psycopg2.connect(
+            connection = psycopg.connect(
                 database="postgres",
                 user=user_name,
                 host=host_name,

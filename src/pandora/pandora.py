@@ -1,6 +1,6 @@
 import time
 
-import psycopg2
+import psycopg
 
 from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
     make_cyclic_o3_circuit, make_hc_circuit
@@ -50,7 +50,7 @@ class Pandora:
         """
         Creates and returns a database connection object.
         """
-        connection = psycopg2.connect(
+        connection = psycopg.connect(
             database=self.pandora_config.database,
             user=self.pandora_config.user,
             host=self.pandora_config.host,
