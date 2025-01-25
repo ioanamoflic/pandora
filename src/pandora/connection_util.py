@@ -215,7 +215,7 @@ def insert_single_batch(connection, cursor, batch):
     Insert a single batch of entries into the database.
     """
     start = time.time()
-    args = b','.join(
+    args = ','.join(
         cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", el.to_tuple())
         for el in batch)
 
@@ -224,7 +224,7 @@ def insert_single_batch(connection, cursor, batch):
 
     sql_statement = \
         (b"INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
-         b"next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
+         b"next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args.encode("utf-8"))
 
     print(f'--- Statement time: {time.time() - joint}')
 
