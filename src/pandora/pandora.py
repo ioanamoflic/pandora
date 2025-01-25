@@ -51,7 +51,7 @@ class Pandora:
         Creates and returns a database connection object.
         """
         connection = psycopg.connect(
-            database=self.pandora_config.database,
+            dbname=self.pandora_config.database,
             user=self.pandora_config.user,
             host=self.pandora_config.host,
             port=self.pandora_config.port,
