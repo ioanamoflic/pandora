@@ -216,8 +216,8 @@ def insert_single_batch(connection, cursor, batch):
     """
     start = time.time()
     args = ','.join(
-        cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", el.to_tuple())
-        for el in batch)
+        # cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+        el.to_tuple() for el in batch)
 
     joint = time.time()
     print(f'--- Join time: {joint - start}')
