@@ -127,16 +127,15 @@ def slice_into_batches(pandora_gates: list[PandoraGate],
     Create batches of lists. One batch will be inserted into the database at a time.
     """
     # slices the iterator for at most batch_size elements
-    while pandora_gates:
+    while True:
         # for the moment, i am creating a list a returning it
         # TODO: use an iterator instead of the list
         mylist = list(itertools.islice(pandora_gates, batch_size))
-        if len(mylist) == 0:
+        if len(mylist) != 0:
             # if there is nothing to return (i.e. the top iterator is finished)
-            return
-        # else:
-        #     print(f"batch has {len(mylist)}")
-        yield mylist
+            yield mylist
+        else:
+            break
 
 
 # def create_batch_of_batches(batches: list[Any],
