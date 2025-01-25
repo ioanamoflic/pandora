@@ -179,8 +179,8 @@ class UnionFindWidgetizer:
 
     def compute_widgets_and_properties(self):
         # Compress all the possible paths -- not needed because the paths are already compressed in find?
-        # for node_id in self.parent.keys():
-        #     self.find(node_id)
+        for node_id in self.parent.keys():
+            self.find(node_id)
 
         # Create a set of all the unique widgets
         widgets = set(self.parent.values())
@@ -192,6 +192,7 @@ class UnionFindWidgetizer:
         avg_depth = sum(depths) / len(depths)
 
         t_counts = [w.t_count for w in widgets]
+        print(t_counts)
         avg_t = sum(t_counts) / len(t_counts)
 
         return self.widget_count, avg_depth, avg_t, full_widget_count

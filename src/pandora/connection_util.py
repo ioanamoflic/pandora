@@ -3,7 +3,7 @@ import os
 import sys
 from itertools import cycle
 from multiprocessing import Process, cpu_count
-from typing import Any
+from typing import Any, Iterator
 
 import cirq
 
@@ -86,7 +86,8 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
 
 def drop_and_replace_tables(connection,
                             clean: bool = False,
-                            tables: tuple[str] = ('linked_circuit', 'linked_circuit_test', 'stop_condition', 'edge_list'),
+                            tables: tuple[str] = (
+                            'linked_circuit', 'linked_circuit_test', 'stop_condition', 'edge_list'),
                             verbose=False) -> None:
     """
     This method drops all tables of Pandora and rebuilds them according to the configuration in
@@ -216,7 +217,8 @@ def insert_single_batch(connection, batch: list[PandoraGate], is_test=False):
              "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
     else:
         args = ','.join(
-            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple(is_test=True)).decode(
+            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                           tup.to_tuple(is_test=True)).decode(
                 'utf-8')
             for tup in batch)
         sql_statement = \
@@ -288,6 +290,22 @@ def get_edge_list(connection) -> list[tuple[int, int]]:
     tuples = cursor.fetchall()
 
     return tuples
+
+
+def get_edge_list_in_batches(connection, batch_size) -> Iterator[list[tuple[int, int]]]:
+    """
+    Returns the contents from edge_list table in batches.
+    """
+    cursor = connection.cursor()
+    cursor.execute('select * from edge_list order by source, target')
+
+    while True:
+        records = cursor.fetchmany(size=batch_size)
+        if not records:
+            break
+        yield records
+
+    cursor.close()
 
 
 def get_gates_by_id(connection, ids: list[int]) -> list[PandoraGate]:

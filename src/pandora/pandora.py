@@ -83,6 +83,9 @@ class Pandora:
         edges = get_edge_list(connection=self.connection)
         return edges
 
+    def get_batched_edge_list(self, batch_size) -> Iterator[list[tuple[int, int]]]:
+        return get_edge_list_in_batches(connection=self.connection, batch_size=batch_size)
+
     def get_pandora_gates_by_id(self, ids: list[int]) -> list[PandoraGate]:
         """
             Returns the Pandora gates with id in ids.

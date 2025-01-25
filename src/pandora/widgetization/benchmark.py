@@ -166,32 +166,34 @@ if __name__ == "__main__":
                           max_time=3600,
                           decomposition_window_size=1000000)
         pandora.build_pandora()
-        # pandora.build_fh_circuit(N=3, p_algo=0.9999999904, times=0.01)
-        pandora.build_example()
+        pandora.build_fh_circuit(N=2, p_algo=0.9999999904, times=0.01)
         pandora.build_edge_list()
-        edges = pandora.get_edge_list()
-        ids = []
-        for (s, t) in edges:
-            ids.append(s)
-            ids.append(t)
-        pandora_gates = pandora.get_pandora_gates_by_id(list(set(ids)))
-        uf = UnionFindWidgetizer(edges=edges,
-                                 pandora_gates=pandora_gates,
-                                 max_t=1000,
-                                 max_d=100)
 
-        edges = sorted(edges, key=lambda x: (x[0], x[1]))
-        for node1, node2 in edges:
-            ret = uf.union(node1, node2)
-            ret_code_stats[ret] = ret_code_stats[ret] + 1
+        batch_edges = pandora.get_batched_edge_list(batch_size=10000)
+        for i, batch_of_edges in enumerate(batch_edges):
+            print(f"Widgetising batch {i} of pandora edges.")
+            id_set = []
+            for (s, t) in batch_of_edges:
+                id_set.append(s)
+                id_set.append(t)
+            pandora_gates = pandora.get_pandora_gates_by_id(list(id_set))
+            uf = UnionFindWidgetizer(edges=batch_of_edges,
+                                     pandora_gates=pandora_gates,
+                                     max_t=100,
+                                     max_d=200)
 
-        pandora_gate_dict = dict([(pandora_gate.id, pandora_gate) for pandora_gate in pandora_gates])
-        print(ret_code_stats)
+            for node1, node2 in batch_of_edges:
+                ret = uf.union(node1, node2)
+                ret_code_stats[ret] = ret_code_stats[ret] + 1
 
-        nr_widgets, avd, avt, full_count = uf.compute_widgets_and_properties()
-        print(f"Avg. depth={avd},  Avg. T depth={avt} for Nr. widgets={nr_widgets}, Full count={full_count}")
-        wutils.generate_d3_json_for_uf(uf_widgetizer=uf,
-                                       pandora_gate_dict=pandora_gate_dict,
-                                       file_path="../../../vis")
+            pandora_gate_dict = dict([(pandora_gate.id, pandora_gate) for pandora_gate in pandora_gates])
+            print(ret_code_stats)
+
+            nr_widgets, avd, avt, full_count = uf.compute_widgets_and_properties()
+            print(f"Avg. depth={avd},  Avg. T depth={avt} for Nr. widgets={nr_widgets}, Full count={full_count}")
+            wutils.generate_d3_json_for_uf(uf_widgetizer=uf,
+                                           pandora_gate_dict=pandora_gate_dict,
+                                           file_path="../../../vis")
+
 
 
