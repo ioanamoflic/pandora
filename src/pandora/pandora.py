@@ -57,7 +57,7 @@ class Pandora:
             port=self.pandora_config.port,
             password=self.pandora_config.password)
 
-        connection.set_session(autocommit=True)
+        connection.set_autocommit(True)
 
         if connection:
             print("Connection to the PostgreSQL established successfully.")
