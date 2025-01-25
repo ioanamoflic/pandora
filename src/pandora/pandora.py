@@ -166,12 +166,12 @@ class Pandora:
 
         print("Initialize Pandora...")
         sys.stdout.flush()
-        start_insert = time.time()
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit',
                           large_buffer_value=1000)
 
         print("Start insert in batches...")
+        start_insert = time.time()
         insert_in_batches(pandora_gates_it=iter(db_tuples_view),
                           connection=self.connection,
                           batch_size=1000000,
