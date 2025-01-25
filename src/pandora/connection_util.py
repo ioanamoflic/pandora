@@ -194,7 +194,9 @@ def insert_in_batches(pandora_gates_it: list[PandoraGate],
     if not isinstance(pandora_gates_it, Iterable):
         raise Exception("This is not an Iterable!")
 
-    cursor = connection.cursor()
+    # cursor = connection.cursor()
+    import psycopg #for v3
+    cursor = psycopg.ClientCursor(connection)
 
     # pandora_gates_iterator = list(pandora_gates_iterator)
 
