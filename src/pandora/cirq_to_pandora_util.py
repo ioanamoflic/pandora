@@ -168,7 +168,7 @@ def sort_pandora_wrapped_by_moment(pandora_gate_id_map: dict[int, PandoraGateWra
                                                                      wrapped.pandora_gate.id))
 
 
-def pandora_to_cirq(pandora_gates: list[PandoraGate]) -> cirq.Circuit:
+def pandora_to_wrapped_gates(pandora_gates: list[PandoraGate]) -> list[PandoraGateWrapper]:
     """
     Takes a list of Pandora gates (unwrapped) and returns the corresponding cirq Circuit.
     """
@@ -220,10 +220,18 @@ def pandora_to_cirq(pandora_gates: list[PandoraGate]) -> cirq.Circuit:
                 elif previous_wrapped_q2.next_id2 == wrapped_id:
                     wrapped.q2 = previous_wrapped_q2.q2
 
-    wrapped_gates: list = rh.values()
+    
+    return list(rh.values())
+
+def pandora_to_cirq(pandora_gates: list[PandoraGate]) -> cirq.Circuit:
+    wrapped_gates = pandora_to_wrapped_gates(pandora_gates)
     circuit = pandora_wrapped_to_circuit(wrapped_gates=wrapped_gates, n_qubits=n_qubits)
     return circuit
 
+
+def pandora_to_layered(pandora_gates: list[PandoraGate]) -> list[PandoraGateWrapper]:
+      wrapped_gates = pandora_to_wrapped_gates(pandora_gates)
+      return list(wrapped_gates)
 
 def pandora_wrapped_to_circuit(wrapped_gates: list[PandoraGateWrapper],
                                n_qubits: int) -> cirq.Circuit:

@@ -298,3 +298,16 @@ class Pandora:
         print(f"DB insert took: {time.time() - start_insert}")
         print('Done ti_circuit!')
         sys.stdout.flush()
+
+    def populate_layered(self):
+        print("Extracting layered circuit...")
+        layers: list[PandoraGateWrapper] = extract_layered_circuit(self.connection, circuit_label="f", table_name='linked_circuit')
+        insert_layered_in_batches(pandora_gates=layers,
+                          connection=self.connection,
+                          batch_size=1000000,
+                          table_name='layered_cliff_t')
+        print("Done Extracting layered circuit")
+
+
+        
+

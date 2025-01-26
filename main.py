@@ -54,6 +54,7 @@ if __name__ == "__main__":
     elif sys.argv[next_arg] == "fh":
         N = int(sys.argv[next_arg + 1])
         pandora.build_fh_circuit(N=N, p_algo=0.9999999904, times=0.01)
+        pandora.populate_layered()
     elif sys.argv[next_arg] == "mg":
         pandora.build_mg_coating_walk_op(data_path=hrl_data_path)
     elif sys.argv[next_arg] == "o3":

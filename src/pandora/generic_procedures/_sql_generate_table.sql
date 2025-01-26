@@ -50,3 +50,14 @@ create table if not exists public.edge_list
     source bigint,
     target bigint
 );
+
+
+create table IF NOT EXISTS public.layered_cliff_t
+(
+    id        bigserial primary key, 
+    control_q bigint,
+    target_q  bigint,
+    type      smallint,
+    param     real,
+    layer     bigint
+);

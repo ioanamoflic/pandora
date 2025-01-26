@@ -208,6 +208,53 @@ def insert_in_batches(pandora_gates_it: list[PandoraGate],
     if reset_id is True:
         reset_database_id(connection, table_name=table_name)
 
+def format_layred_padora_gate_tuple(cursor, pandora_gate: PandoraGateWrapper) -> str:
+    control, target = (pandora_gate.q1, pandora_gate.q2) if pandora_gate.pandora_gate.type in TWO_QUBIT_GATES else (None, pandora_gate.q1)
+    return cursor.mogrify(
+        "(%s, %s, %s, %s, %s, %s)",
+        (pandora_gate.pandora_gate.id, control, target, pandora_gate.pandora_gate.type, pandora_gate.pandora_gate.param, pandora_gate.moment)
+            ).decode(
+                'utf-8')
+
+def insert_layered_in_batches(pandora_gates: list[PandoraGateWrapper],
+                      connection,
+                      table_name: str,
+                      batch_size: int = 1000,
+                      reset_id: bool = False) -> None:
+    """
+    This method is used for inserting a list of PanoraGate objects into the database in batches.
+    The batched version of the insertion is faster than inserting gates one by one. The idea is to create
+    a huge string of insert statements which is processed as a single one.
+
+    Note that the fields in the PandoraGate object should match the physical table column names. Since psycopg2
+    does not support ORM, and this is a way of faking it.
+
+     Params:
+            pandora_gates: list of PandoraGate objects
+            connection: the Postgres connection object
+            table_name: name of the table in which the gates should be inserted
+            batch_size: size of PandoraGate objects which should be inserted at once.
+            reset_id: boolean value based on which we reset the starting id to 0 or not.
+    Returns:
+            None.
+    """
+    pandora_gates = list(pandora_gates)
+    batches = create_batches(pandora_gates, batch_size=int(batch_size))
+    cursor = connection.cursor()
+
+    # mogrify_arg, insert_query = pandora_gates[0].get_insert_query(table_name=table_name)
+    for i, batch in enumerate(batches):
+        args = ','.join(format_layred_padora_gate_tuple(cursor, pandora_gate) for pandora_gate in batch)
+        sql_statement = \
+            ("INSERT INTO layered_cliff_t(id, control_q, target_q, type, param, layer) VALUES " + args)
+
+        # execute the sql statement
+        cursor.execute(sql_statement)
+        connection.commit()
+
+    if reset_id is True:
+        reset_database_id(connection, table_name=table_name)
+
 
 def insert_single_batch(connection, cursor, batch):
     """
@@ -232,6 +279,7 @@ def insert_single_batch(connection, cursor, batch):
     connection.commit()
 
 
+    
 def remove_io_gates_from_circuit(circuit: cirq.Circuit) -> cirq.Circuit:
     """
     Constructs and returns a copy of circuit without In/Out gates.
@@ -242,6 +290,32 @@ def remove_io_gates_from_circuit(circuit: cirq.Circuit) -> cirq.Circuit:
             io_free_reconstructed.append(op)
     return io_free_reconstructed
 
+# Unused at the moment
+def get_gate_by_id(connection, gate_id) -> PandoraGate:
+    sql =f"select * from {table_name} where id={gate_id}"
+    cursor = connection.cursor()
+    cursor.execute(sql, args)
+    row: tuple = cursor.fetchone()
+    return PandoraGate(*row)
+
+
+def extract_pandora_gates(connection,
+                         circuit_label: str = None,
+                         table_name: str = None,
+                         remove_io_gates: bool = False) -> list[PandoraGate]:
+
+    args = tuple()
+    if circuit_label is not None:
+        args = (circuit_label,)
+        sql = f"select * from {table_name} where label=%s"
+    else:
+        sql = f"select * from {table_name}"
+
+    cursor = connection.cursor()
+    cursor.execute(sql, args)
+    tuples: list[tuple] = cursor.fetchall()
+
+    return [PandoraGate(*tup) for tup in tuples]
 
 def extract_cirq_circuit(connection,
                          circuit_label: str = None,
@@ -258,24 +332,31 @@ def extract_cirq_circuit(connection,
             The cirq circuit.
 
     """
-    args = tuple()
-    if circuit_label is not None:
-        args = (circuit_label,)
-        sql = f"select * from {table_name} where label=%s"
-    else:
-        sql = f"select * from {table_name}"
-
-    cursor = connection.cursor()
-    cursor.execute(sql, args)
-    tuples: list[tuple] = cursor.fetchall()
-
-    pandora_gates: list[PandoraGate] = [PandoraGate(*tup) for tup in tuples]
+    extract_pandora_gates(connection=connection, circuit_label=circuit_label, table_name=table_name, remove_io_gates=remove_io_gates)
     final_circ: cirq.Circuit = pandora_to_cirq(pandora_gates=pandora_gates)
 
     if remove_io_gates:
         return remove_io_gates_from_circuit(final_circ)
     return final_circ
 
+
+def extract_layered_circuit(connection,
+                            circuit_label: str = None,
+                            table_name: str = None,
+                            remove_io_gates: bool = False) -> list[PandoraGate]:
+    """
+    Extracts a circuit with a given label from the database and returns the corresponding cirq circuit.
+    Params:
+            connection: the Postgres connection object
+            table_name: name of the table from which the circuit is read out
+            circuit_label: label used to store the circuit in the database.
+            remove_io_gates: boolean value based on which In/Out gates are removed or not.
+    Returns:
+            The cirq circuit.
+
+    """
+    pandora_gates = extract_pandora_gates(connection=connection, circuit_label=circuit_label, table_name=table_name, remove_io_gates=remove_io_gates)
+    return pandora_to_layered(pandora_gates)
 
 def get_edge_list(connection) -> list[tuple[int, int]]:
     """
