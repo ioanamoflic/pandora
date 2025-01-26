@@ -10,11 +10,11 @@ def hello_world():
 
 @app.route('/get_nr_slices')
 def get_nr_slices():
-    return "100"
+    return "1"
 
 @app.route('/get_slice/<nr>')
 def get_slice(nr):
-    with open("/Users/palera1/Library/Application Support/minetest/mods/minetest/n_output.json") as f:
+    with open("dummy.json") as f:
         d = json.load(f)
         return d
 
