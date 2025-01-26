@@ -156,10 +156,10 @@ class Pandora:
         print("cirq_to_pandora...")
         sys.stdout.flush()
         db_tuples_view, _ = cirq_to_pandora_from_op_list(op_list=decomposed_ops,
-                                                    qubit_set=qubit_set,
-                                                    last_id=0,
-                                                    label='f',
-                                                    add_margins=True)
+                                                         qubit_set=qubit_set,
+                                                         last_id=0,
+                                                         label='f',
+                                                         add_margins=True)
         print(f"cirq_to_pandora took: {time.time() - start_cirq_to_pandora}")
         print(f'Number of final circuit ops: {len(db_tuples_view)}')
         sys.stdout.flush()
@@ -301,13 +301,16 @@ class Pandora:
 
     def populate_layered(self):
         print("Extracting layered circuit...")
-        layers: list[PandoraGateWrapper] = extract_layered_circuit(self.connection, circuit_label="f", table_name='linked_circuit')
-        insert_layered_in_batches(pandora_gates=layers,
+        layers: list[PandoraGateWrapper] = extract_layered_circuit(
+            self.connection,
+            circuit_label="f",
+            table_name='linked_circuit')
+
+        print('Inserting Layered Circuit!')
+        insert_in_batches(pandora_gates_it=iter(layers),
                           connection=self.connection,
+                          table_name='layered_cliff_t',
                           batch_size=1000000,
-                          table_name='layered_cliff_t')
-        print("Done Extracting layered circuit")
-
-
-        
-
+                          reset_id=True,
+                          forlscom=True)
+        print("Done Extraction and Insertion")

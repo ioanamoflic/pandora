@@ -88,7 +88,7 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
 
 def drop_and_replace_tables(connection,
                             clean: bool = False,
-                            tables: tuple[str] = ('linked_circuit', 'stop_condition', 'edge_list'),
+                            tables: tuple[str] = ('linked_circuit', 'stop_condition', 'edge_list', 'layered_cliff_t'),
                             verbose=False) -> None:
     """
     This method drops all tables of Pandora and rebuilds them according to the configuration in
@@ -170,7 +170,8 @@ def insert_in_batches(pandora_gates_it: list[PandoraGate],
                       connection,
                       table_name: str,
                       batch_size: int = 1000,
-                      reset_id: bool = False) -> None:
+                      reset_id: bool = False,
+                      forlscom: bool = False) -> None:
     """
     This method is used for inserting a list of PandoraGate objects into the database in batches.
     The batched version of the insertion is faster than inserting gates one by one. The idea is to create
@@ -202,59 +203,41 @@ def insert_in_batches(pandora_gates_it: list[PandoraGate],
     # mogrify_arg, insert_query = pandora_gates[0].get_insert_query(table_name=table_name)
     batch_idx = 0
     for batch in slice_into_batches(pandora_gates_it, batch_size=int(batch_size)):
-        insert_single_batch(connection, cursor, batch)
+        if forlscom:
+            insert_layered_single_batch(connection, cursor, batch)
+        else:
+            insert_single_batch(connection, cursor, batch)
         batch_idx += 1
 
     if reset_id is True:
         reset_database_id(connection, table_name=table_name)
 
-def format_layred_padora_gate_tuple(cursor, pandora_gate: PandoraGateWrapper) -> str:
+def format_layered_padora_gate_tuple(cursor, pandora_gate: PandoraGateWrapper) -> str:
     control, target = (pandora_gate.q1, pandora_gate.q2) if pandora_gate.pandora_gate.type in TWO_QUBIT_GATES else (None, pandora_gate.q1)
     return cursor.mogrify(
         "(%s, %s, %s, %s, %s, %s)",
         (pandora_gate.pandora_gate.id, control, target, pandora_gate.pandora_gate.type, pandora_gate.pandora_gate.param, pandora_gate.moment)
-            ).decode(
-                'utf-8')
+            )
 
-def insert_layered_in_batches(pandora_gates: list[PandoraGateWrapper],
-                      connection,
-                      table_name: str,
-                      batch_size: int = 1000,
-                      reset_id: bool = False) -> None:
+def insert_layered_single_batch(connection, cursor, batch):
     """
-    This method is used for inserting a list of PanoraGate objects into the database in batches.
-    The batched version of the insertion is faster than inserting gates one by one. The idea is to create
-    a huge string of insert statements which is processed as a single one.
-
-    Note that the fields in the PandoraGate object should match the physical table column names. Since psycopg2
-    does not support ORM, and this is a way of faking it.
-
-     Params:
-            pandora_gates: list of PandoraGate objects
-            connection: the Postgres connection object
-            table_name: name of the table in which the gates should be inserted
-            batch_size: size of PandoraGate objects which should be inserted at once.
-            reset_id: boolean value based on which we reset the starting id to 0 or not.
-    Returns:
-            None.
+    Insert a single batch of entries into the database.
     """
-    pandora_gates = list(pandora_gates)
-    batches = create_batches(pandora_gates, batch_size=int(batch_size))
-    cursor = connection.cursor()
+    start = time.time()
+    args = ','.join(
+        format_layered_padora_gate_tuple(cursor, pandora_gate) for pandora_gate in batch)
 
-    # mogrify_arg, insert_query = pandora_gates[0].get_insert_query(table_name=table_name)
-    for i, batch in enumerate(batches):
-        args = ','.join(format_layred_padora_gate_tuple(cursor, pandora_gate) for pandora_gate in batch)
-        sql_statement = \
-            ("INSERT INTO layered_cliff_t(id, control_q, target_q, type, param, layer) VALUES " + args)
+    joint = time.time()
+    print(f'--- Join time: {joint - start}')
 
-        # execute the sql statement
-        cursor.execute(sql_statement)
-        connection.commit()
+    sql_statement = \
+        (b"INSERT INTO layered_cliff_t(id, control_q, target_q, type, param, layer) VALUES " + args.encode("utf-8"))
 
-    if reset_id is True:
-        reset_database_id(connection, table_name=table_name)
+    print(f'--- Statement time: {time.time() - joint}')
 
+    # execute the sql statement
+    cursor.execute(sql_statement)
+    connection.commit()
 
 def insert_single_batch(connection, cursor, batch):
     """
