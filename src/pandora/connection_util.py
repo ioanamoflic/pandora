@@ -88,7 +88,11 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
 
 def drop_and_replace_tables(connection,
                             clean: bool = False,
-                            tables: tuple[str] = ('linked_circuit', 'stop_condition', 'edge_list', 'layered_cliff_t'),
+                            tables: tuple[str] = ('linked_circuit',
+                                                  'stop_condition',
+                                                  'edge_list',
+                                                  'layered_cliff_t',
+                                                  'minetest'),
                             verbose=False) -> None:
     """
     This method drops all tables of Pandora and rebuilds them according to the configuration in

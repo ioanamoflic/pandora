@@ -61,3 +61,9 @@ create table IF NOT EXISTS public.layered_cliff_t
     param     real,
     layer     bigint
 );
+
+create table IF NOT EXISTS public.minetest
+(
+    id        bigserial primary key unique,
+    json      text
+);
