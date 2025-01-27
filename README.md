@@ -37,6 +37,6 @@ TODO: More documentation
 * `python main.py adder 8` for building an 8-bit adder
 
 ## Widgetization
-![fh_2.gif](fh_2.gif)
+![fh2.gif](fh2.gif)
 
 <a href="./vis/index.html" target=_blank>Example</a>
