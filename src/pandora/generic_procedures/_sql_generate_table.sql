@@ -38,6 +38,19 @@ create table IF NOT EXISTS public.linked_circuit_test
     qubit_name varchar(50)
 );
 
+create table IF NOT EXISTS public.benchmark_results
+(
+    id      varchar(10),
+    pyliqtr_time float,
+    pyliqtr_count int,
+    decomp_time float,
+    pandora_time float,
+    pandora_count bigint,
+    widgetisation_time float,
+    widget_count int,
+    extraction_time float
+);
+
 create extension IF NOT EXISTS tsm_system_rows;
 
 create table if not exists public.stop_condition

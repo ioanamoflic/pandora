@@ -73,8 +73,18 @@ class Pandora:
         """
         Creates the Pandora database table from scratch and updates all stored procedures.
         """
-        drop_and_replace_tables(self.connection, clean=True, verbose=True)
-        refresh_all_stored_procedures(self.connection, verbose=True)
+        drop_and_replace_tables(self.connection,
+                                clean=True,
+                                verbose=True)
+        refresh_all_stored_procedures(self.connection,
+                                      verbose=True)
+
+    def build_dedicated_table(self, table_name: str):
+        """
+        Creates the Pandora database table from scratch and updates all stored procedures.
+        """
+        create_named_table(connection=self.connection,
+                           table_name=table_name)
 
     def build_edge_list(self) -> None:
         self.connection.cursor().execute("call generate_edge_list()")
@@ -84,13 +94,15 @@ class Pandora:
         return edges
 
     def get_batched_edge_list(self, batch_size) -> Iterator[list[tuple[int, int]]]:
-        return get_edge_list_in_batches(connection=self.connection, batch_size=batch_size)
+        return get_edge_list_in_batches(connection=self.connection,
+                                        batch_size=batch_size)
 
     def get_pandora_gates_by_id(self, ids: list[int]) -> list[PandoraGate]:
         """
             Returns the Pandora gates with id in ids.
         """
-        return get_gates_by_id(connection=self.connection, ids=ids)
+        return get_gates_by_id_fast(connection=self.connection,
+                                    ids=ids)
 
     def decompose_toffolis(self):
         """
@@ -107,10 +119,12 @@ class Pandora:
         CEND = '\033[0m'
 
         self.build_pandora()
-        adder_batches = get_adder(n_bits=bitsize, window_size=1000000)
+        adder_batches = get_adder(n_bits=bitsize,
+                                  window_size=1000000)
 
         for i, batch in enumerate(adder_batches):
-            insert_single_batch(connection=self.connection, batch=batch)
+            insert_single_batch(connection=self.connection,
+                                batch=batch)
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
 
@@ -122,7 +136,6 @@ class Pandora:
                                         cirq.CX(q3, q4),
                                         cirq.CX(q2, q3),
                                         cirq.CX(q1, q2)])
-        print(initial_circuit)
         big_circuit = initial_circuit * 100
         pandora_gates, _ = cirq_to_pandora(cirq_circuit=big_circuit,
                                            last_id=0,
@@ -141,28 +154,39 @@ class Pandora:
         qrom_batches = get_qrom(data=data)
 
         for _, batch in enumerate(qrom_batches):
-            insert_single_batch(connection=self.connection, batch=batch)
+            insert_single_batch(connection=self.connection,
+                                batch=batch)
 
         self.decompose_toffolis()
 
     def build_qualtran_qpe(self, num_sites=2, eps=1e-5, m_bits=1):
         self.build_pandora()
-        qpe_batches = get_qpe_of_1d_ising_model(num_sites=num_sites, eps=eps, m_bits=m_bits)
+        qpe_batches = get_qpe_of_1d_ising_model(num_sites=num_sites,
+                                                eps=eps,
+                                                m_bits=m_bits)
 
         for _, batch in enumerate(qpe_batches):
-            insert_single_batch(connection=self.connection, batch=batch)
+            insert_single_batch(connection=self.connection,
+                                batch=batch)
 
-    def build_qualtran_hubbard_2d(self, dim=(2, 2), t=1, u=4):
+    def build_qualtran_hubbard_2d(self,
+                                  dim=(2, 2),
+                                  t=1,
+                                  u=4):
         self.build_pandora()
-        qpe_batches = get_2d_hubbard_model(dim=dim, t=t, u=u)
+        qpe_batches = get_2d_hubbard_model(dim=dim,
+                                           t=t,
+                                           u=u)
 
         for _, batch in enumerate(qpe_batches):
-            insert_single_batch(connection=self.connection, batch=batch)
+            insert_single_batch(connection=self.connection,
+                                batch=batch)
 
     def build_maslov_adder(self, m_bits):
         self.build_pandora()
 
-        db_tuples = get_maslov_adder(conn=self.connection, n_bits=m_bits)
+        db_tuples = get_maslov_adder(conn=self.connection,
+                                     n_bits=m_bits)
         insert_in_batches(pandora_gates=db_tuples,
                           connection=self.connection,
                           batch_size=self.decomposition_window_size,
@@ -180,20 +204,50 @@ class Pandora:
         fh_circuit = make_fh_circuit(N=N,
                                      times=times,
                                      p_algo=p_algo)
-        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
+        total_pyliqtr = time.time() - start_make
+        print(f"Building pyliqtr circuit took: {total_pyliqtr}")
+        pyliqtr_count = len(list(fh_circuit.all_operations()))
+
+        self.build_pandora()
+        self.build_dedicated_table(table_name=f'fh_{N}')
+
+        reset_database_id(self.connection,
+                          table_name='linked_circuit',
+                          large_buffer_value=100000)
 
         print("Decomposing circuit for pandora...")
         start_decomp = time.time()
         batches = windowed_cirq_to_pandora(circuit=fh_circuit,
                                            window_size=self.decomposition_window_size)
-        self.build_pandora()
-        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
 
-        for i, batch in enumerate(batches):
-            insert_single_batch(connection=self.connection, batch=batch)
+        total_decomp_time = 0
+        total_insert_times = 0
+        pandora_count = 0
+
+        for i, (batch, decomposition_time) in enumerate(batches):
+            start_insert = time.time()
+            insert_single_batch(connection=self.connection,
+                                table_name=f'fh_{N}',
+                                batch=batch)
+            pandora_count += len(batch)
+            total_insert_times += (time.time() - start_insert)
+            total_decomp_time += decomposition_time
+
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
 
+        insert_benchmark_row(connection=self.connection, benchmark_tuple=(f'fh_{N}',
+                                                                          total_pyliqtr,
+                                                                          pyliqtr_count,
+                                                                          total_decomp_time,
+                                                                          total_insert_times,
+                                                                          pandora_count,
+                                                                          None,
+                                                                          None,
+                                                                          None
+                                                                          ))
+
+        print(f"DB insert took: {total_insert_times}")
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
     def build_mg_coating_walk_op(self, data_path="."):
@@ -212,7 +266,7 @@ class Pandora:
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
 
-        for i, batch in enumerate(batches):
+        for i, (batch, decomposition_time) in enumerate(batches):
             insert_single_batch(connection=self.connection, batch=batch)
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
@@ -235,7 +289,7 @@ class Pandora:
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
 
-        for i, batch in enumerate(batches):
+        for i, (batch, decomposition_time) in enumerate(batches):
             insert_single_batch(connection=self.connection, batch=batch)
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
@@ -258,7 +312,7 @@ class Pandora:
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
 
-        for i, batch in enumerate(batches):
+        for i, (batch, decomposition_time) in enumerate(batches):
             insert_single_batch(connection=self.connection, batch=batch)
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
@@ -281,7 +335,7 @@ class Pandora:
         self.build_pandora()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
 
-        for i, batch in enumerate(batches):
+        for i, (batch, decomposition_time) in enumerate(batches):
             insert_single_batch(connection=self.connection, batch=batch)
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
