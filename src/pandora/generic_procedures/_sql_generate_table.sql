@@ -40,7 +40,7 @@ create table IF NOT EXISTS public.linked_circuit_test
 
 create table IF NOT EXISTS public.benchmark_results
 (
-    id      varchar(10),
+    id      int primary key,
     pyliqtr_time float,
     pyliqtr_count int,
     decomp_time float,

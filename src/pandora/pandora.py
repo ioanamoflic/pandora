@@ -10,6 +10,7 @@ from .qualtran_to_pandora_util import *
 from benchmarking.benchmark_adders import get_maslov_adder
 
 from pandora.connection_util import *
+from .widgetization.union_find import UnionFindWidgetizer, WidgetizationReturnCodes
 
 
 class PandoraConfig:
@@ -209,8 +210,6 @@ class Pandora:
         pyliqtr_count = len(list(fh_circuit.all_operations()))
 
         self.build_pandora()
-        self.build_dedicated_table(table_name=f'fh_{N}')
-
         reset_database_id(self.connection,
                           table_name='linked_circuit',
                           large_buffer_value=100000)
@@ -227,7 +226,6 @@ class Pandora:
         for i, (batch, decomposition_time) in enumerate(batches):
             start_insert = time.time()
             insert_single_batch(connection=self.connection,
-                                table_name=f'fh_{N}',
                                 batch=batch)
             pandora_count += len(batch)
             total_insert_times += (time.time() - start_insert)
@@ -236,7 +234,7 @@ class Pandora:
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
 
-        insert_benchmark_row(connection=self.connection, benchmark_tuple=(f'fh_{N}',
+        insert_benchmark_row(connection=self.connection, benchmark_tuple=(N,
                                                                           total_pyliqtr,
                                                                           pyliqtr_count,
                                                                           total_decomp_time,
@@ -341,3 +339,49 @@ class Pandora:
             print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
 
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
+
+    def widgetize(self, max_t, max_d, fh_N: int):
+        total_union_time = 0
+        total_extraction_time = 0
+        total_widget_count = 0
+
+        self.build_edge_list()
+        batch_edges = self.get_batched_edge_list(batch_size=self.decomposition_window_size)
+
+        for i, batch_of_edges in enumerate(batch_edges):
+            batch_start = time.time()
+            id_set = []
+            for (s, t) in batch_of_edges:
+                id_set.append(s)
+                id_set.append(t)
+
+            ids_start = time.time()
+            pandora_gates = self.get_pandora_gates_by_id(list(set(id_set)))
+            total_extraction_time += (time.time() - ids_start)
+
+            uf = UnionFindWidgetizer(edges=batch_of_edges,
+                                     pandora_gates=pandora_gates,
+                                     max_t=max_t,
+                                     max_d=max_d)
+
+            union_start = time.time()
+            for node1, node2 in batch_of_edges:
+                ret = uf.union(node1, node2)
+            total_union_time += (time.time() - union_start)
+
+            nr_widgets, avd, avt, full_count = uf.compute_widgets_and_properties()
+            total_widget_count += nr_widgets
+
+            print(f"Avg. depth={avd},  Avg. T depth={avt} for Nr. widgets={nr_widgets}, Full count={full_count}")
+            print(f"Widgetising batch {i} of pandora edges took {time.time() - batch_start}")
+
+        update_widgetisation_results(connection=self.connection,
+                                     id=fh_N,
+                                     widgetisation_time=total_union_time,
+                                     widget_count=total_widget_count,
+                                     extraction_time=total_extraction_time)
+
+
+
+
+

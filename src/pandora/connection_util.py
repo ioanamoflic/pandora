@@ -1,6 +1,7 @@
 import inspect
 import os
 import sys
+import time
 from itertools import cycle
 from multiprocessing import Process, cpu_count
 from typing import Any, Iterator
@@ -87,7 +88,11 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
 def drop_and_replace_tables(connection,
                             clean: bool = False,
                             tables: tuple[str] = (
-                            'linked_circuit', 'linked_circuit_test', 'stop_condition', 'edge_list'),
+                                    'linked_circuit',
+                                    'linked_circuit_test',
+                                    'stop_condition',
+                                    'edge_list',
+                                    'benchmark_results'),
                             verbose=False) -> None:
     """
     This method drops all tables of Pandora and rebuilds them according to the configuration in
@@ -120,6 +125,37 @@ def drop_and_replace_tables(connection,
         connection.commit()
 
 
+def create_named_table(connection, table_name) -> None:
+    """
+    Creates a dedicated table for a circuit with the same structure as the canonical linked_circuit.
+    Args:
+        connection: Postgres connection object
+        table_name: name of the newly created table
+
+    Returns:
+        None
+
+    """
+    cursor = connection.cursor()
+    sql_statement = f"create table IF NOT EXISTS public.{table_name}(id bigserial primary key, prev_q1 bigint, \
+            prev_q2 bigint,\
+            prev_q3 bigint, \
+            type    smallint,\
+            param   real,\
+            global_shift real,\
+            switch  boolean,\
+            next_q1 bigint,\
+            next_q2 bigint,\
+            next_q3 bigint,\
+            visited boolean,\
+            label   char,\
+            cl_ctrl boolean,\
+            meas_key smallint);"
+
+    cursor.execute(sql_statement)
+    connection.commit()
+
+
 def create_batches(pandora_gates: list[Any],
                    batch_size: int) -> list:
     """
@@ -145,6 +181,27 @@ def reset_database_id(connection,
         return
 
     cursor.execute(f"ALTER SEQUENCE {table_name}_id_seq RESTART WITH 1")
+
+
+def insert_benchmark_row(connection, benchmark_tuple: tuple):
+    cursor = connection.cursor()
+    args = cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s)", benchmark_tuple) \
+        .decode('utf-8')
+    sql_statement = \
+        ("INSERT INTO benchmark_results(id, pyliqtr_time, pyliqtr_count, decomp_time, pandora_time, "
+         "pandora_count, widgetisation_time, widget_count, extraction_time) VALUES" + args)
+
+    cursor.execute(sql_statement)
+    connection.commit()
+
+
+def update_widgetisation_results(connection, id, widgetisation_time, widget_count, extraction_time):
+    cursor = connection.cursor()
+    sql_statement = \
+        f"update benchmark_results set widgetisation_time={widgetisation_time}, widget_count={widget_count}, " \
+        f"extraction_time={extraction_time} where id={id}"
+    cursor.execute(sql_statement)
+    connection.commit()
 
 
 def insert_in_batches(pandora_gates: list[PandoraGate],
@@ -202,19 +259,27 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
         reset_database_id(connection, table_name=table_name)
 
 
-def insert_single_batch(connection, batch: list[PandoraGate], is_test=False):
+def insert_single_batch(connection, batch: list[PandoraGate],
+                        table_name: str = 'linked_circuit',
+                        is_test=False):
     """
     Insert a single batch of entries into the database.
     """
     cursor = connection.cursor()
     if not is_test:
+        start = time.time()
         args = ','.join(
             cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple()).decode(
                 'utf-8')
             for tup in batch)
+        joint = time.time()
+        print(f'--- Join time: {joint - start}')
+
         sql_statement = \
-            ("INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
+            (f"INSERT INTO {table_name}(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
              "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
+        print(f'--- Statement time: {time.time() - joint}')
+
     else:
         args = ','.join(
             cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
@@ -331,6 +396,16 @@ def get_gates_by_id(connection, ids: list[int]) -> list[PandoraGate]:
             print(gid)
             raise TupleNotFound
         pandora_gates.append(PandoraGate(*gate_tuple))
+
+    return pandora_gates
+
+
+def get_gates_by_id_fast(connection, ids: list[int]) -> list[PandoraGate]:
+    cursor = connection.cursor()
+    sql_statement = ("select * from linked_circuit where id in " + str(tuple(ids)))
+    cursor.execute(sql_statement)
+    gate_tuples = cursor.fetchall()
+    pandora_gates = [PandoraGate(*gate_tuple) for gate_tuple in gate_tuples]
 
     return pandora_gates
 

@@ -192,7 +192,6 @@ class UnionFindWidgetizer:
         avg_depth = sum(depths) / len(depths)
 
         t_counts = [w.t_count for w in widgets]
-        print(t_counts)
         avg_t = sum(t_counts) / len(t_counts)
 
         return self.widget_count, avg_depth, avg_t, full_widget_count
