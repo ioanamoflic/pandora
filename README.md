@@ -1,3 +1,5 @@
+![Logo](pandoraos_logo_resized.png)
+
 # Pandora: Ultra-Large-Scale Quantum Circuit Design Automation
 
 ## About

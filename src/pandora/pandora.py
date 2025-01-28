@@ -153,7 +153,7 @@ class Pandora:
         self.build_pandora()
         qrom_batches = get_qrom(data=data)
 
-        for _, batch in enumerate(qrom_batches):
+        for _, (batch, decomp_time) in enumerate(qrom_batches):
             insert_single_batch(connection=self.connection,
                                 batch=batch)
 
@@ -165,7 +165,7 @@ class Pandora:
                                                 eps=eps,
                                                 m_bits=m_bits)
 
-        for _, batch in enumerate(qpe_batches):
+        for _, (batch, decomp_time) in enumerate(qpe_batches):
             insert_single_batch(connection=self.connection,
                                 batch=batch)
 
@@ -178,7 +178,7 @@ class Pandora:
                                            t=t,
                                            u=u)
 
-        for _, batch in enumerate(qpe_batches):
+        for _, (batch, decomp_time) in enumerate(qpe_batches):
             insert_single_batch(connection=self.connection,
                                 batch=batch)
 
