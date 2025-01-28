@@ -1,3 +1,5 @@
+![Logo](pandoraos_logo_resized.png)
+
 # Pandora: Ultra-Large-Scale Quantum Circuit Design Automation
 
 **Pandora** is an open-source tool for compiling, analyzing and optimizing quantum circuits through template rewrite rules. The tool can easily handle quantum circuits with hundreds of millions of gates, and can operate in a multi-threaded manner offering almost linear speed-ups. Pandora can apply thousands of complex circuit rewrites per second at random circuit locations.
