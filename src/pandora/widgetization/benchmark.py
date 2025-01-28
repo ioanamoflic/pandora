@@ -1,7 +1,6 @@
 import csv
 import random
 import time
-from pandora.connection_util import get_connection, get_edge_list, get_gate_types
 from union_find import WidgetizationReturnCodes, BFSWidgetization, WidgetUtils, \
     UnionFindWidgetizer
 
@@ -28,6 +27,7 @@ if __name__ == "__main__":
         pandora = Pandora(pandora_config=config,
                           max_time=3600,
                           decomposition_window_size=1000000)
+        pandora.build_pandora()
         pandora.build_edge_list()
 
         # print("Connecting...")
@@ -165,22 +165,28 @@ if __name__ == "__main__":
         pandora = Pandora(pandora_config=config,
                           max_time=3600,
                           decomposition_window_size=1000000)
-        pandora.build_pandora()
-        pandora.build_fh_circuit(N=2, p_algo=0.9999999904, times=0.01)
-        pandora.build_edge_list()
 
-        batch_edges = pandora.get_batched_edge_list(batch_size=10000)
+        start_time = time.time()
+        pandora.build_pandora()
+        pandora.build_qualtran_adder(bitsize=2)
+        pandora.build_edge_list()
+        batch_edges = pandora.get_batched_edge_list(batch_size=2000000)
+
         for i, batch_of_edges in enumerate(batch_edges):
-            print(f"Widgetising batch {i} of pandora edges.")
+            batch_start = time.time()
             id_set = []
             for (s, t) in batch_of_edges:
                 id_set.append(s)
                 id_set.append(t)
-            pandora_gates = pandora.get_pandora_gates_by_id(list(id_set))
+
+            ids_start = time.time()
+            pandora_gates = pandora.get_pandora_gates_by_id(list(set(id_set)))
+            print(f'Getting ids took {time.time() - ids_start}')
+
             uf = UnionFindWidgetizer(edges=batch_of_edges,
                                      pandora_gates=pandora_gates,
-                                     max_t=100,
-                                     max_d=200)
+                                     max_t=5,
+                                     max_d=10)
 
             for node1, node2 in batch_of_edges:
                 ret = uf.union(node1, node2)
@@ -191,9 +197,12 @@ if __name__ == "__main__":
 
             nr_widgets, avd, avt, full_count = uf.compute_widgets_and_properties()
             print(f"Avg. depth={avd},  Avg. T depth={avt} for Nr. widgets={nr_widgets}, Full count={full_count}")
+            print(f"Widgetising batch {i} of pandora edges took {time.time() - batch_start}")
+
             wutils.generate_d3_json_for_uf(uf_widgetizer=uf,
                                            pandora_gate_dict=pandora_gate_dict,
                                            file_path="../../../vis")
+        print(f'Time it took to widgetize FH (2) = {time.time() - start_time}')
 
 
 
