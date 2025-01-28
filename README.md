@@ -37,6 +37,9 @@ TODO: More documentation
 * `python main.py adder 8` for building an 8-bit adder
 
 ## Widgetization
+This is an example of a widgetised Fermi-Hubbard instance (N=2) decomposed into Clifford+T with around 58K gates.
+Each frame is a visualisation of the widgets with d3 (each node is a gate, the color identifies the widget) for different parameters.
+
 ![fh2.gif](fh2.gif)
 
 <a href="./vis/index.html" target=_blank>Example</a>
