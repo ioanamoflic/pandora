@@ -1,5 +1,5 @@
 import time
-from typing import Iterator
+from typing import Iterator, Tuple, List
 
 import cirq
 import sys
@@ -331,7 +331,7 @@ def phase_estimation(walk: QubitizationWalkOperator, m: int) -> cirq.OP_TREE:
     yield cirq.qft(*m_qubits, inverse=True)
 
 
-def get_adder(n_bits, window_size=100, is_test=False) -> Iterator[list[PandoraGate]]:
+def get_adder(n_bits, window_size=100, is_test=False) -> Iterator[tuple[list[PandoraGate], float]]:
     """
     Returns a decomposed Qualtran Adder into a Pandora compatible gate format.
     """
@@ -340,7 +340,7 @@ def get_adder(n_bits, window_size=100, is_test=False) -> Iterator[list[PandoraGa
     return windowed_cirq_to_pandora(circuit=circuit, window_size=window_size, is_test=is_test)
 
 
-def get_qrom(data, window_size=100, is_test=False) -> Iterator[list[PandoraGate]]:
+def get_qrom(data, window_size=100, is_test=False) -> Iterator[tuple[list[PandoraGate], float]]:
     """
     Returns a decomposed Qualtran QROM into a Pandora compatible gate format.
     """
@@ -349,7 +349,7 @@ def get_qrom(data, window_size=100, is_test=False) -> Iterator[list[PandoraGate]
     return windowed_cirq_to_pandora(circuit=circuit, window_size=window_size, is_test=is_test)
 
 
-def get_qpe_of_1d_ising_model(num_sites=1, eps=1e-5, m_bits=1) -> Iterator[list[PandoraGate]]:
+def get_qpe_of_1d_ising_model(num_sites=1, eps=1e-5, m_bits=1) -> Iterator[tuple[list[PandoraGate], float]]:
     """
     Returns a decomposed Qualtran QPE of a 1d ising model into a Pandora compatible gate format.
 
@@ -360,7 +360,7 @@ def get_qpe_of_1d_ising_model(num_sites=1, eps=1e-5, m_bits=1) -> Iterator[list[
     return windowed_cirq_to_pandora(circuit=circuit, window_size=1000000)
 
 
-def get_2d_hubbard_model(dim: tuple[int, int] = (2, 2), t=1.0, u=4) -> Iterator[list[PandoraGate]]:
+def get_2d_hubbard_model(dim: tuple[int, int] = (2, 2), t=1.0, u=4) -> Iterator[tuple[list[PandoraGate], float]]:
     """
     PREPARE bloq taken from https://github.com/quantumlib/Qualtran/blob/main/qualtran/bloqs/chemistry/hubbard_model/qubitization/hubbard_model.ipynb
     Args:

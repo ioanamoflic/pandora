@@ -1,7 +1,4 @@
 import random
-
-import cirq
-
 from benchmarking import benchmark_cirq
 
 from pandora.qualtran_to_pandora_util import *

@@ -1,7 +1,7 @@
-import random
-
 from enum import Enum
-import igraph as ig
+import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
 
 from pandora.widgetization.widget import Widget
 from pandora.connection_util import *
@@ -14,81 +14,6 @@ class WidgetizationReturnCodes(Enum):
     EXIST = 1
     TCOUNT = 2
     DEPTH = 3
-
-
-class BFSWidgetization:
-
-    def __init__(self, num_elem, edges, node_labels):
-        self.parent = [x for x in range(num_elem)]
-
-        self.g = ig.Graph()
-        self.g.add_vertices(num_elem)
-        self.g.add_edges(edges)
-
-        self.edges = edges
-        self.not_visited_nodes = set(range(num_elem))
-        self.widget = list(range(num_elem))
-        self.node_labels = node_labels
-
-        self.size = {}
-        self.t_count = {}
-
-    def get_potential_roots(self):
-        return list(self.not_visited_nodes)
-
-    def is_tgate(self, index):
-        label = self.node_labels[index]
-        return label == "Z**0.25" or label == "Z**-0.25"
-
-    def widgetize(self, root, max_tcount, max_size):
-        tcount = 0
-        for vertex, dist, parent in self.g.bfsiter(root, advanced=True):
-
-            if vertex.index not in self.not_visited_nodes:
-                continue
-
-            self.not_visited_nodes.remove(vertex.index)
-            self.widget[vertex.index] = root
-
-            if root not in self.size:
-                self.size[root] = 0
-            if root not in self.t_count:
-                self.t_count[root] = 0
-
-            self.size[root] = 1 + self.size[root]
-
-            if parent is None:
-                # print(f"Widget from {vertex.index}")
-                True
-            else:
-                # print(f"Vertex {vertex.index} reached at distance {dist} from vertex {parent.index}")
-                if self.is_tgate(vertex.index):
-                    self.t_count[root] = 1 + self.t_count[root]
-
-                if self.t_count[root] == max_tcount:
-                    # print("... found")
-                    return WidgetizationReturnCodes.TCOUNT
-
-                if self.size[root] == max_size:
-                    # print("... found")
-                    return WidgetizationReturnCodes.DEPTH
-
-        return WidgetizationReturnCodes.OK
-
-    def compute_widgets_and_properties(self):
-
-        # Create a set of all the unique widgets
-        widgets = set(self.widget)
-
-        self.widget_count = len(widgets) + 1
-
-        sss = [self.size[w] for w in widgets]
-        avg_size = sum(sss) / len(sss)
-
-        ttt = [self.t_count[w] for w in widgets]
-        avg_t = sum(ttt) / len(ttt)
-
-        return self.widget_count, avg_size, avg_t
 
 
 class UnionFindWidgetizer:
@@ -121,7 +46,7 @@ class UnionFindWidgetizer:
 
         root_of_current = self.parent[current_id].root.id
         if root_of_current != current_id:
-            # path compression call
+            # path compression
             self.parent[current_id] = self.parent[self.find(root_of_current)]
         return root_of_current
 
@@ -209,55 +134,8 @@ class UnionFindWidgetizer:
 
         return components
 
-    def display_png_graph(self):
-        """
-        Deprecated and replaced with D3.
-        """
-        components = self.print_components()
-        color_map = {}
-        g = ig.Graph(edges=self.edges, directed=True)
-        g.vs["label"] = self.node_labels
-        for root in components.keys():
-            color_map[root] = "#{:06x}".format(random.randint(0, 0xFFFFFF))
-        g.vs["color"] = [color_map[self.widget[i]] if self.widget[i] in color_map.keys() else "white" for i in
-                         range(len(self.widget))]
-
-        # make it look like an actual circuit
-        layout = g.layout_reingold_tilford(root=[0], mode="all")
-        layout = [[y, -x] for x, y in layout]
-
-        ig.plot(
-            g,
-            layout=layout,
-            target="graph.png",
-            vertex_size=30,
-            vertex_color=g.vs["color"],
-            vertex_label=g.vs["label"],
-        )
-
 
 class WidgetUtils:
-    @staticmethod
-    def generate_d3_json(widgetizer: BFSWidgetization, file_path=""):
-        json_dict = {}
-        nodes = []
-        links = []
-        for node_id in range(len(widgetizer.widget)):
-            d = {"id": f'{widgetizer.node_labels[node_id]} ({node_id})', "group": widgetizer.widget[node_id]}
-            nodes.append(d)
-        json_dict["nodes"] = nodes
-
-        for source, target in widgetizer.edges:
-            d = {"source": f'{widgetizer.node_labels[source]} ({source})',
-                 "target": f'{widgetizer.node_labels[target]} ({target})',
-                 "value": 1}
-            links.append(d)
-        json_dict["links"] = links
-
-        json_data = json.dumps(json_dict)
-        with open(f"{file_path}/circuit.json", "w") as f:
-            f.write(json_data)
-
     @staticmethod
     def generate_d3_json_for_uf(uf_widgetizer: UnionFindWidgetizer,
                                 pandora_gate_dict: dict[int, PandoraGate],
@@ -287,3 +165,25 @@ class WidgetUtils:
         json_data = json.dumps(json_dict)
         with open(f"{file_path}/circuit.json", "w") as f:
             f.write(json_data)
+
+    @staticmethod
+    def plot3dsurface():
+        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+        df = pd.read_csv('widget_bench.csv', sep=',', usecols=['record_t', 'record_d', 'widget_count', 'times'])
+
+        # Make data
+        x = df['record_d']
+        y = df['record_t']
+        z = df['widget_count']
+
+        x = np.log10(x)
+        y = np.log10(y)
+        z = np.log10(z)
+
+        surf = ax.plot_trisurf(x, y, z, antialiased=False, edgecolor="black", linewidth=0.1, )
+
+        ax.set_xlabel("Log(Depth)")
+        ax.set_ylabel("Log(T-count)")
+        ax.set_zlabel("Log(Widget-Count)")
+
+        plt.show()

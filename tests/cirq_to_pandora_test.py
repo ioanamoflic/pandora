@@ -1,8 +1,5 @@
-import csv
-import time
-
 import benchmarking.benchmark_cirq
-from pandora.qualtran_to_pandora_util import get_adder, get_qrom, get_qpe_of_1d_ising_model, get_adder_as_cirq_circuit, \
+from pandora.qualtran_to_pandora_util import get_adder, get_qrom, get_adder_as_cirq_circuit, \
     get_qrom_as_cirq_circuit
 from pandora.connection_util import *
 
@@ -54,7 +51,7 @@ def test_qualtran_adder_reconstruction(connection):
 
         qubit_dict = dict((str(qubit), i) for i, qubit in enumerate(sorted(full_adder_circuit.all_qubits(),
                                                                            key=lambda q: str(q))))
-        for i, batch in enumerate(adder_batches):
+        for i, (batch, _) in enumerate(adder_batches):
             insert_single_batch(connection=connection, batch=batch, is_test=True)
 
         extracted_circuit: cirq.Circuit = extract_cirq_circuit(connection=connection,
@@ -101,7 +98,7 @@ def test_qualtran_qrom_reconstruction(connection):
 
         qubit_dict = dict((str(qubit), i) for i, qubit in enumerate(sorted(full_qrom_circuit.all_qubits(),
                                                                            key=lambda q: str(q))))
-        for i, batch in enumerate(qrom_batches):
+        for i, (batch, _) in enumerate(qrom_batches):
             insert_single_batch(connection=connection, batch=batch, is_test=True)
 
         extracted_circuit: cirq.Circuit = extract_cirq_circuit(connection=connection,

@@ -10,7 +10,7 @@ from .qualtran_to_pandora_util import *
 from benchmarking.benchmark_adders import get_maslov_adder
 
 from pandora.connection_util import *
-from .widgetization.union_find import UnionFindWidgetizer, WidgetizationReturnCodes
+from .widgetization.union_find import UnionFindWidgetizer
 
 
 class PandoraConfig:
@@ -102,9 +102,7 @@ class Pandora:
         """
             Returns the Pandora gates with id in ids.
         """
-        # return get_gates_by_id_fast(connection=self.connection,
-        #                             ids=ids)
-        return get_gates_by_id(connection=self.connection, ids=ids)
+        return get_gates_by_id_fast(connection=self.connection, ids=ids)
 
     def decompose_toffolis(self):
         """

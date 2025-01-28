@@ -16,5 +16,6 @@ class Widget:
         self.depth = depth
         self.t_count = t_count
         self.root = root
-        # this could be used in the future to mark this as a starting point for widgetization
+        # this could be used in the future to mark this as a starting point for parallel widgetization
         self.is_starting_node = False
+
