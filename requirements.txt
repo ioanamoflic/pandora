@@ -1,6 +1,5 @@
 qualtran==0.4
-psycopg # use it only on M1 Mac
-psycopg-binary # does not work on M1 Mac
+psycopg2-binary
 requests
 pytest
 # pytket

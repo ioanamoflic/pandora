@@ -1,6 +1,6 @@
 import time
 
-import psycopg
+import psycopg2
 
 from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
     make_cyclic_o3_circuit, make_hc_circuit
@@ -50,14 +50,14 @@ class Pandora:
         """
         Creates and returns a database connection object.
         """
-        connection = psycopg.connect(
+        connection = psycopg2.connect(
             dbname=self.pandora_config.database,
             user=self.pandora_config.user,
             host=self.pandora_config.host,
             port=self.pandora_config.port,
             password=self.pandora_config.password)
 
-        connection.set_autocommit(True)
+        connection.set_session(autocommit=True)
 
         if connection:
             print("Connection to the PostgreSQL established successfully.")

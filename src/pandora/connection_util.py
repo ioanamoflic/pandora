@@ -198,9 +198,9 @@ def insert_in_batches(pandora_gates_it: list[PandoraGate],
     if not isinstance(pandora_gates_it, Iterable):
         raise Exception("This is not an Iterable!")
 
-    # cursor = connection.cursor()
-    import psycopg #for v3
-    cursor = psycopg.ClientCursor(connection)
+    cursor = connection.cursor()
+    # import psycopg #for v3
+    # cursor = psycopg.ClientCursor(connection)
 
     # pandora_gates_iterator = list(pandora_gates_iterator)
 
@@ -228,14 +228,14 @@ def insert_layered_single_batch(connection, cursor, batch):
     Insert a single batch of entries into the database.
     """
     start = time.time()
-    args = ','.join(
+    args = b','.join(
         format_layered_padora_gate_tuple(cursor, pandora_gate) for pandora_gate in batch)
 
     joint = time.time()
     print(f'--- Join time: {joint - start} for {len(batch)} gates')
 
     sql_statement = \
-        (b"INSERT INTO layered_cliff_t(id, control_q, target_q, type, param, layer) VALUES " + args.encode("utf-8"))
+        (b"INSERT INTO layered_cliff_t(id, control_q, target_q, type, param, layer) VALUES " + args)
 
     print(f'--- Statement time: {time.time() - joint}')
 
@@ -248,16 +248,16 @@ def insert_single_batch(connection, cursor, batch):
     Insert a single batch of entries into the database.
     """
     start = time.time()
-    args = ','.join(
+    args = b','.join(
         # cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-        el.to_tuple() for el in batch)
+        el.to_tuple().encode("utf-8") for el in batch)
 
     joint = time.time()
     print(f'--- Join time: {joint - start} for {len(batch)} gates')
 
     sql_statement = \
         (b"INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
-         b"next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args.encode("utf-8"))
+         b"next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
 
     print(f'--- Statement time: {time.time() - joint}')
 
