@@ -4,6 +4,6 @@ pgdata/
 pgrun/
 trace*
 circuitsharing/
-__pycache__
+*/__pycache__/*
 venv
 */__pycache__/*

@@ -1,5 +1,4 @@
 import random
-
 from benchmarking import benchmark_cirq
 
 from pandora.qualtran_to_pandora_util import *
@@ -32,7 +31,8 @@ def test_cancel_single_qubit(connection):
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
 
     assert len(extracted_circuit) == 0
     print('Test cancel_single_qubit passed!')
@@ -58,7 +58,8 @@ def test_cancel_two_qubit(connection):
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
 
     assert len(extracted_circuit) == 0
     print('Test cancel_two_qubit passed!')
@@ -85,7 +86,8 @@ def test_commute_single_control_right(connection):
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
 
     qubit_map = dict(
         zip(
@@ -120,7 +122,8 @@ def test_commute_single_control_left(connection):
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
 
     qubit_map = dict(
         zip(
@@ -155,7 +158,8 @@ def test_cx_to_hhcxhh_a(connection):
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
 
     qubit_map = dict(
         zip(
@@ -190,7 +194,8 @@ def test_cx_to_hhcxhh_b(connection):
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
 
     qubit_map = dict(
         zip(
@@ -225,7 +230,8 @@ def test_hhcxhh_to_cx_a(connection):
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
 
     qubit_map = dict(
         zip(
@@ -260,7 +266,8 @@ def test_hhcxhh_to_cx_b(connection):
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
 
     qubit_map = dict(
         zip(
@@ -295,7 +302,8 @@ def test_replace_two_sq_with_one(connection):
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
 
     qubit_map = dict(
         zip(
@@ -338,7 +346,8 @@ def test_commute_cx_ctrl_target_case_1(connection):
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
 
     qubit_map = dict(
         zip(
@@ -372,7 +381,8 @@ def test_commute_cx_ctrl_target_case_2(connection):
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
 
     qubit_map = dict(
         zip(
@@ -417,7 +427,8 @@ def test_case_1(connection):
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
 
     assert len(extracted_circuit) == 0
     print('Test case 1 passed!')
@@ -466,6 +477,7 @@ def test_case_1_repeated(connection, n):
                                              circuit_label='t',
                                              remove_io_gates=True,
                                              table_name='linked_circuit',
+                                             is_test=False
                                              )
     print(extracted_circuit)
     assert len(extracted_circuit) == 0
@@ -502,6 +514,7 @@ def test_case_2(connection):
                                              circuit_label='t',
                                              remove_io_gates=False,
                                              table_name='linked_circuit',
+                                             is_test=False
                                              )
     print(extracted_circuit)
     cursor.execute(f"call commute_single_control_right({myZPow}, -0.25, 100, 1)")
@@ -510,7 +523,7 @@ def test_case_2(connection):
                                              circuit_label='t',
                                              remove_io_gates=False,
                                              table_name='linked_circuit',
-
+                                             is_test=False
                                              )
     print(extracted_circuit)
     cursor.execute(f"call linked_hhcxhh_to_cx(10, 1)")
@@ -520,6 +533,7 @@ def test_case_2(connection):
                                              circuit_label='t',
                                              remove_io_gates=True,
                                              table_name='linked_circuit',
+                                             is_test=False
                                              )
 
     assert len(extracted_circuit) == 0
@@ -575,6 +589,7 @@ def test_case_2_repeated(connection, n):
                                              circuit_label='t',
                                              remove_io_gates=True,
                                              table_name='linked_circuit',
+                                             is_test=False
                                              )
 
     assert len(extracted_circuit) == 0
@@ -594,9 +609,9 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
         refresh_all_stored_procedures(connection=connection)
         reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
 
-        circuit = get_adder(bit_size)
+        full_adder_circuit = get_adder_as_cirq_circuit(bit_size)
 
-        pandora_gates, _ = cirq_to_pandora(cirq_circuit=circuit,
+        pandora_gates, _ = cirq_to_pandora(cirq_circuit=full_adder_circuit,
                                            last_id=0,
                                            label='t',
                                            add_margins=True)
@@ -626,8 +641,9 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
                                                                circuit_label='t',
                                                                remove_io_gates=True,
                                                                table_name='linked_circuit',
-                                                               )
-        circuit = remove_measurements(remove_classically_controlled_ops(circuit))
+                                                               is_test=False)
+
+        circuit = remove_measurements(remove_classically_controlled_ops(full_adder_circuit))
         extracted_circuit = remove_measurements(remove_classically_controlled_ops(extracted_circuit))
 
         assert np.allclose(circuit.unitary(), extracted_circuit.unitary())
@@ -691,6 +707,7 @@ def check_logical_correctness_random(connection, stop_after: int):
                                                      circuit_label='t',
                                                      remove_io_gates=False,
                                                      table_name='linked_circuit',
+                                                     is_test=False
                                                      )
 
             print('Final:')
@@ -728,6 +745,7 @@ def test_BVZ_optimization(connection, stop_after):
                                                      circuit_label='t',
                                                      remove_io_gates=False,
                                                      table_name='linked_circuit',
+                                                     is_test=False
                                                      )
             assert np.allclose(initial_circuit.unitary(), extracted_circuit.unitary())
             print(f'Passed bvz({n_bits}, secret={secret})')

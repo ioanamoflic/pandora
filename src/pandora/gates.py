@@ -22,7 +22,8 @@ class PandoraGate:
                  visited: bool = False,
                  label: str = None,
                  is_classically_controlled: bool = False,
-                 measurement_key: int = None):
+                 measurement_key: int = None,
+                 qubit_name: str = None):
         self.id = gate_id
         self.prev_q1 = prev_q1
         self.prev_q2 = prev_q2
@@ -38,6 +39,7 @@ class PandoraGate:
         self.label = label
         self.cl_ctrl = is_classically_controlled
         self.meas_key = measurement_key
+        self.qubit_name = qubit_name
 
     def __str__(self):
         return f'{self.prev_q1}<---------->{self.next_q1}\n' \
@@ -53,7 +55,24 @@ class PandoraGate:
         psql_insert = f"INSERT INTO {table_name}{tuple(columns)}"
         return mogrify_arg, psql_insert
 
-    def to_tuple(self):
+    def to_tuple(self, is_test=False):
+        if is_test:
+            return (self.id,
+                    self.prev_q1,
+                    self.prev_q2,
+                    self.prev_q3,
+                    self.type,
+                    self.param,
+                    self.global_shift,
+                    self.switch,
+                    self.next_q1,
+                    self.next_q2,
+                    self.next_q3,
+                    self.visited,
+                    self.label,
+                    self.cl_ctrl,
+                    self.meas_key,
+                    self.qubit_name)
         return (self.id,
                 self.prev_q1,
                 self.prev_q2,
@@ -68,7 +87,8 @@ class PandoraGate:
                 self.visited,
                 self.label,
                 self.cl_ctrl,
-                self.meas_key)
+                self.meas_key
+                )
 
 
 class PandoraGateWrapper:

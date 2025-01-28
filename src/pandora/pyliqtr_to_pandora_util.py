@@ -23,7 +23,6 @@ from pyscf import ao2mo, tools
 from openfermion import InteractionOperator
 
 
-# real p_algo should be 0.999999
 def make_qsvt_circuit(model, encoding, times=1.0, p_algo=0.95):
     """Make a QSVT based circuit from pyLIQTR"""
     eps = (1 - p_algo) / 2
@@ -150,4 +149,3 @@ def make_hc_circuit(data_path="."):
                                                                                  df_threshold=1e-3
                                                                                  )
     return circuit.circuit
-

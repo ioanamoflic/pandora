@@ -69,7 +69,6 @@ def cirq_operation_to_pandora_gate(operation: cirq.Operation, meas_key_dict: dic
         cirq_class_name = cirq_gate.__class__.__name__
         if cirq_class_name not in list(PandoraGateTranslator.__members__):
             print(cirq_class_name)
-            print(cirq_gate.bloq)
             raise CirqGateHasNoPandoraEquivalent
 
         # Build the translation starting from the cirq class name
@@ -107,7 +106,9 @@ def wrap_pandora_gates(pandora_gates: list[PandoraGate]) -> dict[int, PandoraGat
     return pandora_gate_id_map
 
 
-def sort_pandora_wrapped_by_moment(pandora_gate_id_map: dict[int, PandoraGateWrapper]):
+def sort_pandora_wrapped_by_moment(pandora_gate_id_map: dict[int, PandoraGateWrapper],
+                                   original_qubits_test: dict[str, int] = None,
+                                   is_test=False):
     """
     This method receives a dictionary of (id, PandoraGateWrapped) and returns a list of PandoraGateWrapped objects
     sorted by the moment each pandora gate would appear in the reconstructed cirq Circuit.
@@ -164,16 +165,24 @@ def sort_pandora_wrapped_by_moment(pandora_gate_id_map: dict[int, PandoraGateWra
                         all_are_marked = False
 
     assert all([wrapped.moment != default_moment for wrapped in pandora_gate_id_map.values()])
+    if is_test:
+        return sorted(pandora_gate_id_map.values(), key=lambda wrapped: (wrapped.moment,
+                                                                         original_qubits_test[
+                                                                             wrapped.pandora_gate.qubit_name]
+                                                                         if wrapped.pandora_gate.type
+                                                                            == PandoraGateTranslator.In.value
+                                                                         else wrapped.pandora_gate.id))
     return sorted(pandora_gate_id_map.values(), key=lambda wrapped: (wrapped.moment,
                                                                      wrapped.pandora_gate.id))
 
 
-def pandora_to_wrapped_gates(pandora_gates: list[PandoraGate]) -> list[PandoraGateWrapper]:
+def pandora_to_cirq(pandora_gates: list[PandoraGate], original_qubits_test: dict[str, int] = None, is_test=False) \
+        -> cirq.Circuit:
     """
     Takes a list of Pandora gates (unwrapped) and returns the corresponding cirq Circuit.
     """
     pandora_gate_id_map = wrap_pandora_gates(pandora_gates=pandora_gates)
-    sorted_gates = sort_pandora_wrapped_by_moment(pandora_gate_id_map)
+    sorted_gates = sort_pandora_wrapped_by_moment(pandora_gate_id_map, original_qubits_test, is_test)
     sorted_ids = [wrapped.pandora_gate.id for wrapped in sorted_gates]
 
     rh = dict(zip(sorted_ids, sorted_gates))
@@ -220,18 +229,10 @@ def pandora_to_wrapped_gates(pandora_gates: list[PandoraGate]) -> list[PandoraGa
                 elif previous_wrapped_q2.next_id2 == wrapped_id:
                     wrapped.q2 = previous_wrapped_q2.q2
 
-    
-    return list(rh.values())
-
-def pandora_to_cirq(pandora_gates: list[PandoraGate]) -> cirq.Circuit:
-    wrapped_gates = pandora_to_wrapped_gates(pandora_gates)
+    wrapped_gates = list(rh.values())
     circuit = pandora_wrapped_to_circuit(wrapped_gates=wrapped_gates, n_qubits=n_qubits)
     return circuit
 
-
-def pandora_to_layered(pandora_gates: list[PandoraGate]) -> list[PandoraGateWrapper]:
-      wrapped_gates = pandora_to_wrapped_gates(pandora_gates)
-      return list(wrapped_gates)
 
 def pandora_wrapped_to_circuit(wrapped_gates: list[PandoraGateWrapper],
                                n_qubits: int) -> cirq.Circuit:
@@ -332,58 +333,49 @@ def cirq_to_pandora(cirq_circuit: cirq.Circuit,
     return pandora_gates.values(), last_id
 
 
-def cirq_to_pandora_from_op_list(op_list: list[cirq.GateOperation],
-                                 qubit_set: set[cirq.NamedQubit],
-                                 last_id: int,
-                                 label: Optional[str] = None,
-                                 add_margins=True
-                                 ) -> tuple[[PandoraGate], int]:
+def windowed_cirq_to_pandora_from_op_list(op_list: list[cirq.Operation],
+                                          pandora_dictionary: dict[int, PandoraGate],
+                                          latest_conc_on_qubit: dict[cirq.Qid, int],
+                                          last_id: int,
+                                          label: Optional[str] = None,
+                                          is_test: bool = False
+                                          ) -> tuple[dict[int, PandoraGate], dict[cirq.Qid, int], int]:
     """
     Fast method which converts a cirq circuit into a list of tuples which can be used as database entries.
 
     Args:
+        is_test: if test, keep initial qubit ordering in the test table to ensure reconstruction is perfect
+        latest_conc_on_qubit: last id concatenated with gate wire on each qubit
+                last id concatenated with gate wire on each qubit
+                the convention is that we concatenate to the id a value between 1-3 as follows:
+                * (1) for control or single qubit gate;
+                * (2) for target or second control
+                * (3) for target (three qubit gates)
+        pandora_dictionary: dict of pandora gates; key is the gate_id, value is the PandoraGate object
         op_list: list of operations which need to be inserted into the database
-        qubit_set: set containing all the qubits that ops from op_list operate on
         last_id: the id of the first tuple that is inserted in the database.
         label: a string which describes the circuit and can be later used for retrieving the circuit from the database
-        add_margins: if True, In() and Out() gates are added to the circuit
 
     Returns:
         A list of tuples where each tuple describes a circuit operation.
     """
-    # dict of pandora gates; key is the gate_id, value is the PandoraGate object
-    pandora_gates = {}
-
-    # last id concatenated with gate wire on each qubit
-    # the convention is that we concatenate to the id a value between 1-3 as follows:
-    # * (1) for control or single qubit gate;
-    # * (2) for target or second control
-    # * (3) for target
-    latest_conc_on_qubit = {}
 
     # dictionary of keys
     meas_key_dict = {}
-
-    # the permutation of the qubits depends on the ordering of the In gates
-    # sorting works for now
-    if add_margins:
-        sorted_qubits = list(sorted(qubit_set))
-        in_gates = [In().on(q) for q in sorted_qubits]
-        out_gates = [Out().on(q) for q in sorted_qubits]
-        op_list = in_gates + op_list + out_gates
-
     # iterate through the cirq operations of the cirq circuit
     for i, current_operation in enumerate(op_list):
-        # current gate is an initial gate with no prev values
-        if isinstance(current_operation.gate, type(In())):
-            latest_conc_on_qubit[current_operation.qubits[0]] = last_id * 10
-            pandora_gates[last_id] = PandoraGate(gate_id=last_id,
-                                                 gate_code=PandoraGateTranslator.In.value,
-                                                 label=label)
-            last_id += 1
-            continue
-
         current_op_qubits = current_operation.qubits
+        for qub in current_op_qubits:
+            if qub not in latest_conc_on_qubit.keys():
+                pandora_dictionary[last_id] = PandoraGate(gate_id=last_id,
+                                                          gate_code=PandoraGateTranslator.In.value,
+                                                          label=label)
+                if is_test:
+                    pandora_dictionary[last_id].qubit_name = str(qub)
+
+                latest_conc_on_qubit[qub] = last_id * 10
+                last_id += 1
+
         current_pandora_gate = cirq_operation_to_pandora_gate(current_operation, meas_key_dict=meas_key_dict)
         current_pandora_gate.id = last_id
         current_pandora_gate.label = label
@@ -401,13 +393,10 @@ def cirq_to_pandora_from_op_list(op_list: list[cirq.GateOperation],
             previous_id, previous_order_qubit = latest_conc_on_qubit[q] // 10, latest_conc_on_qubit[q] % 10
 
             conc_id = last_id * 10 + q_idx
-            setattr(pandora_gates[previous_id], f'next_q{previous_order_qubit + 1}', conc_id)
+            setattr(pandora_dictionary[previous_id], f'next_q{previous_order_qubit + 1}', conc_id)
             latest_conc_on_qubit[q] = conc_id
 
-        pandora_gates[last_id] = current_pandora_gate
+        pandora_dictionary[last_id] = current_pandora_gate
         last_id += 1
 
-    # with open(f'meas_keys_{label}.json', 'w') as fp:
-    #   json.dump(meas_key_dict, fp)
-
-    return pandora_gates.values(), last_id
+    return pandora_dictionary, latest_conc_on_qubit, last_id

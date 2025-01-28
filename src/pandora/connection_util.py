@@ -1,14 +1,15 @@
 import inspect
 import os
 import sys
+import time
 from itertools import cycle
 from multiprocessing import Process, cpu_count
-from typing import Any
+from typing import Any, Iterator
 
 import cirq
 
 from pandora.cirq_to_pandora_util import *
-from pandora.gate_translator import PANDORA_TO_READABLE
+from pandora.gate_translator import PANDORA_TO_READABLE, GLOBAL_IN_ID, GLOBAL_OUT_ID
 
 
 def get_connection():
@@ -86,7 +87,12 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
 
 def drop_and_replace_tables(connection,
                             clean: bool = False,
-                            tables: tuple[str] = ('linked_circuit', 'stop_condition', 'edge_list'),
+                            tables: tuple[str] = (
+                                    'linked_circuit',
+                                    'linked_circuit_test',
+                                    'stop_condition',
+                                    'edge_list',
+                                    'benchmark_results'),
                             verbose=False) -> None:
     """
     This method drops all tables of Pandora and rebuilds them according to the configuration in
@@ -119,22 +125,44 @@ def drop_and_replace_tables(connection,
         connection.commit()
 
 
-def create_batches(pandora_gates: list[PandoraGate],
+def create_named_table(connection, table_name) -> None:
+    """
+    Creates a dedicated table for a circuit with the same structure as the canonical linked_circuit.
+    Args:
+        connection: Postgres connection object
+        table_name: name of the newly created table
+
+    Returns:
+        None
+
+    """
+    cursor = connection.cursor()
+    sql_statement = f"create table IF NOT EXISTS public.{table_name}(id bigserial primary key, prev_q1 bigint, \
+            prev_q2 bigint,\
+            prev_q3 bigint, \
+            type    smallint,\
+            param   real,\
+            global_shift real,\
+            switch  boolean,\
+            next_q1 bigint,\
+            next_q2 bigint,\
+            next_q3 bigint,\
+            visited boolean,\
+            label   char,\
+            cl_ctrl boolean,\
+            meas_key smallint);"
+
+    cursor.execute(sql_statement)
+    connection.commit()
+
+
+def create_batches(pandora_gates: list[Any],
                    batch_size: int) -> list:
     """
     Create batches of lists. One batch will be inserted into the database at a time.
     """
     for i in range(0, len(pandora_gates), batch_size):
         yield pandora_gates[i:i + batch_size]
-
-
-def create_batch_of_batches(batches: list[Any],
-                            batch_of_batch_size: int) -> list:
-    """
-       Create batches of lists. One batch will be inserted into the database at a time.
-    """
-    for i in range(0, len(list(batches)), batch_of_batch_size):
-        yield batches[i:i + batch_of_batch_size]
 
 
 def reset_database_id(connection,
@@ -153,6 +181,27 @@ def reset_database_id(connection,
         return
 
     cursor.execute(f"ALTER SEQUENCE {table_name}_id_seq RESTART WITH 1")
+
+
+def insert_benchmark_row(connection, benchmark_tuple: tuple):
+    cursor = connection.cursor()
+    args = cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s)", benchmark_tuple) \
+        .decode('utf-8')
+    sql_statement = \
+        ("INSERT INTO benchmark_results(id, pyliqtr_time, pyliqtr_count, decomp_time, pandora_time, "
+         "pandora_count, widgetisation_time, widget_count, extraction_time) VALUES" + args)
+
+    cursor.execute(sql_statement)
+    connection.commit()
+
+
+def update_widgetisation_results(connection, id, widgetisation_time, widget_count, extraction_time):
+    cursor = connection.cursor()
+    sql_statement = \
+        f"update benchmark_results set widgetisation_time={widgetisation_time}, widget_count={widget_count}, " \
+        f"extraction_time={extraction_time} where id={id}"
+    cursor.execute(sql_statement)
+    connection.commit()
 
 
 def insert_in_batches(pandora_gates: list[PandoraGate],
@@ -209,72 +258,43 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
     if reset_id is True:
         reset_database_id(connection, table_name=table_name)
 
-def format_layred_padora_gate_tuple(cursor, pandora_gate: PandoraGateWrapper) -> str:
-    control, target = (pandora_gate.q1, pandora_gate.q2) if pandora_gate.pandora_gate.type in TWO_QUBIT_GATES else (None, pandora_gate.q1)
-    return cursor.mogrify(
-        "(%s, %s, %s, %s, %s, %s)",
-        (pandora_gate.pandora_gate.id, control, target, pandora_gate.pandora_gate.type, pandora_gate.pandora_gate.param, pandora_gate.moment)
-            ).decode(
-                'utf-8')
 
-def insert_layered_in_batches(pandora_gates: list[PandoraGateWrapper],
-                      connection,
-                      table_name: str,
-                      batch_size: int = 1000,
-                      reset_id: bool = False) -> None:
-    """
-    This method is used for inserting a list of PanoraGate objects into the database in batches.
-    The batched version of the insertion is faster than inserting gates one by one. The idea is to create
-    a huge string of insert statements which is processed as a single one.
-
-    Note that the fields in the PandoraGate object should match the physical table column names. Since psycopg2
-    does not support ORM, and this is a way of faking it.
-
-     Params:
-            pandora_gates: list of PandoraGate objects
-            connection: the Postgres connection object
-            table_name: name of the table in which the gates should be inserted
-            batch_size: size of PandoraGate objects which should be inserted at once.
-            reset_id: boolean value based on which we reset the starting id to 0 or not.
-    Returns:
-            None.
-    """
-    pandora_gates = list(pandora_gates)
-    batches = create_batches(pandora_gates, batch_size=int(batch_size))
-    cursor = connection.cursor()
-
-    # mogrify_arg, insert_query = pandora_gates[0].get_insert_query(table_name=table_name)
-    for i, batch in enumerate(batches):
-        args = ','.join(format_layred_padora_gate_tuple(cursor, pandora_gate) for pandora_gate in batch)
-        sql_statement = \
-            ("INSERT INTO layered_cliff_t(id, control_q, target_q, type, param, layer) VALUES " + args)
-
-        # execute the sql statement
-        cursor.execute(sql_statement)
-        connection.commit()
-
-    if reset_id is True:
-        reset_database_id(connection, table_name=table_name)
-
-
-def insert_single_batch(connection, batch):
+def insert_single_batch(connection, batch: list[PandoraGate],
+                        table_name: str = 'linked_circuit',
+                        is_test=False):
     """
     Insert a single batch of entries into the database.
     """
     cursor = connection.cursor()
-    args = ','.join(
-        cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple()).decode('utf-8')
-        for tup in batch)
-    sql_statement = \
-        ("INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
-         "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
+    if not is_test:
+        start = time.time()
+        args = ','.join(
+            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple()).decode(
+                'utf-8')
+            for tup in batch)
+        joint = time.time()
+        print(f'--- Join time: {joint - start}')
+
+        sql_statement = \
+            (f"INSERT INTO {table_name}(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
+             "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
+        print(f'--- Statement time: {time.time() - joint}')
+
+    else:
+        args = ','.join(
+            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                           tup.to_tuple(is_test=True)).decode(
+                'utf-8')
+            for tup in batch)
+        sql_statement = \
+            ("INSERT INTO linked_circuit_test(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, "
+             "next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key, qubit_name) VALUES" + args)
 
     # execute the sql statement
     cursor.execute(sql_statement)
     connection.commit()
 
 
-    
 def remove_io_gates_from_circuit(circuit: cirq.Circuit) -> cirq.Circuit:
     """
     Constructs and returns a copy of circuit without In/Out gates.
@@ -285,20 +305,24 @@ def remove_io_gates_from_circuit(circuit: cirq.Circuit) -> cirq.Circuit:
             io_free_reconstructed.append(op)
     return io_free_reconstructed
 
-# Unused at the moment
-def get_gate_by_id(connection, gate_id) -> PandoraGate:
-    sql =f"select * from {table_name} where id={gate_id}"
-    cursor = connection.cursor()
-    cursor.execute(sql, args)
-    row: tuple = cursor.fetchone()
-    return PandoraGate(*row)
 
-
-def extract_pandora_gates(connection,
+def extract_cirq_circuit(connection,
                          circuit_label: str = None,
                          table_name: str = None,
-                         remove_io_gates: bool = False) -> list[PandoraGate]:
+                         remove_io_gates: bool = False,
+                         original_qubits_test: dict[str, int] = None,
+                         is_test=True) -> cirq.Circuit:
+    """
+    Extracts a circuit with a given label from the database and returns the corresponding cirq circuit.
+    Params:
+            connection: the Postgres connection object
+            table_name: name of the table from which the circuit is read out
+            circuit_label: label used to store the circuit in the database.
+            remove_io_gates: boolean value based on which In/Out gates are removed or not.
+    Returns:
+            The cirq circuit.
 
+    """
     args = tuple()
     if circuit_label is not None:
         args = (circuit_label,)
@@ -310,48 +334,15 @@ def extract_pandora_gates(connection,
     cursor.execute(sql, args)
     tuples: list[tuple] = cursor.fetchall()
 
-    return [PandoraGate(*tup) for tup in tuples]
-
-def extract_cirq_circuit(connection,
-                         circuit_label: str = None,
-                         table_name: str = None,
-                         remove_io_gates: bool = False) -> cirq.Circuit:
-    """
-    Extracts a circuit with a given label from the database and returns the corresponding cirq circuit.
-    Params:
-            connection: the Postgres connection object
-            table_name: name of the table from which the circuit is read out
-            circuit_label: label used to store the circuit in the database.
-            remove_io_gates: boolean value based on which In/Out gates are removed or not.
-    Returns:
-            The cirq circuit.
-
-    """
-    extract_pandora_gates(connection=connection, circuit_label=circuit_label, table_name=table_name, remove_io_gates=remove_io_gates)
-    final_circ: cirq.Circuit = pandora_to_cirq(pandora_gates=pandora_gates)
+    pandora_gates: list[PandoraGate] = [PandoraGate(*tup) for tup in tuples]
+    final_circ: cirq.Circuit = pandora_to_cirq(pandora_gates=pandora_gates,
+                                               original_qubits_test=original_qubits_test,
+                                               is_test=is_test)
 
     if remove_io_gates:
         return remove_io_gates_from_circuit(final_circ)
     return final_circ
 
-
-def extract_layered_circuit(connection,
-                            circuit_label: str = None,
-                            table_name: str = None,
-                            remove_io_gates: bool = False) -> list[PandoraGate]:
-    """
-    Extracts a circuit with a given label from the database and returns the corresponding cirq circuit.
-    Params:
-            connection: the Postgres connection object
-            table_name: name of the table from which the circuit is read out
-            circuit_label: label used to store the circuit in the database.
-            remove_io_gates: boolean value based on which In/Out gates are removed or not.
-    Returns:
-            The cirq circuit.
-
-    """
-    pandora_gates = extract_pandora_gates(connection=connection, circuit_label=circuit_label, table_name=table_name, remove_io_gates=remove_io_gates)
-    return pandora_to_layered(pandora_gates)
 
 def get_edge_list(connection) -> list[tuple[int, int]]:
     """
@@ -364,6 +355,59 @@ def get_edge_list(connection) -> list[tuple[int, int]]:
     tuples = cursor.fetchall()
 
     return tuples
+
+
+def get_edge_list_in_batches(connection, batch_size) -> Iterator[list[tuple[int, int]]]:
+    """
+    Returns the contents from edge_list table in batches.
+    """
+    cursor = connection.cursor()
+    cursor.execute('select * from edge_list order by source, target')
+
+    while True:
+        records = cursor.fetchmany(size=batch_size)
+        if not records:
+            break
+        yield records
+
+    cursor.close()
+
+
+def get_gates_by_id(connection, ids: list[int]) -> list[PandoraGate]:
+    """
+    Returns the Pandora gates with id in ids.
+    """
+    pandora_gates: list[PandoraGate] = []
+    for gid in ids:
+        if gid == GLOBAL_IN_ID:
+            pandora_gates.append(PandoraGate(gate_id=gid,
+                                             gate_code=PandoraGateTranslator.GlobalIn.value))
+            continue
+        if gid == GLOBAL_OUT_ID:
+            pandora_gates.append(PandoraGate(gate_id=gid,
+                                             gate_code=PandoraGateTranslator.GlobalOut.value))
+            continue
+        args = (gid,)
+        sql = "select * from linked_circuit where id=%s;"
+        cursor = connection.cursor()
+        cursor.execute(sql, args)
+        gate_tuple = cursor.fetchone()
+        if gate_tuple is None:
+            print(gid)
+            raise TupleNotFound
+        pandora_gates.append(PandoraGate(*gate_tuple))
+
+    return pandora_gates
+
+
+def get_gates_by_id_fast(connection, ids: list[int]) -> list[PandoraGate]:
+    cursor = connection.cursor()
+    sql_statement = ("select * from linked_circuit where id in " + str(tuple(ids)))
+    cursor.execute(sql_statement)
+    gate_tuples = cursor.fetchall()
+    pandora_gates = [PandoraGate(*gate_tuple) for gate_tuple in gate_tuples]
+
+    return pandora_gates
 
 
 def get_gate_types(connection,
@@ -396,35 +440,35 @@ def get_gate_types(connection,
     return types
 
 
-def insert_hack(batch: list[list[Any]]) -> None:
+def insert_hack(batches: list[list[Any]], bs_per_process: int) -> None:
     """
     TODO
     """
     connection = get_connection()
     connection.set_session(autocommit=True)
-    insert_single_batch(connection, batch=batch)
+    process_batches = create_batches(batches, batch_size=int(bs_per_process))
+
+    for batch in process_batches:
+        insert_single_batch(connection, batch=batch)
 
 
-def parallel_insert(pandora_gates: list[PandoraGate]) -> None:
+def parallel_insert(pandora_gates: list[PandoraGate], nprocs: int, bs_per_process: int) -> None:
     """
     TODO
     VERY memory intensive. Hopefully faster?
     """
-    my_cpu_count: int = cpu_count()
     pandora_gates = list(pandora_gates)
-    process_batch_size: int = len(pandora_gates) // my_cpu_count
+    process_batch_size: int = len(pandora_gates) // nprocs
     batches = create_batches(pandora_gates, batch_size=int(process_batch_size))
-
-    n_batches = my_cpu_count
 
     process_list = []
     for i, batch_of_inserts in enumerate(batches):
-        p = Process(target=insert_hack, args=(batch_of_inserts,))
+        p = Process(target=insert_hack, args=(batch_of_inserts, bs_per_process))
         process_list.append(p)
 
-    for i in range(n_batches):
+    for i in range(nprocs):
         process_list[i].start()
-    for i in range(n_batches):
+    for i in range(nprocs):
         process_list[i].join()
 
 

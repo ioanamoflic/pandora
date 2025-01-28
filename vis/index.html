@@ -23,7 +23,7 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 
 <div id="cns" height="50">Hello World!</div>
-<svg width="1000" height="600"></svg>
+<svg width="1500" height="1000"></svg>
 
 <script>
 
@@ -43,7 +43,8 @@
                 return d.id;
             })
             .distance(function (d) {
-                return d.source.group === d.target.group ? 1 : 10;
+                // return d.source.group === d.target.group ? -10000 : 1;
+                 return d.source.group === d.target.group ? 100 : 100;
             })
         )
         .force("charge", d3.forceManyBody())
