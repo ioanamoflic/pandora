@@ -6,4 +6,4 @@ trace*
 circuitsharing/
 __pycache__
 venv
-src/pandora/widgetization/__pycache__/*
+*/__pycache__/*
