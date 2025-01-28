@@ -42,4 +42,4 @@ Each frame is a visualisation of the widgets with d3 (each node is a gate, the c
 
 ![fh2.gif](fh2.gif)
 
-<a href="./vis/index.html" target=_blank>Example</a>
+<a href="./vis/index.html" target=_blank>This is an example of a widgetised 2-bit adder.</a>
