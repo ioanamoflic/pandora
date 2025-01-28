@@ -12,6 +12,7 @@ app = Flask(__name__)
 #Load default config
 config = PandoraConfig()
 pandora = Pandora(pandora_config=config, max_time=3600)
+connection = pandora.get_connection()
 
 @app.route('/')
 def hello_world():
@@ -20,8 +21,6 @@ def hello_world():
 
 @app.route('/get_nr_slices')
 def get_nr_slices():
-
-    connection = pandora.get_connection()
     cursor = connection.cursor()
 
     sql_statement = "select count(id) from minetest"
@@ -37,11 +36,7 @@ def get_slice(nr):
     #     d = json.load(f)
     #     return d
 
-    connection = pandora.get_connection()
     cursor = connection.cursor()
-
-    # tnr = (int(nr) % 6) + 1
-
     tnr = int(nr)
     sql_statement = f"select json from minetest where id={tnr}"
     cursor.execute(sql_statement)

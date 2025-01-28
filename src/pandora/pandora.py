@@ -176,7 +176,9 @@ class Pandora:
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit')
-        print(f"DB insert took: {time.time() - start_insert}")
+        CRED = '\033[91m'
+        CEND = '\033[0m'
+        print(f"{CRED}Pandora insert took: {time.time() - start_insert}{CEND}")
         print('Done fh_circuit!')
         sys.stdout.flush()
 
@@ -295,7 +297,9 @@ class Pandora:
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit')
-        print(f"DB insert took: {time.time() - start_insert}")
+        CRED = '\033[91m'
+        CEND = '\033[0m'
+        print(f"{CRED}Pandora insert took: {time.time() - start_insert}{CEND}")
         print('Done ti_circuit!')
         sys.stdout.flush()
 

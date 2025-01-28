@@ -232,7 +232,7 @@ def insert_layered_single_batch(connection, cursor, batch):
         format_layered_padora_gate_tuple(cursor, pandora_gate) for pandora_gate in batch)
 
     joint = time.time()
-    print(f'--- Join time: {joint - start}')
+    print(f'--- Join time: {joint - start} for {len(batch)} gates')
 
     sql_statement = \
         (b"INSERT INTO layered_cliff_t(id, control_q, target_q, type, param, layer) VALUES " + args.encode("utf-8"))
@@ -253,7 +253,7 @@ def insert_single_batch(connection, cursor, batch):
         el.to_tuple() for el in batch)
 
     joint = time.time()
-    print(f'--- Join time: {joint - start}')
+    print(f'--- Join time: {joint - start} for {len(batch)} gates')
 
     sql_statement = \
         (b"INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
