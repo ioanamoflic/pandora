@@ -223,7 +223,10 @@ class Pandora:
 
         for i, (batch, decomposition_time) in enumerate(batches):
             start_insert = time.time()
+
+            cursor = self.connection.cursor()
             insert_single_batch(connection=self.connection,
+                                cursor=cursor,
                                 batch=batch)
             pandora_count += len(batch)
             total_insert_times += (time.time() - start_insert)

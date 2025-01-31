@@ -294,13 +294,14 @@ def insert_layered_single_batch(connection, cursor, batch):
     cursor.execute(sql_statement)
     connection.commit()
 
-def insert_single_batch(connection, cursor, batch):
+def insert_single_batch(connection, cursor, batch,
+                        table_name: str = 'linked_circuit',
+                        is_test=False):
     """
     Insert a single batch of entries into the database.
     """
     start = time.time()
     args = b','.join(
-        # cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
         el.to_tuple().encode("utf-8") for el in batch)
 
     joint = time.time()
@@ -311,19 +312,21 @@ def insert_single_batch(connection, cursor, batch):
          b"next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
 
     print(f'--- Statement time: {time.time() - joint}')
-    cursor = connection.cursor()
+
+    # is_test = False #TODO: Paler
+
     if not is_test:
         start = time.time()
-        args = ','.join(
-            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple()).decode(
-                'utf-8')
-            for tup in batch)
+        args = b','.join(
+            el.to_tuple().encode("utf-8") for el in batch)
+
         joint = time.time()
         print(f'--- Join time: {joint - start}')
 
-        sql_statement = \
-            (f"INSERT INTO {table_name}(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
-             "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
+        insert = f"INSERT INTO {table_name}(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, " \
+                 f"next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES"
+
+        sql_statement = insert.encode("utf-8") + args
         print(f'--- Statement time: {time.time() - joint}')
 
     else:
