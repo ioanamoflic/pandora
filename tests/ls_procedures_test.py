@@ -40,7 +40,8 @@ def test_cnotify_XX(connection):
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
-                                             remove_io_gates=False)
+                                             remove_io_gates=False,
+                                             is_test=False)
     print(extracted_circuit)
     assert len(extracted_circuit) == 4
     print('Test cnotify_XX passed!')
@@ -80,7 +81,8 @@ def test_cnotify_ZZ(connection):
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
-                                             remove_io_gates=False)
+                                             remove_io_gates=False,
+                                             is_test=False)
     print(extracted_circuit)
     assert len(extracted_circuit) == 4
     print('Test cnotify_ZZ passed!')
@@ -144,7 +146,8 @@ def test_simplify_erasure_error(connection):
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
     print(extracted_circuit)
     assert len(extracted_circuit) == 1
     print('Test simplify_erasure_error passed!')
@@ -184,7 +187,8 @@ def test_simplify_two_parity_check(connection):
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
-                                             remove_io_gates=True)
+                                             remove_io_gates=True,
+                                             is_test=False)
     print(extracted_circuit)
     assert len(extracted_circuit) == 1
     print('Test simplify_two_parity_check passed!')

@@ -55,3 +55,9 @@ class PandoraGateWrappedMissingQubits(PandoraException):
     """
         Qubit is none.
     """
+
+
+class WindowSizeError(PandoraException):
+    """
+        Window size has to be >= 2.
+    """
