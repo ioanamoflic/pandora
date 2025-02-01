@@ -88,6 +88,8 @@ MAX_QUBITS_PER_GATE = 3
 GLOBAL_IN_ID = -1
 GLOBAL_OUT_ID = -2
 
+KEEP_RZ = True
+
 PANDORA_TO_CIRQ = {
     PandoraGateTranslator.Rx.value: cirq.ops.common_gates.Rx,
     PandoraGateTranslator.Ry.value: cirq.ops.common_gates.Ry,
@@ -185,6 +187,12 @@ REQUIRES_EXPONENT = [PandoraGateTranslator.XPowGate.value,
                      PandoraGateTranslator.CXPowGate.value,
                      PandoraGateTranslator.XXPowGate.value,
                      PandoraGateTranslator.ZZPowGate.value]
+
+PYLIQTR_ROTATION_TO_PANDORA = {
+    'rz_decomp': 'Rz',
+    'ry_decomp': 'Ry',
+    'rx_decomp': 'Rx'
+}
 
 CAN_HAVE_GLOBAL_SHIFT = REQUIRES_EXPONENT
 
