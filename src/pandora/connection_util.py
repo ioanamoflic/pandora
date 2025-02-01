@@ -357,6 +357,18 @@ def get_edge_list(connection) -> list[tuple[int, int]]:
     return tuples
 
 
+def add_inputs(edge_records: list[tuple[int, int]]):
+    """
+    Adds In gates to the edge-list (could be used to deduce a local qubit id)
+    """
+    edges_to_append: list[tuple[int, int]] = []
+    targets = [edge_record[1] for edge_record in edge_records]
+    for (s, t) in edge_records:
+        if s not in targets:
+            edges_to_append.append((GLOBAL_IN_ID, s))
+    return edges_to_append + edge_records
+
+
 def get_edge_list_in_batches(connection, batch_size) -> Iterator[list[tuple[int, int]]]:
     """
     Returns the contents from edge_list table in batches.
@@ -412,7 +424,7 @@ def get_gates_by_id_fast(connection, ids: list[int]) -> list[PandoraGate]:
                                              gate_code=PandoraGateTranslator.GlobalOut.value))
             continue
 
-    ids = [i for i in ids if i not in [-1, -2]]
+    ids = [i for i in ids if i not in [GLOBAL_IN_ID, GLOBAL_OUT_ID]]
 
     cursor = connection.cursor()
     sql_statement = ("select * from linked_circuit where id in " + str(tuple(ids)))

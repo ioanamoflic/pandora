@@ -1,3 +1,4 @@
+import json
 from enum import Enum
 import numpy as np
 import pandas as pd
@@ -139,6 +140,7 @@ class WidgetUtils:
     @staticmethod
     def generate_d3_json_for_uf(uf_widgetizer: UnionFindWidgetizer,
                                 pandora_gate_dict: dict[int, PandoraGate],
+                                batch_id='',
                                 file_path=""):
         json_dict = {}
         nodes = []
@@ -163,7 +165,7 @@ class WidgetUtils:
         json_dict["links"] = links
 
         json_data = json.dumps(json_dict)
-        with open(f"{file_path}/circuit.json", "w") as f:
+        with open(f"{file_path}/circuit_{batch_id}.json", "w") as f:
             f.write(json_data)
 
     @staticmethod
