@@ -26,6 +26,7 @@ from pandora.cirq_to_pandora_util import windowed_cirq_to_pandora_from_op_list
 from pandora.exceptions import WindowSizeError
 from pandora.gate_translator import In, Out, SINGLE_QUBIT_GATES, TWO_QUBIT_GATES
 from pandora.gates import PandoraGate
+from pandora.utils import printred
 
 sys.setrecursionlimit(10000000)
 # Increase recursion limit from default since adder bloq has a recursive implementation.
@@ -232,39 +233,44 @@ def windowed_cirq_to_pandora(circuit: cirq.Circuit | Bloq, window_size: int, is_
     latest_conc_on_qubit = dict()
     last_id = 0
 
-    batches = generator_get_pandora_compatible_batch_via_pyliqtr(circuit=circuit,
+    windows = generator_get_pandora_compatible_batch_via_pyliqtr(circuit=circuit,
                                                                  window_size=window_size)
-    for i, (current_batch, cliff_decomp_time) in enumerate(batches):
-        for op in current_batch:
+
+    for i, (current_window, cliff_decomp_time) in enumerate(windows):
+        for op in current_window:
             qubit_set.update(set(list(op.qubits)))
 
         start_cirq_to_pandora = time.time()
         # the idea is to add anything that is not null on "next link" from the pandora gates dictionary
         pandora_dictionary, latest_conc_on_qubit, last_id = windowed_cirq_to_pandora_from_op_list(
-            op_list=current_batch,
+            op_list=current_window,
             pandora_dictionary=pandora_dictionary,
             latest_conc_on_qubit=latest_conc_on_qubit,
             last_id=last_id,
             label='x',
             is_test=is_test
         )
+
+        #TODO: Explain the code below
         dictionary_copy = pandora_dictionary.copy()
-        batch_elements: list[PandoraGate] = []
+        window_elements: list[PandoraGate] = []
         for pandora_gate in dictionary_copy.values():
             if (pandora_gate.type in SINGLE_QUBIT_GATES
                 and pandora_gate.next_q1 is not None) \
                     or (pandora_gate.type in TWO_QUBIT_GATES
                         and pandora_gate.next_q1 is not None
                         and pandora_gate.next_q2 is not None):
-                batch_elements.append(pandora_gate)
+                window_elements.append(pandora_gate)
                 pandora_dictionary.pop(pandora_gate.id)
 
-        yield batch_elements, time.time() - start_cirq_to_pandora + cliff_decomp_time
+        yield window_elements, time.time() - start_cirq_to_pandora + cliff_decomp_time
 
+    # The final window consists of only output gates
+    # printred("The last batch from here")
     start_final = time.time()
-    final_batch: list[cirq.Operation] = [Out().on(q) for q in qubit_set]
+    final_window: list[cirq.Operation] = [Out().on(q) for q in qubit_set]
     pandora_out_gates, _, _ = windowed_cirq_to_pandora_from_op_list(
-        op_list=final_batch,
+        op_list=final_window,
         pandora_dictionary=pandora_dictionary,
         latest_conc_on_qubit=latest_conc_on_qubit,
         last_id=last_id,
