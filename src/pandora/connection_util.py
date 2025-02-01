@@ -301,43 +301,19 @@ def insert_single_batch(connection, cursor, batch,
     Insert a single batch of entries into the database.
     """
     start = time.time()
-    args = b','.join(
-        el.to_tuple().encode("utf-8") for el in batch)
-
+    args = b','.join(el.to_tuple(is_test=is_test).encode("utf-8") for el in batch)
     joint = time.time()
     print(f'--- Join time: {joint - start} for {len(batch)} gates')
 
-    sql_statement = \
-        (b"INSERT INTO linked_circuit(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
-         b"next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
-
-    print(f'--- Statement time: {time.time() - joint}')
-
-    # is_test = False #TODO: Paler
-
     if not is_test:
-        start = time.time()
-        args = b','.join(
-            el.to_tuple().encode("utf-8") for el in batch)
-
-        joint = time.time()
-        print(f'--- Join time: {joint - start}')
-
         insert = f"INSERT INTO {table_name}(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, " \
                  f"next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES"
-
-        sql_statement = insert.encode("utf-8") + args
-        print(f'--- Statement time: {time.time() - joint}')
-
     else:
-        args = ','.join(
-            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                           tup.to_tuple(is_test=True)).decode(
-                'utf-8')
-            for tup in batch)
-        sql_statement = \
-            ("INSERT INTO linked_circuit_test(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, "
-             "next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key, qubit_name) VALUES" + args)
+        insert = "INSERT INTO linked_circuit_test(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, " \
+                 "next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key, qubit_name) VALUES"
+
+    sql_statement = insert.encode("utf-8") + args
+    print(f'--- Statement time: {time.time() - joint}')
 
     # execute the sql statement
     cursor.execute(sql_statement)
@@ -355,12 +331,12 @@ def remove_io_gates_from_circuit(circuit: cirq.Circuit) -> cirq.Circuit:
     return io_free_reconstructed
 
 # Unused at the moment
-def get_gate_by_id(connection, gate_id) -> PandoraGate:
-    sql =f"select * from {table_name} where id={gate_id}"
-    cursor = connection.cursor()
-    cursor.execute(sql, args)
-    row: tuple = cursor.fetchone()
-    return PandoraGate(*row)
+# def get_gate_by_id(connection, gate_id) -> PandoraGate:
+#     sql =f"select * from {table_name} where id={gate_id}"
+#     cursor = connection.cursor()
+#     cursor.execute(sql, args)
+#     row: tuple = cursor.fetchone()
+#     return PandoraGate(*row)
 
 
 def extract_pandora_gates(connection,
@@ -434,7 +410,8 @@ def extract_layered_circuit(connection,
             The cirq circuit.
 
     """
-    pandora_gates = extract_pandora_gates(connection=connection, circuit_label=circuit_label, table_name=table_name, remove_io_gates=remove_io_gates)
+    pandora_gates = extract_pandora_gates(connection=connection, circuit_label=circuit_label,
+                                          table_name=table_name, remove_io_gates=remove_io_gates)
     return pandora_to_layered(pandora_gates)
 
 def get_edge_list(connection) -> list[tuple[int, int]]:
@@ -466,31 +443,31 @@ def get_edge_list_in_batches(connection, batch_size) -> Iterator[list[tuple[int,
     cursor.close()
 
 
-def get_gates_by_id(connection, ids: list[int]) -> list[PandoraGate]:
-    """
-    Returns the Pandora gates with id in ids.
-    """
-    pandora_gates: list[PandoraGate] = []
-    for gid in ids:
-        if gid == GLOBAL_IN_ID:
-            pandora_gates.append(PandoraGate(gate_id=gid,
-                                             gate_code=PandoraGateTranslator.GlobalIn.value))
-            continue
-        if gid == GLOBAL_OUT_ID:
-            pandora_gates.append(PandoraGate(gate_id=gid,
-                                             gate_code=PandoraGateTranslator.GlobalOut.value))
-            continue
-        args = (gid,)
-        sql = "select * from linked_circuit where id=%s;"
-        cursor = connection.cursor()
-        cursor.execute(sql, args)
-        gate_tuple = cursor.fetchone()
-        if gate_tuple is None:
-            print(gid)
-            raise TupleNotFound
-        pandora_gates.append(PandoraGate(*gate_tuple))
-
-    return pandora_gates
+# def get_gates_by_id(connection, ids: list[int]) -> list[PandoraGate]:
+#     """
+#     Returns the Pandora gates with id in ids.
+#     """
+#     pandora_gates: list[PandoraGate] = []
+#     for gid in ids:
+#         if gid == GLOBAL_IN_ID:
+#             pandora_gates.append(PandoraGate(gate_id=gid,
+#                                              gate_code=PandoraGateTranslator.GlobalIn.value))
+#             continue
+#         if gid == GLOBAL_OUT_ID:
+#             pandora_gates.append(PandoraGate(gate_id=gid,
+#                                              gate_code=PandoraGateTranslator.GlobalOut.value))
+#             continue
+#         args = (gid,)
+#         sql = "select * from linked_circuit where id=%s;"
+#         cursor = connection.cursor()
+#         cursor.execute(sql, args)
+#         gate_tuple = cursor.fetchone()
+#         if gate_tuple is None:
+#             print(gid)
+#             raise TupleNotFound
+#         pandora_gates.append(PandoraGate(*gate_tuple))
+#
+#     return pandora_gates
 
 
 def get_gates_by_id_fast(connection, ids: list[int]) -> list[PandoraGate]:
@@ -526,7 +503,6 @@ def get_gate_types(connection,
 
     Returns:
             The list of tuples.
-
     """
     types = []
     for gate_id in gate_ids:
@@ -545,37 +521,37 @@ def get_gate_types(connection,
     return types
 
 
-def insert_hack(batches: list[list[Any]], bs_per_process: int) -> None:
-    """
-    TODO
-    """
-    connection = get_connection()
-    connection.set_session(autocommit=True)
-    process_batches = create_batches(batches, batch_size=int(bs_per_process))
+# def insert_hack(batches: list[list[Any]], bs_per_process: int) -> None:
+#     """
+#     TODO
+#     """
+#     connection = get_connection()
+#     connection.set_session(autocommit=True)
+#     process_batches = create_batches(batches, batch_size=int(bs_per_process))
+#
+#     for batch in process_batches:
+#         insert_single_batch(connection, batch=batch)
 
-    for batch in process_batches:
-        insert_single_batch(connection, batch=batch)
 
-
-def parallel_insert(pandora_gates: list[PandoraGate], nprocs: int, bs_per_process: int) -> None:
-    """
-    TODO: VERY memory intensive. Hopefully faster?
-    This is because the batches are lists and not iterators.
-    After slice_into_batches will return iterators, the memory footprint will be lower
-    """
-    pandora_gates = list(pandora_gates)
-    process_batch_size: int = len(pandora_gates) // nprocs
-    batches = slice_into_batches(pandora_gates, batch_size=int(process_batch_size))
-
-    process_list = []
-    for i, batch_of_inserts in enumerate(batches):
-        p = Process(target=insert_hack, args=(batch_of_inserts, bs_per_process))
-        process_list.append(p)
-
-    for i in range(nprocs):
-        process_list[i].start()
-    for i in range(nprocs):
-        process_list[i].join()
+# def parallel_insert(pandora_gates: list[PandoraGate], nprocs: int, bs_per_process: int) -> None:
+#     """
+#     TODO: VERY memory intensive. Hopefully faster?
+#     This is because the batches are lists and not iterators.
+#     After slice_into_batches will return iterators, the memory footprint will be lower
+#     """
+#     pandora_gates = list(pandora_gates)
+#     process_batch_size: int = len(pandora_gates) // nprocs
+#     batches = slice_into_batches(pandora_gates, batch_size=int(process_batch_size))
+#
+#     process_list = []
+#     for i, batch_of_inserts in enumerate(batches):
+#         p = Process(target=insert_hack, args=(batch_of_inserts, bs_per_process))
+#         process_list.append(p)
+#
+#     for i in range(nprocs):
+#         process_list[i].start()
+#     for i in range(nprocs):
+#         process_list[i].join()
 
 
 def map_hack(aff,

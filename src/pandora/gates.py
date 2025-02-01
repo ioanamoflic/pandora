@@ -56,40 +56,25 @@ class PandoraGate:
         return mogrify_arg, psql_insert
 
     def to_tuple(self, is_test=False):
+        tup = (self.id,
+               self.prev_q1,
+               self.prev_q2,
+               self.prev_q3,
+               self.type,
+               self.param,
+               self.global_shift,
+               self.switch,
+               self.next_q1,
+               self.next_q2,
+               self.next_q3,
+               self.visited,
+               self.label,
+               self.cl_ctrl,
+               self.meas_key
+               )
+
         if is_test:
-            tup = (self.id,
-                    self.prev_q1,
-                    self.prev_q2,
-                    self.prev_q3,
-                    self.type,
-                    self.param,
-                    self.global_shift,
-                    self.switch,
-                    self.next_q1,
-                    self.next_q2,
-                    self.next_q3,
-                    self.visited,
-                    self.label,
-                    self.cl_ctrl,
-                    self.meas_key,
-                    self.qubit_name)
-        else:
-            tup = (self.id,
-                    self.prev_q1,
-                    self.prev_q2,
-                    self.prev_q3,
-                    self.type,
-                    self.param,
-                    self.global_shift,
-                    self.switch,
-                    self.next_q1,
-                    self.next_q2,
-                    self.next_q3,
-                    self.visited,
-                    self.label,
-                    self.cl_ctrl,
-                    self.meas_key
-                )
+            tup = tup + (self.qubit_name, )
 
         return str(tup).replace("None", "NULL")
 

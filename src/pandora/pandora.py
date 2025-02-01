@@ -4,13 +4,16 @@ import datetime
 import cirq
 import psycopg2
 
-from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
+from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, \
+    make_fh_circuit, make_mg_coating_walk_op, \
     make_cyclic_o3_circuit, make_hc_circuit
 from .qualtran_to_pandora_util import *
 from benchmarking.benchmark_adders import get_maslov_adder
 
 from pandora.connection_util import *
 from .widgetization.union_find import UnionFindWidgetizer
+
+from pandora.utils import printred
 
 
 class PandoraConfig:
@@ -33,9 +36,8 @@ class PandoraConfig:
             self.host = data["host"]
             self.port = int(data["port"])
             self.password = data["password"]
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-        print(f"{CRED}Loaded Pandora config from file: {path}", self.__dict__, f"{CEND}")
+
+        printred(f"Loaded Pandora config from file: {path}" + self.__dict__)
 
 
 class Pandora:
@@ -115,8 +117,6 @@ class Pandora:
         Inserts a Qualtran adder bloq of bitsize=bits decomposed into
         Clifford+T into a fresh Pandora table instance.
         """
-        CRED = '\033[91m'
-        CEND = '\033[0m'
 
         self.build_pandora()
         adder_batches = get_adder(n_bits=bitsize,
@@ -126,7 +126,7 @@ class Pandora:
             insert_single_batch(connection=self.connection,
                                 batch=batch)
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
+            printred(f"Done inserting batch {i} at {ts}")
 
     def build_example(self, repeat=100):
         self.build_pandora()
@@ -195,24 +195,21 @@ class Pandora:
         self.decompose_toffolis()
 
     def build_fh_circuit(self, N, times, p_algo):
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-
         print(f"Making FERMI-HUBBARD circuit...with window_size = {self.decomposition_window_size}")
         start_make = time.time()
         fh_circuit = make_fh_circuit(N=N,
                                      times=times,
                                      p_algo=p_algo)
-        total_pyliqtr = time.time() - start_make
-        print(f"Building pyliqtr circuit took: {total_pyliqtr}")
-        pyliqtr_count = len(list(fh_circuit.all_operations()))
+        total_pyLIQTR = time.time() - start_make
+        print(f"Building pyLIQTR circuit took: {total_pyLIQTR}")
+        pyLIQTR_count = len(list(fh_circuit.all_operations()))
 
         self.build_pandora()
         reset_database_id(self.connection,
                           table_name='linked_circuit',
                           large_buffer_value=100000)
 
-        print("Decomposing circuit for pandora...")
+        print("Decomposing circuit for Pandora...")
         start_decomp = time.time()
         batches = windowed_cirq_to_pandora(circuit=fh_circuit,
                                            window_size=self.decomposition_window_size)
@@ -233,11 +230,11 @@ class Pandora:
             total_decomp_time += decomposition_time
 
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
+            printred(f"Done inserting batch {i} at {ts}")
 
         insert_benchmark_row(connection=self.connection, benchmark_tuple=(N,
-                                                                          total_pyliqtr,
-                                                                          pyliqtr_count,
+                                                                          total_pyLIQTR,
+                                                                          pyLIQTR_count,
                                                                           total_decomp_time,
                                                                           total_insert_times,
                                                                           pandora_count,
@@ -246,19 +243,17 @@ class Pandora:
                                                                           None
                                                                           ))
 
-        print(f"DB insert took: {total_insert_times}")
+        print(f"Pandora insert took: {total_insert_times}")
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
     def build_mg_coating_walk_op(self, data_path="."):
-        CRED = '\033[91m'
-        CEND = '\033[0m'
 
         print(f"Making MG circuit...with window_size = {self.decomposition_window_size}")
         start_make = time.time()
         mg_circuit = make_mg_coating_walk_op(EC=13, data_path=data_path)
-        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
+        print(f"Building pyLIQTR circuit took: {time.time() - start_make}")
 
-        print("Decomposing circuit for pandora...")
+        print("Decomposing circuit for Pandora...")
         start_decomp = time.time()
         batches = windowed_cirq_to_pandora(circuit=mg_circuit,
                                            window_size=self.decomposition_window_size)
@@ -268,20 +263,17 @@ class Pandora:
         for i, (batch, decomposition_time) in enumerate(batches):
             insert_single_batch(connection=self.connection, batch=batch)
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
+            printred(f"Done inserting batch {i} at {ts}")
 
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
     def build_cyclic_o3(self, data_path="."):
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-
         print(f"Making o3 circuit...with window_size = {self.decomposition_window_size}")
         start_make = time.time()
         o3_circuit = make_cyclic_o3_circuit(data_path=data_path)
-        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
+        print(f"Building pyLIQTR circuit took: {time.time() - start_make}")
 
-        print("Decomposing circuit for pandora...")
+        print("Decomposing circuit for Pandora...")
         start_decomp = time.time()
         batches = windowed_cirq_to_pandora(circuit=o3_circuit,
                                            window_size=self.decomposition_window_size)
@@ -291,20 +283,17 @@ class Pandora:
         for i, (batch, decomposition_time) in enumerate(batches):
             insert_single_batch(connection=self.connection, batch=batch)
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
+            printred(f"Done inserting batch {i} at {ts}")
 
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
     def build_hc_circuit(self, data_path='.'):
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-
         print(f"Making hc circuit...with window_size = {self.decomposition_window_size}")
         start_make = time.time()
         hc_circuit = make_hc_circuit(data_path=data_path)
-        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
+        print(f"Building pyLIQTR circuit took: {time.time() - start_make}")
 
-        print("Decomposing circuit for pandora...")
+        print("Decomposing circuit for Pandora...")
         start_decomp = time.time()
         batches = windowed_cirq_to_pandora(circuit=hc_circuit,
                                            window_size=self.decomposition_window_size)
@@ -314,20 +303,17 @@ class Pandora:
         for i, (batch, decomposition_time) in enumerate(batches):
             insert_single_batch(connection=self.connection, batch=batch)
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
+            printred(f"Done inserting batch {i} at {ts}")
 
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
     def build_traverse_ising(self, N=2):
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-
         print(f"Making ISING circuit...with window_size = {self.decomposition_window_size}")
         start_make = time.time()
         ti_circuit = make_transverse_ising_circuit(N=N)
-        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
+        print(f"Building pyLIQTR circuit took: {time.time() - start_make}")
 
-        print("Decomposing circuit for pandora...")
+        print("Decomposing circuit for Pandora...")
         start_decomp = time.time()
         batches = windowed_cirq_to_pandora(circuit=ti_circuit,
                                            window_size=self.decomposition_window_size)
@@ -337,9 +323,7 @@ class Pandora:
                           connection=self.connection,
                           batch_size=1000000,
                           table_name='linked_circuit')
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-        print(f"{CRED}Pandora insert took: {time.time() - start_insert}{CEND}")
+        printred(f"Pandora insert took: {time.time() - start_insert}")
         print('Done ti_circuit!')
         sys.stdout.flush()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
@@ -347,7 +331,7 @@ class Pandora:
         for i, (batch, decomposition_time) in enumerate(batches):
             insert_single_batch(connection=self.connection, batch=batch)
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
+            printred(f"Done inserting batch {i} at {ts}")
 
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
