@@ -17,6 +17,26 @@ create table IF NOT EXISTS public.linked_circuit
     meas_key smallint
 );
 
+create table IF NOT EXISTS public.batched_circuit
+(
+    id      bigserial primary key,
+    local_id int,
+    prev_q1 int,
+    prev_q2 int,
+    prev_q3 int,
+    type    smallint,
+    param   real,
+    global_shift real,
+    switch  boolean,
+    next_q1 int,
+    next_q2 int,
+    next_q3 int,
+    visited boolean,
+    label   int,
+    cl_ctrl boolean,
+    meas_key smallint
+);
+
 -- table only used for testing purposes
 create table IF NOT EXISTS public.linked_circuit_test
 (

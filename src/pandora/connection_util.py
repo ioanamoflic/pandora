@@ -1,12 +1,9 @@
 import inspect
 import os
 import sys
-import time
 from itertools import cycle
-from multiprocessing import Process, cpu_count
+from multiprocessing import Process
 from typing import Any, Iterator
-
-import cirq
 
 from pandora.cirq_to_pandora_util import *
 from pandora.gate_translator import PANDORA_TO_READABLE, GLOBAL_IN_ID, GLOBAL_OUT_ID
@@ -89,6 +86,7 @@ def drop_and_replace_tables(connection,
                             clean: bool = False,
                             tables: tuple[str] = (
                                     'linked_circuit',
+                                    'batched_circuit',
                                     'linked_circuit_test',
                                     'stop_condition',
                                     'edge_list',
@@ -260,39 +258,45 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
 
 
 def insert_single_batch(connection, batch: list[PandoraGate],
-                        table_name: str = 'linked_circuit',
-                        is_test=False):
+                        table_name: str = 'linked_circuit'):
     """
     Insert a single batch of entries into the database.
+    TODO clean this ugly code
     """
     cursor = connection.cursor()
-    if not is_test:
-        start = time.time()
+    if table_name == 'batched_circuit':
         args = ','.join(
-            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple()).decode(
-                'utf-8')
-            for tup in batch)
-        joint = time.time()
-        print(f'--- Join time: {joint - start}')
-
+            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple())
+            .decode('utf-8') for tup in batch)
         sql_statement = \
-            (f"INSERT INTO {table_name}(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
+            (f"INSERT INTO batched_circuit(local_id, "
+             f"prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
              "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
-        print(f'--- Statement time: {time.time() - joint}')
-
-    else:
+        cursor.execute(sql_statement)
+        connection.commit()
+    elif table_name == 'linked_circuit':
+        args = ','.join(
+            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple())
+            .decode('utf-8') for tup in batch)
+        sql_statement = \
+            (f"INSERT INTO linked_circuit(id, "
+             f"prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
+             "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
+        cursor.execute(sql_statement)
+        connection.commit()
+    elif table_name == 'linked_circuit_test':
         args = ','.join(
             cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                           tup.to_tuple(is_test=True)).decode(
-                'utf-8')
-            for tup in batch)
+                           tup.to_tuple(is_test=True))
+            .decode('utf-8') for tup in batch)
         sql_statement = \
-            ("INSERT INTO linked_circuit_test(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, "
+            ("INSERT INTO linked_circuit_test(id, "
+             "prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, "
              "next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key, qubit_name) VALUES" + args)
-
+        cursor.execute(sql_statement)
+        connection.commit()
     # execute the sql statement
-    cursor.execute(sql_statement)
-    connection.commit()
+
 
 
 def remove_io_gates_from_circuit(circuit: cirq.Circuit) -> cirq.Circuit:

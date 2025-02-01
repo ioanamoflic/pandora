@@ -400,3 +400,79 @@ def windowed_cirq_to_pandora_from_op_list(op_list: list[cirq.Operation],
         last_id += 1
 
     return pandora_dictionary, latest_conc_on_qubit, last_id
+
+
+def cirq_to_pandora_from_op_list(op_list: list[cirq.Operation],
+                                 label: int = None,
+                                 ) -> list[PandoraGate]:
+    """
+    This method inserts a list of operations as if it's a single circuit.
+
+    Args:
+        op_list: list of operations which need to be inserted into the database
+        label: the id of the batch
+
+    Returns:
+        A list of tuples where each tuple describes a circuit operation.
+    """
+    last_id = 0
+    # dict of pandora gates; key is the gate_id, value is the PandoraGate object
+    pandora_gates = {}
+
+    # last id concatenated with gate wire on each qubit
+    # the convention is that we concatenate to the id a value between 1-3 as follows:
+    # * (1) for control or single qubit gate;
+    # * (2) for target or second control
+    # * (3) for target
+    latest_conc_on_qubit = {}
+
+    # dictionary of keys
+    meas_key_dict = {}
+
+    # iterate through the cirq operations of the cirq circuit
+    for i, current_operation in enumerate(op_list):
+        current_op_qubits = current_operation.qubits
+        for qub in current_op_qubits:
+            if qub not in latest_conc_on_qubit.keys():
+                pandora_gates[last_id] = PandoraGate(gate_id=last_id,
+                                                     gate_code=PandoraGateTranslator.In.value,
+                                                     label=label)
+
+                latest_conc_on_qubit[qub] = last_id * 10
+                last_id += 1
+
+        current_pandora_gate = cirq_operation_to_pandora_gate(current_operation, meas_key_dict=meas_key_dict)
+        current_pandora_gate.id = last_id
+        current_pandora_gate.label = label
+
+        # fill out missing 'prev' links for the current pandora gate
+        previous_concatenations = [latest_conc_on_qubit[q] for q in current_op_qubits]
+        while len(previous_concatenations) < MAX_QUBITS_PER_GATE:
+            previous_concatenations.append(None)
+        current_pandora_gate.prev_q1 = previous_concatenations[0]
+        current_pandora_gate.prev_q2 = previous_concatenations[1]
+        current_pandora_gate.prev_q3 = previous_concatenations[2]
+
+        # fill out missing 'next' links for the gates on the left
+        for q_idx, q in enumerate(current_op_qubits):
+            previous_id, previous_order_qubit = latest_conc_on_qubit[q] // 10, latest_conc_on_qubit[q] % 10
+
+            conc_id = last_id * 10 + q_idx
+            setattr(pandora_gates[previous_id], f'next_q{previous_order_qubit + 1}', conc_id)
+            latest_conc_on_qubit[q] = conc_id
+
+        pandora_gates[last_id] = current_pandora_gate
+        last_id += 1
+
+    # append Out gates at the end, this is the barrier at the end
+    for q in latest_conc_on_qubit.keys():
+        pandora_gates[last_id] = PandoraGate(gate_id=last_id,
+                                             gate_code=PandoraGateTranslator.Out.value,
+                                             label=label)
+
+        previous_id, previous_order_qubit = latest_conc_on_qubit[q] // 10, latest_conc_on_qubit[q] % 10
+        conc_id = last_id * 10
+        setattr(pandora_gates[previous_id], f'next_q{previous_order_qubit + 1}', conc_id)
+        last_id += 1
+
+    return list(pandora_gates.values())

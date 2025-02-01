@@ -24,7 +24,8 @@ class PandoraGate:
                  is_classically_controlled: bool = False,
                  measurement_key: int = None,
                  qubit_name: str = None):
-        self.id = gate_id
+        self.global_id = None
+        self.local_id = gate_id
         self.prev_q1 = prev_q1
         self.prev_q2 = prev_q2
         self.prev_q3 = prev_q3
@@ -43,7 +44,7 @@ class PandoraGate:
 
     def __str__(self):
         return f'{self.prev_q1}<---------->{self.next_q1}\n' \
-               f'{self.prev_q2}<--{self.type}({self.id})-->{self.next_q2}\n' \
+               f'{self.prev_q2}<--{self.type}({self.local_id})-->{self.next_q2}\n' \
                f'{self.prev_q3}<---------->{self.next_q3}\n'
 
     def get_insert_query(self, table_name):
@@ -57,7 +58,7 @@ class PandoraGate:
 
     def to_tuple(self, is_test=False):
         if is_test:
-            return (self.id,
+            return (self.local_id,
                     self.prev_q1,
                     self.prev_q2,
                     self.prev_q3,
@@ -73,7 +74,7 @@ class PandoraGate:
                     self.cl_ctrl,
                     self.meas_key,
                     self.qubit_name)
-        return (self.id,
+        return (self.local_id,
                 self.prev_q1,
                 self.prev_q2,
                 self.prev_q3,
