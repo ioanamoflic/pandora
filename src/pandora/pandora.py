@@ -7,7 +7,7 @@ import psycopg2
 from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
     make_cyclic_o3_circuit, make_hc_circuit
 from .qualtran_to_pandora_util import *
-from benchmarking.benchmark_adders import get_maslov_adder
+from .benchmarking.benchmark_adders import get_maslov_adder
 
 from pandora.connection_util import *
 from .widgetization.union_find import UnionFindWidgetizer
@@ -379,8 +379,4 @@ class Pandora:
                                      widgetisation_time=total_union_time,
                                      widget_count=total_widget_count,
                                      extraction_time=total_extraction_time)
-
-
-
-
 
