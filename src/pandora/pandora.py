@@ -328,13 +328,14 @@ class Pandora:
         batches = windowed_cirq_to_pandora(circuit=ti_circuit,
                                            window_size=self.window_size)
         self.build_pandora()
-        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
-        insert_in_batches(pandora_gates_it=db_tuples,
-                          connection=self.connection,
-                          batch_size=1000000,
-                          table_name='linked_circuit')
-        printred(f"Pandora insert took: {time.time() - start_insert}")
-        print('Done ti_circuit!')
+        # start_insert = time.time()
+        # reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=1000)
+        # insert_in_batches(pandora_gates_it=db_tuples,
+        #                   connection=self.connection,
+        #                   batch_size=1000000,
+        #                   table_name='linked_circuit')
+        # printred(f"Pandora insert took: {time.time() - start_insert}")
+        # print('Done ti_circuit!')
         sys.stdout.flush()
         reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
 

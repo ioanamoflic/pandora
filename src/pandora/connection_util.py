@@ -269,10 +269,11 @@ def insert_in_batches(pandora_gates_it: list[PandoraGate],
 
 def format_layered_padora_gate_tuple(cursor, pandora_gate: PandoraGateWrapper) -> str:
     control, target = (pandora_gate.q1, pandora_gate.q2) if pandora_gate.pandora_gate.type in TWO_QUBIT_GATES else (None, pandora_gate.q1)
-    return cursor.mogrify(
-        "(%s, %s, %s, %s, %s, %s)",
-        (pandora_gate.pandora_gate.id, control, target, pandora_gate.pandora_gate.type, pandora_gate.pandora_gate.param, pandora_gate.moment)
-            )
+
+    tup = (pandora_gate.pandora_gate.id, control, target, pandora_gate.pandora_gate.type,
+           pandora_gate.pandora_gate.param, pandora_gate.moment)
+
+    return str(tup).replace("None", "NULL")
 
 def insert_layered_single_batch(connection, cursor, batch):
     """
