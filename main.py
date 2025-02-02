@@ -2,6 +2,7 @@ import sys
 import os
 
 from pandora import Pandora, PandoraConfig
+from pandora.pyliqtr_to_pandora_util import make_fh_circuit
 
 if __name__ == "__main__":
 
@@ -22,30 +23,10 @@ if __name__ == "__main__":
 
     hrl_data_path = os.path.abspath(".")
 
-    if sys.argv[next_arg] == "adder":
-        n_bits = int(sys.argv[next_arg + 1])
-        pandora.build_qualtran_adder(n_bits)
-    elif sys.argv[next_arg] == "qrom":
-        n_bits = int(sys.argv[next_arg + 1])
-    elif sys.argv[next_arg] == "qpe":
-        num_sites = int(sys.argv[next_arg + 1])
-        pandora.build_qualtran_qpe(num_sites)
-    elif sys.argv[next_arg] == "hubbard":
-        N = int(sys.argv[next_arg + 1])
-        pandora.build_qualtran_hubbard_2d(dim=(N, N))
-    elif sys.argv[next_arg] == "fh":
-        N = int(sys.argv[next_arg + 1])
-        pandora.build_fh_circuit(N=N, p_algo=0.9999999904, times=0.01)
-        widgets = pandora.widgetize(max_t=10, max_d=100, batch_size=10, add_gin_per_widget=True)
+    # Example
+    #circuit = make_fh_circuit(N=2, p_algo=0.9999999904, times=0.01)
+    #pandora.build_pyliqtr_circuit(pyliqtr_circuit=circuit)
 
-    elif sys.argv[next_arg] == "mg":
-        pandora.build_mg_coating_walk_op(data_path=hrl_data_path)
-    elif sys.argv[next_arg] == "o3":
-        pandora.build_cyclic_o3(data_path=hrl_data_path)
-    elif sys.argv[next_arg] == "hc":
-        pandora.build_hc_circuit(data_path=hrl_data_path)
-    elif sys.argv[next_arg] == "ising":
-        N = int(sys.argv[next_arg + 1])
-        pandora.build_traverse_ising(N=N)
-    elif sys.argv[next_arg] == "example":
-        pandora.build_example()
+    widgets = pandora.widgetize(max_t=10, max_d=100, batch_size=100, add_gin_per_widget=True)
+    for widget in widgets:
+        print(widget)

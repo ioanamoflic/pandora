@@ -1,13 +1,14 @@
 import time
 import datetime
 
-import cirq
 import psycopg2
 
 from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
     make_cyclic_o3_circuit, make_hc_circuit
 from pandora.qualtran_to_pandora_util import *
 from pandora.benchmarking.benchmark_adders import get_maslov_adder
+
+from benchmarking.benchmark_adders import get_maslov_adder
 
 from pandora.connection_util import *
 from pandora.widgetization.union_find import UnionFindWidgetizer
@@ -27,7 +28,6 @@ class PandoraConfig:
         self.host = host
         self.port = port
         self.password = password
-
 
     def update_from_file(self, path):
         import json
@@ -51,6 +51,8 @@ class Pandora:
 
         # Connection should be None if failed
         self.connection = None
+        if self.pandora_config.database != 'postgres':
+            self.create_database()
         self.connection = self.get_connection()
         self.stop_after = max_time
         self.decomposition_window_size = decomposition_window_size
@@ -58,6 +60,25 @@ class Pandora:
     def __del__(self):
         if self.connection is not None:
             self.connection.close()
+
+    def create_database(self):
+        """
+        This gets you a connection to the postgres default database. Using this connection, you can then create a new
+        named database.
+        """
+        try:
+            connection_to_default = psycopg2.connect(
+                database='postgres',
+                user=self.pandora_config.user,
+                host=self.pandora_config.host,
+                port=self.pandora_config.port,
+                password=self.pandora_config.password)
+
+            connection_to_default.set_session(autocommit=True)
+            connection_to_default.cursor().execute(f'create database {self.pandora_config.database}')
+            connection_to_default.close()
+        except psycopg2.errors.DuplicateDatabase as e:
+            print(e)
 
     def get_connection(self):
         """
@@ -90,14 +111,11 @@ class Pandora:
                                       verbose=True)
 
     def build_dedicated_table(self, table_name: str):
-        """
-        Creates the Pandora database table from scratch and updates all stored procedures.
-        """
-        create_named_table(connection=self.connection,
-                           table_name=table_name)
+        create_named_circuit_table(connection=self.connection,
+                                   table_name=table_name)
 
     def build_edge_list(self) -> None:
-        self.connection.cursor().execute("call generate_edge_list()")
+        self.connection.cursor().execute(f"call generate_edge_list()")
 
     def get_edge_list(self) -> list[tuple[int, int]]:
         edges = get_edge_list(connection=self.connection)
@@ -111,31 +129,14 @@ class Pandora:
         """
             Returns the Pandora gates with id in ids.
         """
-        return get_gates_by_id_fast(connection=self.connection, ids=ids)
+        return get_gates_by_id_fast(connection=self.connection,
+                                    ids=ids)
 
     def decompose_toffolis(self):
         """
         Decomposes all existing Toffoli gates in the Pandora into Clifford+T.
         """
         self.connection.cursor().execute("call linked_toffoli_decomp()")
-
-    def build_qualtran_adder(self, bitsize):
-        """
-        Inserts a Qualtran adder bloq of bitsize=bits decomposed into
-        Clifford+T into a fresh Pandora table instance.
-        """
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-
-        self.build_pandora()
-        adder_batches = get_adder(n_bits=bitsize,
-                                  window_size=1000000)
-
-        for i, (batch, _) in enumerate(adder_batches):
-            insert_single_batch(connection=self.connection,
-                                batch=batch)
-            ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
 
     def build_example(self, repeat=100):
         self.build_pandora()
@@ -154,43 +155,6 @@ class Pandora:
                           connection=self.connection,
                           table_name='linked_circuit')
 
-    def build_qualtran_qrom(self, data):
-        """
-        Inserts a Qualtran QROM bloq of bitsize=bits decomposed into
-        Clifford+T into a fresh Pandora table instance.
-        """
-        self.build_pandora()
-        qrom_batches = get_qrom(data=data)
-
-        for _, (batch, decomp_time) in enumerate(qrom_batches):
-            insert_single_batch(connection=self.connection,
-                                batch=batch)
-
-        self.decompose_toffolis()
-
-    def build_qualtran_qpe(self, num_sites=2, eps=1e-5, m_bits=1):
-        self.build_pandora()
-        qpe_batches = get_qpe_of_1d_ising_model(num_sites=num_sites,
-                                                eps=eps,
-                                                m_bits=m_bits)
-
-        for _, (batch, decomp_time) in enumerate(qpe_batches):
-            insert_single_batch(connection=self.connection,
-                                batch=batch)
-
-    def build_qualtran_hubbard_2d(self,
-                                  dim=(2, 2),
-                                  t=1,
-                                  u=4):
-        self.build_pandora()
-        qpe_batches = get_2d_hubbard_model(dim=dim,
-                                           t=t,
-                                           u=u)
-
-        for _, (batch, decomp_time) in enumerate(qpe_batches):
-            insert_single_batch(connection=self.connection,
-                                batch=batch)
-
     def build_maslov_adder(self, m_bits):
         self.build_pandora()
 
@@ -204,157 +168,44 @@ class Pandora:
 
         self.decompose_toffolis()
 
-    def build_fh_circuit(self, N, times, p_algo):
+    def build_pyliqtr_circuit(self,
+                              pyliqtr_circuit: Any) -> None:
+        """
+        This method tries to build an arbitrary pyLIQTR circuit into Pandora. Note that the pyLIQTR decomposition
+        might fail due to missing decompositions.
+        Args:
+            pyliqtr_circuit: the pyLIQTR circuit object
+        """
         CRED = '\033[91m'
         CEND = '\033[0m'
 
-        print(f"Making FERMI-HUBBARD circuit...with window_size = {self.decomposition_window_size}")
-        start_make = time.time()
-        fh_circuit = make_fh_circuit(N=N,
-                                     times=times,
-                                     p_algo=p_algo)
-        total_pyliqtr = time.time() - start_make
-        print(f"Building pyliqtr circuit took: {total_pyliqtr}")
-        pyliqtr_count = len(list(fh_circuit.all_operations()))
-
         self.build_pandora()
-        reset_database_id(self.connection,
-                          table_name='linked_circuit',
-                          large_buffer_value=100000)
 
         print("Decomposing circuit for pandora...")
         start_decomp = time.time()
-        batches = windowed_cirq_to_pandora(circuit=fh_circuit,
+        batches = windowed_cirq_to_pandora(circuit=pyliqtr_circuit,
                                            window_size=self.decomposition_window_size)
 
-        total_decomp_time = 0
-        total_insert_times = 0
-        pandora_count = 0
-
         for i, (batch, decomposition_time) in enumerate(batches):
-            start_insert = time.time()
-            insert_single_batch(connection=self.connection,
-                                batch=batch)
-            pandora_count += len(batch)
-            total_insert_times += (time.time() - start_insert)
-            total_decomp_time += decomposition_time
-
+            insert_single_batch(connection=self.connection, batch=batch)
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
 
-        insert_benchmark_row(connection=self.connection, benchmark_tuple=(N,
-                                                                          total_pyliqtr,
-                                                                          pyliqtr_count,
-                                                                          total_decomp_time,
-                                                                          total_insert_times,
-                                                                          pandora_count,
-                                                                          None,
-                                                                          None,
-                                                                          None
-                                                                          ))
-
-        print(f"DB insert took: {total_insert_times}")
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
-        print('Building edge list...')
+        print("Building edge list...")
+
         self.build_edge_list()
 
-    def build_mg_coating_walk_op(self, data_path="."):
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-
-        print(f"Making MG circuit...with window_size = {self.decomposition_window_size}")
-        start_make = time.time()
-        mg_circuit = make_mg_coating_walk_op(EC=13, data_path=data_path)
-        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
-
-        print("Decomposing circuit for pandora...")
-        start_decomp = time.time()
-        batches = windowed_cirq_to_pandora(circuit=mg_circuit,
-                                           window_size=self.decomposition_window_size)
-        self.build_pandora()
-        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
-
-        for i, (batch, decomposition_time) in enumerate(batches):
-            insert_single_batch(connection=self.connection, batch=batch)
-            ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
-
-        print(f"Decomposing circuit took: {time.time() - start_decomp}")
-
-    def build_cyclic_o3(self, data_path="."):
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-
-        print(f"Making o3 circuit...with window_size = {self.decomposition_window_size}")
-        start_make = time.time()
-        o3_circuit = make_cyclic_o3_circuit(data_path=data_path)
-        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
-
-        print("Decomposing circuit for pandora...")
-        start_decomp = time.time()
-        batches = windowed_cirq_to_pandora(circuit=o3_circuit,
-                                           window_size=self.decomposition_window_size)
-        self.build_pandora()
-        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
-
-        for i, (batch, decomposition_time) in enumerate(batches):
-            insert_single_batch(connection=self.connection, batch=batch)
-            ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
-
-        print(f"Decomposing circuit took: {time.time() - start_decomp}")
-
-    def build_hc_circuit(self, data_path='.'):
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-
-        print(f"Making hc circuit...with window_size = {self.decomposition_window_size}")
-        start_make = time.time()
-        hc_circuit = make_hc_circuit(data_path=data_path)
-        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
-
-        print("Decomposing circuit for pandora...")
-        start_decomp = time.time()
-        batches = windowed_cirq_to_pandora(circuit=hc_circuit,
-                                           window_size=self.decomposition_window_size)
-        self.build_pandora()
-        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
-
-        for i, (batch, decomposition_time) in enumerate(batches):
-            insert_single_batch(connection=self.connection, batch=batch)
-            ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
-
-        print(f"Decomposing circuit took: {time.time() - start_decomp}")
-
-    def build_traverse_ising(self, N=2):
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-
-        print(f"Making ISING circuit...with window_size = {self.decomposition_window_size}")
-        start_make = time.time()
-        ti_circuit = make_transverse_ising_circuit(N=N)
-        print(f"Building pyliqtr circuit took: {time.time() - start_make}")
-
-        print("Decomposing circuit for pandora...")
-        start_decomp = time.time()
-        batches = windowed_cirq_to_pandora(circuit=ti_circuit,
-                                           window_size=self.decomposition_window_size)
-        self.build_pandora()
-        reset_database_id(self.connection, table_name='linked_circuit', large_buffer_value=100000)
-
-        for i, (batch, decomposition_time) in enumerate(batches):
-            insert_single_batch(connection=self.connection, batch=batch)
-            ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
-
-        print(f"Decomposing circuit took: {time.time() - start_decomp}")
-
-    def widgetize(self, max_t: int, max_d: int, batch_size: int, add_gin_per_widget: bool) -> Iterator[list[PandoraGate]]:
+    def widgetize(self,
+                  max_t: int,
+                  max_d: int,
+                  batch_size: int,
+                  add_gin_per_widget: bool) -> Iterator[list[PandoraGate]]:
         """
-        Widgetizes the circuit stored in the linked_list table. Note that it also builds the edge list.
+        Widgetizes the circuit stored in the linked_list table. Note that this method assumes
+        the edge list is pre-built.
         Args:
-            add_gin_per_widget: adds the global in gate per widget
+            add_gin_per_widget: if True, adds the global in gate per widget
             batch_size: batch size of edges read from the edge_list table
             max_t: max nr. of T gates per widget
             max_d: max gate count per widget
@@ -372,7 +223,8 @@ class Pandora:
                 id_set.append(s)
                 id_set.append(t)
 
-            pandora_gates = self.get_pandora_gates_by_id(list(set(id_set)))
+            pandora_gates = self.get_pandora_gates_by_id(ids=list(set(id_set)))
+
             pandora_gate_dict = dict([(pandora_gate.id, pandora_gate) for pandora_gate in pandora_gates])
 
             uf = UnionFindWidgetizer(edges=batch_of_edges,
@@ -393,5 +245,3 @@ class Pandora:
 
             for (root_id, widget_pandora_gates) in widgets.items():
                 yield widget_pandora_gates
-
-

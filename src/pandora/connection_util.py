@@ -125,7 +125,7 @@ def drop_and_replace_tables(connection,
         connection.commit()
 
 
-def create_named_table(connection, table_name) -> None:
+def create_named_circuit_table(connection, table_name: str) -> None:
     """
     Creates a dedicated table for a circuit with the same structure as the canonical linked_circuit.
     Args:
@@ -427,7 +427,7 @@ def get_gates_by_id_fast(connection, ids: list[int]) -> list[PandoraGate]:
     ids = [i for i in ids if i not in [GLOBAL_IN_ID, GLOBAL_OUT_ID]]
 
     cursor = connection.cursor()
-    sql_statement = ("select * from linked_circuit where id in " + str(tuple(ids)))
+    sql_statement = (f"select * from linked_circuit where id in " + str(tuple(ids)))
     cursor.execute(sql_statement)
     gate_tuples = cursor.fetchall()
 
