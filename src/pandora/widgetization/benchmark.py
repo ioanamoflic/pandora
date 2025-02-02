@@ -1,6 +1,6 @@
 import time
 
-from pandora.connection_util import add_inputs
+from pandora.connection_util import add_inputs, update_widgetisation_results
 from union_find import WidgetizationReturnCodes, WidgetUtils, \
     UnionFindWidgetizer
 from pandora import Pandora, PandoraConfig
@@ -84,6 +84,11 @@ if __name__ == "__main__":
                                            pandora_gate_dict=pandora_gate_dict,
                                            batch_id=str(i),
                                            file_path="../../../vis")
+            # update_widgetisation_results(connection=connection,
+            #                              id=fh_N,
+            #                              widgetisation_time=total_union_time,
+            #                              widget_count=total_widget_count,
+            #                              extraction_time=total_extraction_time)
         print(f'Time it took to widgetize Adder = {time.time() - start_time}')
 
 
