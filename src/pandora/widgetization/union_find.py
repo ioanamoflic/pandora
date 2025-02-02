@@ -24,8 +24,8 @@ class UnionFindWidgetizer:
         # the widget count will be given by the number of unique pandora_gate_root values
         self.parent = dict([(pandora_gate.id, Widget(depth=1,
                                                      t_count=1 if
-                                                     pandora_gate.type == PandoraGateTranslator.ZPowGate.value and
-                                                     pandora_gate.param in [0.25, -0.25] else 0,
+                                                     pandora_gate.type in [PandoraGateTranslator.ZPowGate.value,
+                                                                           PandoraGateTranslator.Rz.value] else 0,
                                                      root=pandora_gate))
                             for pandora_gate in pandora_gates])
 
