@@ -85,6 +85,3 @@ if __name__ == "__main__":
                                            batch_id=str(i),
                                            file_path="../../../vis")
         print(f'Time it took to widgetize Adder = {time.time() - start_time}')
-
-
-

@@ -9,7 +9,6 @@ from pandora.connection_util import *
 
 sys.setrecursionlimit(1000000)
 
-
 class WidgetizationReturnCodes(Enum):
     OK = 0
     EXIST = 1
