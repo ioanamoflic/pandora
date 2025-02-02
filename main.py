@@ -37,8 +37,7 @@ if __name__ == "__main__":
         N = int(sys.argv[next_arg + 1])
         pandora.build_fh_circuit(N=N, p_algo=0.9999999904, times=0.01)
         widgets = pandora.widgetize(max_t=10, max_d=100, batch_size=10, add_gin_per_widget=True)
-        for widget in widgets:
-            print(widget)
+
     elif sys.argv[next_arg] == "mg":
         pandora.build_mg_coating_walk_op(data_path=hrl_data_path)
     elif sys.argv[next_arg] == "o3":
