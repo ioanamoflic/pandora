@@ -4,24 +4,30 @@ import datetime
 import cirq
 import psycopg2
 
-from .pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
+from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
     make_cyclic_o3_circuit, make_hc_circuit
-from .qualtran_to_pandora_util import *
-from .benchmarking.benchmark_adders import get_maslov_adder
+from pandora.qualtran_to_pandora_util import *
+from pandora.benchmarking.benchmark_adders import get_maslov_adder
 
-from .pandora.connection_util import *
-from .widgetization.union_find import UnionFindWidgetizer
+from pandora.connection_util import *
+from pandora.widgetization.union_find import UnionFindWidgetizer
 
 
 class PandoraConfig:
-    database = "postgres"
-    user = None
-    host = "localhost"
-    port = 5432
-    password = "1234"
+    def __init__(
+        self,
+        database = "postgres",
+        user = None,
+        host = "localhost",
+        port = 5432,
+        password = "1234"
+    ):
+        self.database = database
+        self.user = user
+        self.host = host
+        self.port = port
+        self.password = password
 
-    def __init__(self):
-        pass
 
     def update_from_file(self, path):
         import json
@@ -43,12 +49,15 @@ class Pandora:
     def __init__(self, pandora_config=PandoraConfig(), max_time=3600, decomposition_window_size=1000000):
         self.pandora_config = pandora_config
 
+        # Connection should be None if failed
+        self.connection = None
         self.connection = self.get_connection()
         self.stop_after = max_time
         self.decomposition_window_size = decomposition_window_size
 
     def __del__(self):
-        self.connection.close()
+        if self.connection is not None:
+            self.connection.close()
 
     def get_connection(self):
         """
