@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     # Example
     print("Initialising circuit")
-    circuit = make_fh_circuit(N=70, p_algo=0.9999999904, times=0.01)
+    circuit = make_fh_circuit(N=10, p_algo=0.9999999904, times=0.01)
     print("initialised circuit")
 
     moment = iter(circuit)
@@ -41,22 +41,26 @@ if __name__ == "__main__":
     circuit.append(qsvt)
 
 
-    
+    def find_target_gate(dec, target):
+        for i in iter(dec):
+            for j in iter(i): 
+                print(j.gate.__class__)
+                if isinstance(j.gate, target):
+                    print(f"Found: {j.gate.__class__}")
+                    return j 
+        print("Failed to find target")
+        raise Exception
 
-    def add_cache_db(circuit, target, decomp, db_name):
+   
+
+    def add_cache_db(circuit, decomp, target, db_name):
         print("Starting decomp")
-        dec = circuit_decompose_multi(circuit, 3)  
+        dec = circuit_decompose_multi(circuit, decomp)  
         print("Finished decomp, searching")
-        it = iter(dec)
+
         target = Adjoint  
 
-        def find_target_gate(target):
-            for i in iter(dec):
-                for j in iter(i): 
-                    if isinstance(j.gate, target):
-                        return j 
-
-        gate = find_target_gate(target)
+        gate = find_target_gate(dec, target)
         decomp_circuit = cirq.Circuit()
         decomp_circuit.append(gate)
 
@@ -64,7 +68,7 @@ if __name__ == "__main__":
         conn.build_pyliqtr_circuit(pyliqtr_circuit=decomp_circuit)
 
     add_cache_db(circuit, 3, Adjoint, 'adjoint')
-    add_cache_db(circuit, 2, pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU, 'lcu')
+    add_cache_db(circuit, 3, pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU, 'lcu')
 
     #widgets = pandora.widgetize(max_t=10, max_d=100, batch_size=100, add_gin_per_widget=True)
     #for widget in widgets:
