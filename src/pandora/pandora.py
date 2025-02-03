@@ -1,3 +1,4 @@
+import copy
 import time
 import datetime
 
@@ -7,8 +8,6 @@ from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_
     make_cyclic_o3_circuit, make_hc_circuit
 from pandora.qualtran_to_pandora_util import *
 from pandora.benchmarking.benchmark_adders import get_maslov_adder
-
-from benchmarking.benchmark_adders import get_maslov_adder
 
 from pandora.connection_util import *
 from pandora.widgetization.union_find import UnionFindWidgetizer
@@ -80,12 +79,21 @@ class Pandora:
         except psycopg2.errors.DuplicateDatabase as e:
             print(e)
 
-    def get_connection(self):
+    def spawn(self, database):
+        cfg = copy.copy(self.pandora_config)
+        cfg.database = database
+
+        pandora = Pandora(cfg)
+        return pandora
+
+    def get_connection(self, database=None):
         """
         Creates and returns a database connection object.
         """
+        if database is None:
+            database = self.pandora_config.database 
         connection = psycopg2.connect(
-            database=self.pandora_config.database,
+            database=database,
             user=self.pandora_config.user,
             host=self.pandora_config.host,
             port=self.pandora_config.port,
