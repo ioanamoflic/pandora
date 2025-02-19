@@ -1,14 +1,17 @@
+'''
+    Example startup script for Pandora
+'''
+
 import sys
 import os
 
-from pandora import Pandora, PandoraConfig
-from pandora.pyliqtr_to_pandora_util import make_fh_circuit
-from pandora.targeted_decomposition import collect_gates, find_target_gate, chain_decompose_multi, add_cache_db
-from pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
-import qualtran
-
 import cirq
 import pyLIQTR
+
+from pandora import Pandora, PandoraConfig
+from pandora.pyliqtr_to_pandora_util import make_fh_circuit
+from pandora.targeted_decomposition import find_target_gate, \
+    chain_decompose_multi, add_cache_db
 
 if __name__ == "__main__":
 
@@ -40,25 +43,23 @@ if __name__ == "__main__":
     circuit = cirq.Circuit()
     circuit.append(qsvt)
 
-
-    def find_target_gate(dec, target):
-        for i in iter(dec):
-            for j in iter(i):
-                print(j.gate.__class__)
-                if isinstance(j.gate, target):
-                    print(f"Found: {j.gate.__class__}")
-                    return j
-        print("Failed to find target")
-        raise Exception
-
-    decomp_level = 4
-    decomposed_circuit = chain_decompose_multi(circuit, decomp_level)  
-    target = find_target_gate(decomposed_circuit, pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU)
-    print(target)
+    DECOMP_LEVEL = 4
+    decomposed_circuit = chain_decompose_multi(
+        circuit,
+        DECOMP_LEVEL
+    )
+    target = find_target_gate(
+        decomposed_circuit,
+        pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU
+    )
 
     # Add a new table for this gate
-    lcu_conn = add_cache_db(pandora, target, 'lcu')
+    conn = add_cache_db(pandora, target, 'lcu')
 
-    #widgets = pandora.widgetize(max_t=10, max_d=100, batch_size=100, add_gin_per_widget=True)
-    #for widget in widgets:
-    #    print(widget)
+    #  # Example widgetisation
+    #  widgets = conn.widgetize(max_t=10,
+    #  max_d=100,
+    #  batch_size=100,
+    #  add_gin_per_widget=True)
+    #  for widget in widgets:
+    #      print(widget)
