@@ -99,3 +99,4 @@ def add_cache_db(pandora: Pandora, gate, db_name: str):
 
     conn = pandora.spawn(db_name)
     conn.build_pyliqtr_circuit(pyliqtr_circuit=decomp_circuit)
+    return conn

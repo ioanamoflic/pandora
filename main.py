@@ -3,12 +3,12 @@ import os
 
 from pandora import Pandora, PandoraConfig
 from pandora.pyliqtr_to_pandora_util import make_fh_circuit
+from pandora.targeted_decomposition import collect_gates, find_target_gate, chain_decompose_multi, add_cache_db
 from pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
 import qualtran
-    
+
 import cirq
 import pyLIQTR
-from qualtran._infra.adjoint import Adjoint
 
 if __name__ == "__main__":
 
@@ -37,38 +37,27 @@ if __name__ == "__main__":
     moment = iter(circuit)
     qsvt = next(iter(next(moment)))
 
-    circuit = cirq.Circuit()  
+    circuit = cirq.Circuit()
     circuit.append(qsvt)
 
 
     def find_target_gate(dec, target):
         for i in iter(dec):
-            for j in iter(i): 
+            for j in iter(i):
                 print(j.gate.__class__)
                 if isinstance(j.gate, target):
                     print(f"Found: {j.gate.__class__}")
-                    return j 
+                    return j
         print("Failed to find target")
         raise Exception
 
-   
+    decomp_level = 4
+    decomposed_circuit = chain_decompose_multi(circuit, decomp_level)  
+    target = find_target_gate(decomposed_circuit, pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU)
+    print(target)
 
-    def add_cache_db(circuit, decomp, target, db_name):
-        print("Starting decomp")
-        dec = circuit_decompose_multi(circuit, decomp)  
-        print("Finished decomp, searching")
-
-        target = Adjoint  
-
-        gate = find_target_gate(dec, target)
-        decomp_circuit = cirq.Circuit()
-        decomp_circuit.append(gate)
-
-        conn = pandora.spawn(db_name)
-        conn.build_pyliqtr_circuit(pyliqtr_circuit=decomp_circuit)
-
-    add_cache_db(circuit, 3, Adjoint, 'adjoint')
-    add_cache_db(circuit, 3, pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU, 'lcu')
+    # Add a new table for this gate
+    lcu_conn = add_cache_db(pandora, target, 'lcu')
 
     #widgets = pandora.widgetize(max_t=10, max_d=100, batch_size=100, add_gin_per_widget=True)
     #for widget in widgets:
