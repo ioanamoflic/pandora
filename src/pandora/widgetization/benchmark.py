@@ -90,6 +90,3 @@ if __name__ == "__main__":
             #                              widget_count=total_widget_count,
             #                              extraction_time=total_extraction_time)
         print(f'Time it took to widgetize Adder = {time.time() - start_time}')
-
-
-

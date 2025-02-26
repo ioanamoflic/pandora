@@ -1,24 +1,32 @@
+import copy
 import time
 import datetime
 
 import psycopg2
 
-from .qualtran_to_pandora_util import *
-from benchmarking.benchmark_adders import get_maslov_adder
+from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
+    make_cyclic_o3_circuit, make_hc_circuit
+from pandora.qualtran_to_pandora_util import *
+from pandora.benchmarking.benchmark_adders import get_maslov_adder
 
 from pandora.connection_util import *
-from .widgetization.union_find import UnionFindWidgetizer
+from pandora.widgetization.union_find import UnionFindWidgetizer
 
 
 class PandoraConfig:
-    database = "fh_2"
-    user = None
-    host = "localhost"
-    port = 5432
-    password = "1234"
-
-    def __init__(self):
-        pass
+    def __init__(
+        self,
+        database = "postgres",
+        user = None,
+        host = "localhost",
+        port = 5432,
+        password = "1234"
+    ):
+        self.database = database
+        self.user = user
+        self.host = host
+        self.port = port
+        self.password = password
 
     def update_from_file(self, path):
         import json
@@ -39,6 +47,9 @@ class Pandora:
 
     def __init__(self, pandora_config=PandoraConfig(), max_time=3600, decomposition_window_size=1000000):
         self.pandora_config = pandora_config
+
+        # Connection should be None if failed
+        self.connection = None
         if self.pandora_config.database != 'postgres':
             self.create_database()
         self.connection = self.get_connection()
@@ -46,7 +57,8 @@ class Pandora:
         self.decomposition_window_size = decomposition_window_size
 
     def __del__(self):
-        self.connection.close()
+        if self.connection is not None:
+            self.connection.close()
 
     def create_database(self):
         """
@@ -67,12 +79,21 @@ class Pandora:
         except psycopg2.errors.DuplicateDatabase as e:
             print(e)
 
-    def get_connection(self):
+    def spawn(self, database):
+        cfg = copy.copy(self.pandora_config)
+        cfg.database = database
+
+        pandora = Pandora(cfg)
+        return pandora
+
+    def get_connection(self, database=None):
         """
         Creates and returns a database connection object.
         """
+        if database is None:
+            database = self.pandora_config.database 
         connection = psycopg2.connect(
-            database=self.pandora_config.database,
+            database=database,
             user=self.pandora_config.user,
             host=self.pandora_config.host,
             port=self.pandora_config.port,
