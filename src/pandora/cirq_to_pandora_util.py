@@ -1,11 +1,10 @@
 from typing import Optional
 import cirq
-import json
 
 from pandora.exceptions import *
 from pandora.gate_translator import In, Out, PandoraGateTranslator, \
     TWO_QUBIT_GATES, SINGLE_QUBIT_GATES, MAX_QUBITS_PER_GATE, \
-    REQUIRES_ROTATION, REQUIRES_EXPONENT
+    REQUIRES_ROTATION, REQUIRES_EXPONENT, PYLIQTR_ROTATION_TO_PANDORA
 
 from pandora.gates import PandoraGate, PandoraGateWrapper
 
@@ -67,8 +66,11 @@ def cirq_operation_to_pandora_gate(operation: cirq.Operation, meas_key_dict: dic
             * by convention the translated name uses the cirq class name. e.g. cirq._PauliX -> translator._PauliX
         """
         cirq_class_name = cirq_gate.__class__.__name__
+        # special pyLIQTR decomposition gate
+        if cirq_class_name in ['rx_decomp', 'ry_decomp', 'rz_decomp']:
+            cirq_class_name = PYLIQTR_ROTATION_TO_PANDORA[cirq_class_name]
         if cirq_class_name not in list(PandoraGateTranslator.__members__):
-            print(cirq_class_name)
+            print('Could not decompose gate ', cirq_class_name)
             raise CirqGateHasNoPandoraEquivalent
 
         # Build the translation starting from the cirq class name

@@ -123,7 +123,7 @@ def drop_and_replace_tables(connection,
         connection.commit()
 
 
-def create_named_table(connection, table_name) -> None:
+def create_named_circuit_table(connection, table_name: str) -> None:
     """
     Creates a dedicated table for a circuit with the same structure as the canonical linked_circuit.
     Args:
@@ -361,6 +361,18 @@ def get_edge_list(connection) -> list[tuple[int, int]]:
     return tuples
 
 
+def add_inputs(edge_records: list[tuple[int, int]]):
+    """
+    Adds In gates to the edge-list (could be used to deduce a local qubit id)
+    """
+    edges_to_append: list[tuple[int, int]] = []
+    targets = [edge_record[1] for edge_record in edge_records]
+    for (s, t) in edge_records:
+        if s not in targets:
+            edges_to_append.append((GLOBAL_IN_ID, s))
+    return edges_to_append + edge_records
+
+
 def get_edge_list_in_batches(connection, batch_size) -> Iterator[list[tuple[int, int]]]:
     """
     Returns the contents from edge_list table in batches.
@@ -405,11 +417,25 @@ def get_gates_by_id(connection, ids: list[int]) -> list[PandoraGate]:
 
 
 def get_gates_by_id_fast(connection, ids: list[int]) -> list[PandoraGate]:
+    pandora_gates: list[PandoraGate] = []
+    for gid in ids:
+        if gid == GLOBAL_IN_ID:
+            pandora_gates.append(PandoraGate(gate_id=gid,
+                                             gate_code=PandoraGateTranslator.GlobalIn.value))
+            continue
+        if gid == GLOBAL_OUT_ID:
+            pandora_gates.append(PandoraGate(gate_id=gid,
+                                             gate_code=PandoraGateTranslator.GlobalOut.value))
+            continue
+
+    ids = [i for i in ids if i not in [GLOBAL_IN_ID, GLOBAL_OUT_ID]]
+
     cursor = connection.cursor()
-    sql_statement = ("select * from linked_circuit where id in " + str(tuple(ids)))
+    sql_statement = (f"select * from linked_circuit where id in " + str(tuple(ids)))
     cursor.execute(sql_statement)
     gate_tuples = cursor.fetchall()
-    pandora_gates = [PandoraGate(*gate_tuple) for gate_tuple in gate_tuples]
+
+    pandora_gates += [PandoraGate(*gate_tuple) for gate_tuple in gate_tuples]
 
     return pandora_gates
 

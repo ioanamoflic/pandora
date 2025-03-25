@@ -1,4 +1,6 @@
 import time
+
+from pandora.connection_util import add_inputs, update_widgetisation_results
 from union_find import WidgetizationReturnCodes, WidgetUtils, \
     UnionFindWidgetizer
 from pandora import Pandora, PandoraConfig
@@ -26,7 +28,7 @@ if __name__ == "__main__":
         # build Pandora
         pandora.build_pandora()
         # decompose and insert a circuit into Pandora (if this is not already done)
-        pandora.build_qualtran_adder(bitsize=2)
+        pandora.build_qualtran_adder(bitsize=3)
         # build the edge list of the decomposed circuit.
         pandora.build_edge_list()
 
@@ -44,12 +46,14 @@ if __name__ == "__main__":
 
         pandora = Pandora(pandora_config=config,
                           max_time=3600,
-                          decomposition_window_size=1000000)
+                          decomposition_window_size=3)
 
         start_time = time.time()
-        batch_edges = pandora.get_batched_edge_list(batch_size=2000000)
+        batch_edges = pandora.get_batched_edge_list(batch_size=10)
 
         for i, batch_of_edges in enumerate(batch_edges):
+            if i != 0:
+                batch_of_edges = add_inputs(batch_of_edges)
             batch_start = time.time()
             id_set = []
             for (s, t) in batch_of_edges:
@@ -78,8 +82,14 @@ if __name__ == "__main__":
 
             wutils.generate_d3_json_for_uf(uf_widgetizer=uf,
                                            pandora_gate_dict=pandora_gate_dict,
+                                           batch_id=str(i),
                                            file_path="../../../vis")
-        print(f'Time it took to widgetize FH (2) = {time.time() - start_time}')
+            # update_widgetisation_results(connection=connection,
+            #                              id=fh_N,
+            #                              widgetisation_time=total_union_time,
+            #                              widget_count=total_widget_count,
+            #                              extraction_time=total_extraction_time)
+        print(f'Time it took to widgetize Adder = {time.time() - start_time}')
 
 
 
