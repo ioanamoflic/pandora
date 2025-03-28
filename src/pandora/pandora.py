@@ -3,6 +3,7 @@ import datetime
 
 import psycopg2
 
+from .parallel_decompose import parallel_decompose_and_insert
 from .qualtran_to_pandora_util import *
 from benchmarking.benchmark_adders import get_maslov_adder
 
@@ -11,7 +12,7 @@ from .widgetization.union_find import UnionFindWidgetizer
 
 
 class PandoraConfig:
-    database = "fh_2"
+    database = "postgres"
     user = None
     host = "localhost"
     port = 5432
@@ -182,6 +183,54 @@ class Pandora:
         print("Building edge list...")
 
         self.build_edge_list()
+
+    def parallel_build_pyliqtr_circuit(self,
+                                       nprocs: int,
+                                       N: int) -> None:
+        """
+        This method tries to build an arbitrary pyLIQTR circuit into Pandora. Note that the pyLIQTR decomposition
+        might fail due to missing decompositions.
+
+        This is a parallel version of the building method, meaning that the decomposition of the circuit is performed
+        in parallel. This implies that the pyLIQTR decomposition is performed only two levels, and then bloqs such as
+        QubitizedRotation or PauliStringLCU ae decomposed in parallel. The circuit is divided into nprocs parts, and
+        each process deals with its targeted region of the circuit.
+
+        Only for the Fermi-Hubbard circuits for now.
+
+        Args:
+            nprocs: the number of parallel workers
+            N: N parameter of the Feri-Hubbard circuit instance
+        """
+        self.build_pandora()
+        print("Decomposing circuit for pandora...")
+
+        cpus = list()
+        if sys.platform == "linux":
+            my_cpus = cycle(os.sched_getaffinity(0))
+
+            if nprocs > max(list(my_cpus)):
+                raise RuntimeError("Not enough cores on this machine!")
+
+            cpus = [[next(my_cpus) * 2] for _ in range(nprocs)]
+
+        start_decomp = time.time()
+        process_list = []
+        for i in range(nprocs):
+            if sys.platform == "linux":
+                p = Process(target=parallel_decompose_and_insert, args=(cpus.pop(), N, i, nprocs,
+                                                                        self.decomposition_window_size))
+            else:
+                p = Process(target=parallel_decompose_and_insert, args=(None, N,  i, nprocs,
+                                                                        self.decomposition_window_size))
+            process_list.append(p)
+
+        for i in range(nprocs):
+            process_list[i].start()
+        for i in range(nprocs):
+            process_list[i].join()
+
+        print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
     def widgetize(self,
                   max_t: int,

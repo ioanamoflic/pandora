@@ -1,8 +1,6 @@
 import sys
 import os
-
-from pandora import Pandora, PandoraConfig
-from pandora.pyliqtr_to_pandora_util import make_fh_circuit
+from pandora import PandoraConfig, Pandora
 
 if __name__ == "__main__":
 
@@ -23,9 +21,8 @@ if __name__ == "__main__":
 
     hrl_data_path = os.path.abspath(".")
 
-    circuit = make_fh_circuit(N=2, p_algo=0.9999999904, times=0.01)
-    pandora.build_pyliqtr_circuit(pyliqtr_circuit=circuit)
-
-    widgets = pandora.widgetize(max_t=10, max_d=100, batch_size=100, add_gin_per_widget=True)
-    for widget in widgets:
-        print(widget)
+    # only FH for now
+    if sys.argv[next_arg] == "fh":
+        N = int(sys.argv[next_arg + 1])
+        NPROC = int(sys.argv[next_arg + 2])
+        pandora.parallel_build_pyliqtr_circuit(nprocs=NPROC, N=N)

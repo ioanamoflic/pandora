@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Iterator
 import cirq
 
 from pandora.exceptions import *
@@ -404,7 +404,7 @@ def windowed_cirq_to_pandora_from_op_list(op_list: list[cirq.Operation],
     return pandora_dictionary, latest_conc_on_qubit, last_id
 
 
-def cirq_to_pandora_from_op_list(op_list: list[cirq.Operation],
+def cirq_to_pandora_from_op_list(op_list: list[cirq.Operation] | Iterator[list[cirq.Operation]],
                                  label: int = None,
                                  ) -> list[PandoraGate]:
     """
