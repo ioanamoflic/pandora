@@ -28,6 +28,7 @@ def parallel_decompose_and_insert(affinity, N: int, proc_id: int, nprocs: int, w
 
     # each process will generate its own copy of the pyLIQTR circuit. This might be a bit inefficient as they
     # take some memory but there's no other obvious way to do it
+    print(f"Hello, I am process {proc_id} and I am creating my own FH circuit.")
     proc_circuit = make_fh_circuit(N=N, p_algo=0.9999999904, times=0.01)
     total_bloqs = sum(1 for _ in generator_decompose(proc_circuit, max_decomposition_passes=2))
 

@@ -25,4 +25,5 @@ if __name__ == "__main__":
     if sys.argv[next_arg] == "fh":
         N = int(sys.argv[next_arg + 1])
         NPROC = int(sys.argv[next_arg + 2])
+        print(f"Starting FH {N}x{N} with {NPROC} processes.")
         pandora.parallel_build_pyliqtr_circuit(nprocs=NPROC, N=N)
