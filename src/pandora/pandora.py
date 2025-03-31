@@ -205,24 +205,24 @@ class Pandora:
         self.build_pandora()
         print("Decomposing circuit for pandora...")
 
-        cpus = list()
-        if sys.platform == "linux":
-            my_cpus = cycle(os.sched_getaffinity(0))
-
-            if nprocs > max(list(my_cpus)):
-                raise RuntimeError("Not enough cores on this machine!")
-
-            cpus = [[next(my_cpus) * 2] for _ in range(nprocs)]
+        # cpus = list()
+        # if sys.platform == "linux":
+        #     my_cpus = cycle(os.sched_getaffinity(0))
+        #
+        #     if nprocs > max(list(my_cpus)):
+        #         raise RuntimeError("Not enough cores on this machine!")
+        #
+        #     cpus = [[next(my_cpus) * 2] for _ in range(nprocs)]
 
         start_decomp = time.time()
         process_list = []
         for i in range(nprocs):
-            if sys.platform == "linux":
-                p = Process(target=parallel_decompose_and_insert, args=(cpus.pop(), N, i, nprocs,
-                                                                        self.decomposition_window_size))
-            else:
-                p = Process(target=parallel_decompose_and_insert, args=(None, N,  i, nprocs,
-                                                                        self.decomposition_window_size))
+            # if sys.platform == "linux":
+            #     p = Process(target=parallel_decompose_and_insert, args=(cpus.pop(), N, i, nprocs,
+            #                                                             self.decomposition_window_size))
+            # else:
+            p = Process(target=parallel_decompose_and_insert, args=(None, N, i, nprocs,
+                                                                    self.decomposition_window_size))
             process_list.append(p)
 
         for i in range(nprocs):

@@ -16,11 +16,11 @@ def parallel_decompose_and_insert(affinity, N: int, proc_id: int, nprocs: int, w
     This is now only working for Fermi-Hubbard circuits.
     """
     # set affinity of each process
-    if sys.platform == "linux":
-        my_pid = os.getppid()
-        old_aff = os.sched_getaffinity(0)
-        os.sched_setaffinity(my_pid, affinity)
-        print(f"My pid is {my_pid} and my old affinity was {old_aff}, my new affinity is {os.sched_getaffinity(0)}")
+    # if sys.platform == "linux":
+    #     my_pid = os.getppid()
+    #     old_aff = os.sched_getaffinity(0)
+    #     os.sched_setaffinity(my_pid, affinity)
+    #     print(f"My pid is {my_pid} and my old affinity was {old_aff}, my new affinity is {os.sched_getaffinity(0)}")
 
     # get a connection for each process
     proc_conn = get_connection()
