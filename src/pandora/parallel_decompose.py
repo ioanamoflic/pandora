@@ -1,5 +1,3 @@
-import os
-import sys
 import time
 
 from pyLIQTR.utils.circuit_decomposition import generator_decompose

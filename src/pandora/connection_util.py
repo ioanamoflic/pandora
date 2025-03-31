@@ -264,25 +264,14 @@ def insert_single_batch(connection, batch: list[PandoraGate],
                         table_name: str = 'linked_circuit'):
     """
     Insert a single batch of entries into the database.
-    TODO clean this ugly code
     """
     cursor = connection.cursor()
-    if table_name == 'batched_circuit':
+    if table_name in ['batched_circuit', 'linked_circuit']:
         args = ','.join(
             cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple())
             .decode('utf-8') for tup in batch)
         sql_statement = \
-            (f"INSERT INTO batched_circuit(local_id, "
-             f"prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
-             "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
-        cursor.execute(sql_statement)
-        connection.commit()
-    elif table_name == 'linked_circuit':
-        args = ','.join(
-            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple())
-            .decode('utf-8') for tup in batch)
-        sql_statement = \
-            (f"INSERT INTO linked_circuit(id, "
+            (f"INSERT INTO {table_name}(id, "
              f"prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
              "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
         cursor.execute(sql_statement)
@@ -290,7 +279,7 @@ def insert_single_batch(connection, batch: list[PandoraGate],
     elif table_name == 'linked_circuit_test':
         args = ','.join(
             cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                           tup.to_tuple(is_test=True))
+                           tup.to_tuple())
             .decode('utf-8') for tup in batch)
         sql_statement = \
             ("INSERT INTO linked_circuit_test(id, "
@@ -486,7 +475,6 @@ def insert_hack(batches: list[list[Any]], bs_per_process: int) -> None:
 
 def parallel_insert(pandora_gates: list[PandoraGate], nprocs: int, bs_per_process: int) -> None:
     """
-    TODO
     VERY memory intensive. Hopefully faster?
     """
     pandora_gates = list(pandora_gates)

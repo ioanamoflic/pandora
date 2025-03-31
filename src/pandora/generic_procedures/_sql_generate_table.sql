@@ -19,8 +19,8 @@ create table IF NOT EXISTS public.linked_circuit
 
 create table IF NOT EXISTS public.batched_circuit
 (
-    id      bigserial primary key,
-    local_id int,
+    auto_id      bigserial primary key,
+    id int,
     prev_q1 int,
     prev_q2 int,
     prev_q3 int,
@@ -32,7 +32,7 @@ create table IF NOT EXISTS public.batched_circuit
     next_q2 int,
     next_q3 int,
     visited boolean,
-    label   int,
+    label   serial,
     cl_ctrl boolean,
     meas_key smallint
 );
