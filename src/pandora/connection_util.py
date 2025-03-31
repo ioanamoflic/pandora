@@ -9,9 +9,12 @@ from pandora.cirq_to_pandora_util import *
 from pandora.gate_translator import PANDORA_TO_READABLE, GLOBAL_IN_ID, GLOBAL_OUT_ID
 
 
-def get_connection():
-    from pandora import Pandora
-    p = Pandora()
+def get_connection(config_file_path=None):
+    from pandora import Pandora, PandoraConfig
+    pandora_config = PandoraConfig()
+    if config_file_path is not None:
+        pandora_config.update_from_file(path=config_file_path)
+    p = Pandora(pandora_config=pandora_config)
     return p.get_connection()
 
 
@@ -296,7 +299,6 @@ def insert_single_batch(connection, batch: list[PandoraGate],
         cursor.execute(sql_statement)
         connection.commit()
     # execute the sql statement
-
 
 
 def remove_io_gates_from_circuit(circuit: cirq.Circuit) -> cirq.Circuit:

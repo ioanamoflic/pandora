@@ -10,25 +10,23 @@ from pandora.pyliqtr_to_pandora_util import make_fh_circuit
 from pandora.qualtran_to_pandora_util import generator_get_pandora_compatible_batch_via_pyliqtr
 
 
-def parallel_decompose_and_insert(affinity, N: int, proc_id: int, nprocs: int, window_size: int = 1e6):
+def parallel_decompose_and_insert(N: int,
+                                  proc_id: int,
+                                  nprocs: int,
+                                  config_file_path: str = None,
+                                  window_size: int = 1e6):
     """
     Embarrassingly parallel version of the generator decomposition.
     This is now only working for Fermi-Hubbard circuits.
     """
-    # set affinity of each process
-    # if sys.platform == "linux":
-    #     my_pid = os.getppid()
-    #     old_aff = os.sched_getaffinity(0)
-    #     os.sched_setaffinity(my_pid, affinity)
-    #     print(f"My pid is {my_pid} and my old affinity was {old_aff}, my new affinity is {os.sched_getaffinity(0)}")
-
     # get a connection for each process
-    proc_conn = get_connection()
+    proc_conn = get_connection(config_file_path)
     start_time = time.time()
 
     # each process will generate its own copy of the pyLIQTR circuit. This might be a bit inefficient as they
     # take some memory but there's no other obvious way to do it
     print(f"Hello, I am process {proc_id} and I am creating my own FH circuit.")
+
     proc_circuit = make_fh_circuit(N=N, p_algo=0.9999999904, times=0.01)
     total_bloqs = sum(1 for _ in generator_decompose(proc_circuit, max_decomposition_passes=2))
 
