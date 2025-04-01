@@ -33,25 +33,30 @@ echo 'host all all 0.0.0.0/0 trust'>> /var/lib/postgresql/data/pg_hba.conf
 
 pg_ctl -o \"$INITDBPORT\" start
 
-psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set max_connections = '762';\"
-psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set wal_buffers = '128MB';\"
-psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set shared_buffers = '350GB';\"
-psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set work_mem = '10GB';\"
-psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set maintenance_work_mem = '10GB';\"
-psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set commit_delay = '200';\"
-psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set checkpoint_timeout = '86400';\"
-psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set max_wal_size = '100GB';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set shared_buffers = '400GB';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set work_mem = '64MB';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set maintenance_work_mem = '4GB';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set checkpoint_completion_target = '0.9';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set checkpoint_timeout = '3600s';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set wal_buffers = '1GB';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set max_wal_size = '32GB';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set wal_writer_delay = '10ms';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set synchronous_commit = 'off';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set autovacuum_naptime = '10s';\"
+
 
 pg_ctl -o \"$INITDBPORT\" restart
 
-psql -U $USER -d $DB_NAME -p $PORT -c \"show max_connections;\"
-psql -U $USER -d $DB_NAME -p $PORT -c \"show wal_buffers;\"
 psql -U $USER -d $DB_NAME -p $PORT -c \"show shared_buffers;\"
 psql -U $USER -d $DB_NAME -p $PORT -c \"show work_mem;\"
 psql -U $USER -d $DB_NAME -p $PORT -c \"show maintenance_work_mem;\"
-psql -U $USER -d $DB_NAME -p $PORT -c \"show commit_delay;\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"show checkpoint_completion_target;\"
 psql -U $USER -d $DB_NAME -p $PORT -c \"show checkpoint_timeout;\"
 psql -U $USER -d $DB_NAME -p $PORT -c \"show max_wal_size;\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"show wal_buffers;\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"show wal_writer_delay;\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"show synchronous_commit;\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"show autovacuum_naptime;\"
 
 export PYTHONPATH=$PYTHONPATH:/pandora/src:/pandora
 
