@@ -5,7 +5,12 @@ if [[ $2 == *json ]]
 then
     # Read the port number from JSON config
     PYTHONPORT="import json;file=open('$2', 'r');print(json.load(file)['port'])"
+    PYTHON_USER="import json;file=open('$2', 'r');print(json.load(file)['user'])"
+    PYTHON_DB_NAME="import json;file=open('$2', 'r');print(json.load(file)['database'])"
     PORT=$(echo $PYTHONPORT | python3)
+    USER=$(echo $PYTHON_USER | python3)
+    DB_NAME=$(echo $PYTHON_DB_NAME | python3)
+
     INITDBPORT="-p $PORT"
 
     # shift the parameters of the script effectively pop-ing $1?
@@ -27,6 +32,26 @@ pg_ctl init
 echo 'host all all 0.0.0.0/0 trust'>> /var/lib/postgresql/data/pg_hba.conf
 
 pg_ctl -o \"$INITDBPORT\" start
+
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set max_connections = '762';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set wal_buffers = '128MB';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set shared_buffers = '350GB';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set work_mem = '10GB';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set maintenance_work_mem = '10GB';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set commit_delay = '200';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set checkpoint_timeout = '86400';\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"alter system set max_wal_size = '100GB';\"
+
+pg_ctl -o \"$INITDBPORT\" restart
+
+psql -U $USER -d $DB_NAME -p $PORT -c \"show max_connections;\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"show wal_buffers;\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"show shared_buffers;\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"show work_mem;\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"show maintenance_work_mem;\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"show commit_delay;\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"show checkpoint_timeout;\"
+psql -U $USER -d $DB_NAME -p $PORT -c \"show max_wal_size;\"
 
 export PYTHONPATH=$PYTHONPATH:/pandora/src:/pandora
 
