@@ -20,7 +20,7 @@ c) multi-threaded speed-up (vertical) when reverting the direction of CNOT gates
 
 ![pandora_res.png](pandora_res.png)
 
-**Pandora** is integrated with <a href="https://github.com/quantumlib/Qualtran" target=_blank>Google Qualtran</a>.
+**Pandora** is integrated with <a href="https://github.com/quantumlib/Qualtran" target=_blank>Google Qualtran</a> and <a href="https://github.com/isi-usc-edu/pyLIQTR" target=_blank>pyLIQTR</a>.
 
 ## Apptainer Setup
 Installation instructions can be found in the `README.md` of the `apptainer` folder. In a nutshell, you need to have
