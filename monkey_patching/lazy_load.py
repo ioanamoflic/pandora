@@ -1,4 +1,6 @@
-from pyLIQTR.qubitization.qsvt import QSVT_real_polynomial
+import pyLIQTR
+
+from pyLIQTR.qubitization.qubitized_gates import QubitizedRotation
 
 
 class LazyProxy:
@@ -9,8 +11,8 @@ class LazyProxy:
 
     def _instantiate(self):
         if self._instance is None:
-            print(f"Lazily instantiating QSVT_real_polynomial...")
-            self._instance = QSVT_real_polynomial(*self._args, **self._kwargs)
+            print(f"Lazily instantiating QubitizedRotation...")
+            self._instance = QubitizedRotation(*self._args, **self._kwargs)
 
     def __getattr__(self, name):
         self._instantiate()
@@ -19,5 +21,5 @@ class LazyProxy:
 
 # monkey-patch
 print("Monkey-patching")
-lazy_QSVT_real_polynomial = lambda *args, **kwargs: LazyProxy(*args, **kwargs)
+pyLIQTR.qubitization.qubitized_gates.QubitizedRotation = lambda *args, **kwargs: LazyProxy(*args, **kwargs)
 
