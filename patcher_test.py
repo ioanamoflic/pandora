@@ -1,4 +1,4 @@
-import monkey_patching.lazy_load
+from monkey_patching.lazy_load import *
 
 from pandora.pyliqtr_to_pandora_util import make_fh_circuit
 

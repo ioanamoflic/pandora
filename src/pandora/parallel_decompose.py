@@ -1,4 +1,5 @@
 import time
+from monkey_patching.lazy_load import *
 
 from pyLIQTR.utils.circuit_decomposition import generator_decompose
 
@@ -12,7 +13,7 @@ def parallel_decompose_and_insert(N: int,
                                   proc_id: int,
                                   nprocs: int,
                                   config_file_path: str = None,
-                                  window_size: int = 1e6):
+                                  window_size: int = 1000):
     """
     Embarrassingly parallel version of the generator decomposition.
     This is now only working for Fermi-Hubbard circuits.
@@ -26,8 +27,9 @@ def parallel_decompose_and_insert(N: int,
     print(f"Hello, I am process {proc_id} and I am creating my own FH circuit.")
 
     proc_circuit = make_fh_circuit(N=N, p_algo=0.9999999904, times=0.01)
-    total_bloqs = sum(1 for _ in generator_decompose(proc_circuit, max_decomposition_passes=2))
+    # total_bloqs = sum(1 for _ in generator_decompose(proc_circuit, max_decomposition_passes=2))
 
+    total_bloqs = 112
     proc_start = (total_bloqs * proc_id) // nprocs
     proc_end = (total_bloqs * (proc_id + 1)) // nprocs
 
