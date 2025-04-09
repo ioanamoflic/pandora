@@ -187,7 +187,8 @@ class Pandora:
     def parallel_build_pyliqtr_circuit(self,
                                        nprocs: int,
                                        N: int,
-                                       config_file_path: str = None) -> None:
+                                       config_file_path: str = None,
+                                       window_size=1000) -> None:
         """
         This method tries to build an arbitrary pyLIQTR circuit into Pandora. Note that the pyLIQTR decomposition
         might fail due to missing decompositions.
@@ -200,6 +201,7 @@ class Pandora:
         Only for the Fermi-Hubbard circuits for now.
 
         Args:
+            window_size: size of decomposition window
             nprocs: the number of parallel workers
             N: N parameter of the Feri-Hubbard circuit instance
             config_file_path: config file name. If None, will use defaults from PandoraConfig.
@@ -214,7 +216,7 @@ class Pandora:
                                                                     i,
                                                                     nprocs,
                                                                     config_file_path,
-                                                                    self.decomposition_window_size))
+                                                                    window_size))
             process_list.append(p)
 
         for i in range(nprocs):

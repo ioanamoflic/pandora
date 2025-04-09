@@ -1,12 +1,8 @@
 import time
-from monkey_patching.lazy_load import *
 
-from pyLIQTR.utils.circuit_decomposition import generator_decompose
+import pyLIQTR
 
-from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list
-from pandora.connection_util import get_connection, insert_single_batch
-from pandora.pyliqtr_to_pandora_util import make_fh_circuit
-from pandora.qualtran_to_pandora_util import generator_get_pandora_compatible_batch_via_pyliqtr
+from pyLIQTR.qubitization.qubitized_gates import QubitizedRotation
 
 
 def parallel_decompose_and_insert(N: int,
@@ -14,6 +10,19 @@ def parallel_decompose_and_insert(N: int,
                                   nprocs: int,
                                   config_file_path: str = None,
                                   window_size: int = 1000):
+
+    import monkey_patching.lazy_load as monkey_patching
+    print("monkey-patching")
+    pyLIQTR.qubitization.qubitized_gates.QubitizedRotation = \
+        lambda *args, **kwargs: monkey_patching.LazyProxy(None, *args, **kwargs)
+
+    from pyLIQTR.utils.circuit_decomposition import generator_decompose
+
+    from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list
+    from pandora.connection_util import get_connection, insert_single_batch
+    from pandora.pyliqtr_to_pandora_util import make_fh_circuit
+    from pandora.qualtran_to_pandora_util import generator_get_pandora_compatible_batch_via_pyliqtr
+
     """
     Embarrassingly parallel version of the generator decomposition.
     This is now only working for Fermi-Hubbard circuits.
@@ -27,9 +36,10 @@ def parallel_decompose_and_insert(N: int,
     print(f"Hello, I am process {proc_id} and I am creating my own FH circuit.")
 
     proc_circuit = make_fh_circuit(N=N, p_algo=0.9999999904, times=0.01)
-    # total_bloqs = sum(1 for _ in generator_decompose(proc_circuit, max_decomposition_passes=2))
 
-    total_bloqs = 112
+    total_bloqs = sum(1 for _ in generator_decompose(proc_circuit, max_decomposition_passes=2))
+    print(total_bloqs)
+
     proc_start = (total_bloqs * proc_id) // nprocs
     proc_end = (total_bloqs * (proc_id + 1)) // nprocs
 
