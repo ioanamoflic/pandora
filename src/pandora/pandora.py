@@ -3,7 +3,7 @@ import datetime
 
 import psycopg2
 
-from .parallel_decompose import parallel_decompose_and_insert
+from .parallel_decompose import parallel_decompose_and_insert, parallel_decompose_multi_and_insert
 from .qualtran_to_pandora_util import *
 from benchmarking.benchmark_adders import get_maslov_adder
 
@@ -212,11 +212,11 @@ class Pandora:
         start_decomp = time.time()
         process_list = []
         for i in range(nprocs):
-            p = Process(target=parallel_decompose_and_insert, args=(N,
-                                                                    i,
-                                                                    nprocs,
-                                                                    config_file_path,
-                                                                    window_size))
+            p = Process(target=parallel_decompose_multi_and_insert, args=(N,
+                                                                          i,
+                                                                          nprocs,
+                                                                          config_file_path,
+                                                                          window_size))
             process_list.append(p)
 
         for i in range(nprocs):
