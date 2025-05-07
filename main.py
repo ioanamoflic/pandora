@@ -28,7 +28,9 @@ if __name__ == "__main__":
         NPROC = int(sys.argv[next_arg + 2])
         print(f"Starting FH {N}x{N} with {NPROC} processes.")
         abs_path = os.path.abspath(sys.argv[1])
+        # abs_path = None
         pandora.parallel_build_pyliqtr_circuit(nprocs=NPROC,
                                                N=N,
                                                config_file_path=abs_path,
-                                               window_size=1000)
+                                               window_size=10000,
+                                               conn_lifetime=120)

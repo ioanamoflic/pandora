@@ -1,12 +1,13 @@
 import time
 import pyLIQTR
+# from memory_profiler import profile
 
 # ignore monkey-patching for now
-# from pyLIQTR.BlockEncodings.PauliStringLCU import PauliStringLCU
-# from pyLIQTR.qubitization.qubitized_gates import QubitizedRotation
+from pyLIQTR.BlockEncodings.PauliStringLCU import PauliStringLCU
+from pyLIQTR.qubitization.qubitized_gates import QubitizedRotation
 
-# import monkey_patching.lazy_load as monkey_patching
-#
+import monkey_patching.lazy_load as monkey_patching
+
 # pyLIQTR.qubitization.qubitized_gates.QubitizedRotation = \
 #     lambda *args, **kwargs: monkey_patching.LazyProxy(QubitizedRotation, None, *args, **kwargs)
 # pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU = \
@@ -33,8 +34,7 @@ def parallel_decompose_and_insert(N: int,
     proc_conn = get_connection(config_file_path)
     start_time = time.time()
 
-    # each process will generate its own copy of the pyLIQTR circuit. This might be a bit inefficient as they
-    # take some memory but there's no other obvious way to do it
+    # each process will generate its own copy of the pyLIQTR circuit
     print(f"Hello, I am process {proc_id} and I am creating my own FH circuit.")
 
     proc_circuit = make_fh_circuit(N=N, p_algo=0.9999999904, times=0.01)
@@ -73,11 +73,13 @@ def parallel_decompose_and_insert(N: int,
     print(f"Hello, I am process {proc_id} finished in {time.time() - start_time}")
 
 
+# @profile
 def parallel_decompose_multi_and_insert(N: int,
                                         proc_id: int,
                                         nprocs: int,
                                         config_file_path: str = None,
-                                        window_size: int = 1000):
+                                        window_size: int = 1000,
+                                        conn_lifetime: int = 120):
     """
     Embarrassingly parallel version of the generator decomposition.
     This is now only working for Fermi-Hubbard circuits.
@@ -87,8 +89,9 @@ def parallel_decompose_multi_and_insert(N: int,
     proc_conn = get_connection(config_file_path)
     start_time = time.time()
 
-    # each process will generate its own copy of the pyLIQTR circuit. This might be a bit inefficient as they
-    # take some memory but there's no other obvious way to do it
+    proc_conn_start = time.time()
+
+    # each process will generate its own copy of the pyLIQTR circuit
     print(f"Hello, I am process {proc_id} and I am creating my own FH circuit.")
 
     proc_circuit = make_fh_circuit(N=N, p_algo=0.9999999904, times=0.01)
@@ -105,7 +108,15 @@ def parallel_decompose_multi_and_insert(N: int,
 
     per_process_gate_list = []
     for i, high_level_op in enumerate(high_level_op_list):
+
         if proc_start <= i < proc_end:
+
+            # avoid keeping the connections alive for too long
+            if time.time() - proc_conn_start >= conn_lifetime:
+                proc_conn.close()
+                proc_conn = get_connection(config_file_path)
+                proc_conn_start = time.time()
+
             process_batches = generator_get_pandora_compatible_batch_via_pyliqtr(circuit=high_level_op,
                                                                                  window_size=window_size)
             for batch, _ in process_batches:

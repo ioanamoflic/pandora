@@ -188,23 +188,25 @@ class Pandora:
                                        nprocs: int,
                                        N: int,
                                        config_file_path: str = None,
-                                       window_size=1000) -> None:
+                                       window_size=1000,
+                                       conn_lifetime=120) -> None:
         """
         This method tries to build an arbitrary pyLIQTR circuit into Pandora. Note that the pyLIQTR decomposition
         might fail due to missing decompositions.
 
-        This is a parallel version of the building method, meaning that the decomposition of the circuit is performed
-        in parallel. This implies that the pyLIQTR decomposition is performed only two levels, and then bloqs such as
-        QubitizedRotation or PauliStringLCU ae decomposed in parallel. The circuit is divided into nprocs parts, and
-        each process deals with its targeted region of the circuit.
-
-        Only for the Fermi-Hubbard circuits for now.
+        This is a parallel version of the building method. This implies that the pyLIQTR decomposition is performed
+        only two levels deep by each of the nprocs processes, and then bloqs such as QubitizedRotation or PauliStringLCU
+        are decomposed in parallel. The circuit is divided into nprocs parts, and each process deals with its targeted
+        region of the circuit.
 
         Args:
-            window_size: size of decomposition window
             nprocs: the number of parallel workers
-            N: N parameter of the Feri-Hubbard circuit instance
+            N: N parameter of the Fermi-Hubbard circuit instance
             config_file_path: config file name. If None, will use defaults from PandoraConfig.
+            window_size: size of decomposition window
+            conn_lifetime: lifetime (in seconds) of a database connection. This is needed as long-running connections
+            in postgres cache a lot of stuff and tend to bloat the memory over time. Once lifetime is exceeded, each
+            process closes its connection and creates a new one.
         """
         self.build_pandora()
         print("Decomposing circuit for pandora...")
@@ -216,7 +218,8 @@ class Pandora:
                                                                           i,
                                                                           nprocs,
                                                                           config_file_path,
-                                                                          window_size))
+                                                                          window_size,
+                                                                          conn_lifetime))
             process_list.append(p)
 
         for i in range(nprocs):
