@@ -5,17 +5,19 @@ from itertools import cycle
 from multiprocessing import Process
 from typing import Any, Iterator
 
+import psycopg2
+
 from pandora.cirq_to_pandora_util import *
 from pandora.gate_translator import PANDORA_TO_READABLE, GLOBAL_IN_ID, GLOBAL_OUT_ID
 
 
-def get_connection(config_file_path=None):
+def get_connection(autocommit=True, config_file_path=None):
     from pandora import Pandora, PandoraConfig
     pandora_config = PandoraConfig()
     if config_file_path is not None:
         pandora_config.update_from_file(path=config_file_path)
     p = Pandora(pandora_config=pandora_config)
-    return p.get_connection()
+    return p.get_connection(autocommit=autocommit)
 
 
 def stop_all_lurking_procedures(connection) -> None:
@@ -268,34 +270,42 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
         reset_database_id(connection, table_name=table_name)
 
 
-def insert_single_batch(connection, batch: list[PandoraGate],
-                        table_name: str = 'linked_circuit'):
+def insert_single_batch(connection,
+                        batch: list[PandoraGate],
+                        table_name: str = 'linked_circuit',
+                        close_conn=False):
     """
     Insert a single batch of entries into the database.
     """
     cursor = connection.cursor()
-    if table_name == 'linked_circuit_test':
-        args = ','.join(
-            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                           tup.to_tuple())
-            .decode('utf-8') for tup in batch)
-        sql_statement = \
-            ("INSERT INTO linked_circuit_test(id, "
-             "prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, "
-             "next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key, qubit_name) VALUES" + args)
-        cursor.execute(sql_statement)
-        connection.commit()
-    else:
-        args = ','.join(
-            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple())
-            .decode('utf-8') for tup in batch)
-        sql_statement = \
-            (f"INSERT INTO {table_name}(id, "
-             f"prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
-             "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
-        cursor.execute(sql_statement)
-        connection.commit()
-    # execute the sql statement
+    try:
+        if table_name == 'linked_circuit_test':
+            args = ','.join(
+                cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                               tup.to_tuple())
+                .decode('utf-8') for tup in batch)
+            sql_statement = \
+                ("INSERT INTO linked_circuit_test(id, "
+                 "prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, "
+                 "next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key, qubit_name) VALUES" + args)
+            cursor.execute(sql_statement)
+            connection.commit()
+        else:
+            args = ','.join(
+                cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple())
+                .decode('utf-8') for tup in batch)
+            sql_statement = \
+                (f"INSERT INTO {table_name}(id, "
+                 f"prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
+                 "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
+            cursor.execute(sql_statement)
+            connection.commit()
+    except psycopg2.Error as err:
+        print("Error at bulk insertion: ", err)
+    finally:
+        cursor.close()
+        if close_conn:
+            connection.close()
 
 
 def remove_io_gates_from_circuit(circuit: cirq.Circuit) -> cirq.Circuit:

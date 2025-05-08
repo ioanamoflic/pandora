@@ -88,7 +88,7 @@ def parallel_decompose_multi_and_insert(N: int,
     """
 
     # get a connection for each process
-    proc_conn = get_connection(config_file_path)
+    proc_conn = get_connection(autocommit=False, config_file_path=config_file_path)
     start_time = time.time()
 
     proc_conn_start = time.time()
@@ -110,15 +110,7 @@ def parallel_decompose_multi_and_insert(N: int,
 
     per_process_gate_list = []
     for i, high_level_op in enumerate(high_level_op_list):
-
         if proc_start <= i < proc_end:
-
-            # avoid keeping the connections alive for too long
-            if time.time() - proc_conn_start >= conn_lifetime:
-                proc_conn.close()
-                proc_conn = get_connection(config_file_path)
-                proc_conn_start = time.time()
-
             process_batches = generator_get_pandora_compatible_batch_via_pyliqtr(circuit=high_level_op,
                                                                                  window_size=window_size)
             for batch, _ in process_batches:
@@ -127,16 +119,26 @@ def parallel_decompose_multi_and_insert(N: int,
                 per_process_gate_list.extend(pandora_gates)
 
             if len(per_process_gate_list) >= window_size:
+                # avoid keeping the connections alive for too long
+                close_conn = False
+                if time.time() - proc_conn_start >= conn_lifetime:
+                    close_conn = True
                 insert_single_batch(connection=proc_conn,
                                     batch=per_process_gate_list,
-                                    table_name=table_name)
+                                    table_name=table_name,
+                                    close_conn=close_conn)
+                if close_conn:
+                    proc_conn = get_connection(autocommit=False, config_file_path=config_file_path)
+                    proc_conn_start = time.time()
+
                 per_process_gate_list = []
 
     # insert last batch
     if len(per_process_gate_list) > 0:
         insert_single_batch(connection=proc_conn,
                             batch=per_process_gate_list,
-                            table_name=table_name)
+                            table_name=table_name,
+                            close_conn=False)
 
     print(f"Hello, I am process {proc_id} finished in {time.time() - start_time}")
     proc_conn.close()

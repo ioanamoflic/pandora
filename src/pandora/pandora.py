@@ -68,7 +68,7 @@ class Pandora:
         except psycopg2.errors.DuplicateDatabase as e:
             print(e)
 
-    def get_connection(self):
+    def get_connection(self, autocommit=True):
         """
         Creates and returns a database connection object.
         """
@@ -79,7 +79,7 @@ class Pandora:
             port=self.pandora_config.port,
             password=self.pandora_config.password)
 
-        connection.set_session(autocommit=True)
+        connection.set_session(autocommit=autocommit)
 
         if connection:
             print("Connection to the PostgreSQL established successfully.")
