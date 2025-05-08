@@ -114,12 +114,12 @@ def parallel_decompose_multi_and_insert(N: int,
                 per_process_gate_list.extend(pandora_gates)
 
             if len(per_process_gate_list) >= window_size:
-                per_process_gate_list = []
                 proc_conn = get_connection(autocommit=False, config_file_path=config_file_path)
                 insert_single_batch(connection=proc_conn,
                                     batch=per_process_gate_list,
                                     table_name=table_name,
                                     close_conn=True)
+                per_process_gate_list = []
 
     # insert last batch
     if len(per_process_gate_list) > 0:
