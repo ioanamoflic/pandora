@@ -90,7 +90,7 @@ class Pandora:
 
     def build_pandora(self):
         """
-        Creates the Pandora database table from scratch and updates all stored procedures.
+        Creates the Pandora database tables from scratch and updates all stored procedures.
         """
         drop_and_replace_tables(self.connection,
                                 clean=True,
@@ -214,12 +214,19 @@ class Pandora:
         start_decomp = time.time()
         process_list = []
         for i in range(nprocs):
+
+            table_name = f"batched_proc_{i}"
+
+            self.build_dedicated_table(table_name=table_name)
+
             p = Process(target=parallel_decompose_multi_and_insert, args=(N,
                                                                           i,
                                                                           nprocs,
+                                                                          table_name,
                                                                           config_file_path,
                                                                           window_size,
-                                                                          conn_lifetime))
+                                                                          conn_lifetime
+                                                                          ))
             process_list.append(p)
 
         for i in range(nprocs):

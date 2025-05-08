@@ -25,7 +25,8 @@ def parallel_decompose_and_insert(N: int,
                                   proc_id: int,
                                   nprocs: int,
                                   config_file_path: str = None,
-                                  window_size: int = 1000):
+                                  window_size: int = 1000,
+                                  conn_lifetime: int = 120):
     """
      Embarrassingly parallel version of the generator decomposition.
      This is now only working for Fermi-Hubbard circuits.
@@ -77,6 +78,7 @@ def parallel_decompose_and_insert(N: int,
 def parallel_decompose_multi_and_insert(N: int,
                                         proc_id: int,
                                         nprocs: int,
+                                        table_name: str,
                                         config_file_path: str = None,
                                         window_size: int = 1000,
                                         conn_lifetime: int = 120):
@@ -127,13 +129,14 @@ def parallel_decompose_multi_and_insert(N: int,
             if len(per_process_gate_list) >= window_size:
                 insert_single_batch(connection=proc_conn,
                                     batch=per_process_gate_list,
-                                    table_name='batched_circuit')
+                                    table_name=table_name)
                 per_process_gate_list = []
 
     # insert last batch
     if len(per_process_gate_list) > 0:
         insert_single_batch(connection=proc_conn,
                             batch=per_process_gate_list,
-                            table_name='batched_circuit')
+                            table_name=table_name)
 
     print(f"Hello, I am process {proc_id} finished in {time.time() - start_time}")
+    proc_conn.close()

@@ -107,12 +107,17 @@ def drop_and_replace_tables(connection,
 
     """
     tables = list(tables)
+
+    # delete all possible process-dedicated tables
+    for proc_id in range(192):
+        tables.append(f"batched_proc_{proc_id}")
+
     cursor = connection.cursor()
 
     if clean:
         for table in tables:
             if verbose:
-                print(f"Dropping {table}")
+                print(f"Dropping (if exists) {table}")
             sql_statement = f"drop table if exists {table} cascade"
             cursor.execute(sql_statement)
             connection.commit()
@@ -132,26 +137,29 @@ def create_named_circuit_table(connection, table_name: str) -> None:
     Args:
         connection: Postgres connection object
         table_name: name of the newly created table
-
     Returns:
         None
-
     """
     cursor = connection.cursor()
-    sql_statement = f"create table IF NOT EXISTS public.{table_name}(id bigserial primary key, prev_q1 bigint, \
-            prev_q2 bigint,\
-            prev_q3 bigint, \
-            type    smallint,\
-            param   real,\
-            global_shift real,\
-            switch  boolean,\
-            next_q1 bigint,\
-            next_q2 bigint,\
-            next_q3 bigint,\
-            visited boolean,\
-            label   char,\
-            cl_ctrl boolean,\
-            meas_key smallint);"
+    sql_statement = \
+        f"""create table IF NOT EXISTS public.{table_name}(
+        auto_id      bigserial primary key,
+        id int,
+        prev_q1 int,
+        prev_q2 int,
+        prev_q3 int,
+        type    smallint,
+        param   real,
+        global_shift real,
+        switch  boolean,
+        next_q1 int,
+        next_q2 int,
+        next_q3 int,
+        visited boolean,
+        label   serial,
+        cl_ctrl boolean,
+        meas_key smallint
+    );"""
 
     cursor.execute(sql_statement)
     connection.commit()
@@ -266,17 +274,7 @@ def insert_single_batch(connection, batch: list[PandoraGate],
     Insert a single batch of entries into the database.
     """
     cursor = connection.cursor()
-    if table_name in ['batched_circuit', 'linked_circuit']:
-        args = ','.join(
-            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple())
-            .decode('utf-8') for tup in batch)
-        sql_statement = \
-            (f"INSERT INTO {table_name}(id, "
-             f"prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
-             "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
-        cursor.execute(sql_statement)
-        connection.commit()
-    elif table_name == 'linked_circuit_test':
+    if table_name == 'linked_circuit_test':
         args = ','.join(
             cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                            tup.to_tuple())
@@ -285,6 +283,16 @@ def insert_single_batch(connection, batch: list[PandoraGate],
             ("INSERT INTO linked_circuit_test(id, "
              "prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, "
              "next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key, qubit_name) VALUES" + args)
+        cursor.execute(sql_statement)
+        connection.commit()
+    else:
+        args = ','.join(
+            cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple())
+            .decode('utf-8') for tup in batch)
+        sql_statement = \
+            (f"INSERT INTO {table_name}(id, "
+             f"prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
+             "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
         cursor.execute(sql_statement)
         connection.commit()
     # execute the sql statement
