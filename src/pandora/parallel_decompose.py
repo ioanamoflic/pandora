@@ -86,12 +86,7 @@ def parallel_decompose_multi_and_insert(N: int,
     Embarrassingly parallel version of the generator decomposition.
     This is now only working for Fermi-Hubbard circuits.
     """
-
-    # get a connection for each process
-    proc_conn = get_connection(autocommit=False, config_file_path=config_file_path)
     start_time = time.time()
-
-    proc_conn_start = time.time()
 
     # each process will generate its own copy of the pyLIQTR circuit
     print(f"Hello, I am process {proc_id} and I am creating my own FH circuit.")
@@ -119,26 +114,20 @@ def parallel_decompose_multi_and_insert(N: int,
                 per_process_gate_list.extend(pandora_gates)
 
             if len(per_process_gate_list) >= window_size:
-                # avoid keeping the connections alive for too long
-                close_conn = False
-                if time.time() - proc_conn_start >= conn_lifetime:
-                    close_conn = True
+                per_process_gate_list = []
+                proc_conn = get_connection(autocommit=False, config_file_path=config_file_path)
                 insert_single_batch(connection=proc_conn,
                                     batch=per_process_gate_list,
                                     table_name=table_name,
-                                    close_conn=close_conn)
-                if close_conn:
-                    proc_conn = get_connection(autocommit=False, config_file_path=config_file_path)
-                    proc_conn_start = time.time()
-
-                per_process_gate_list = []
+                                    close_conn=True)
 
     # insert last batch
     if len(per_process_gate_list) > 0:
+        proc_conn = get_connection(autocommit=False, config_file_path=config_file_path)
         insert_single_batch(connection=proc_conn,
                             batch=per_process_gate_list,
                             table_name=table_name,
-                            close_conn=False)
+                            close_conn=True)
 
     print(f"Hello, I am process {proc_id} finished in {time.time() - start_time}")
-    proc_conn.close()
+    # proc_conn.close()
