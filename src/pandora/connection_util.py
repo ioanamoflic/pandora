@@ -145,7 +145,6 @@ def create_named_circuit_table(connection, table_name: str) -> None:
     cursor = connection.cursor()
     sql_statement = \
         f"""create table IF NOT EXISTS public.{table_name}(
-        auto_id      bigserial primary key,
         id int,
         prev_q1 int,
         prev_q2 int,

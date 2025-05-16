@@ -19,7 +19,7 @@ create table IF NOT EXISTS public.linked_circuit
 
 create table IF NOT EXISTS public.batched_circuit
 (
-    auto_id      bigserial primary key,
+--     auto_id      bigserial primary key,
     id int,
     prev_q1 int,
     prev_q2 int,
