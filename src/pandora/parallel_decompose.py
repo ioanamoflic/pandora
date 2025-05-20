@@ -1,24 +1,23 @@
 import time
-import pyLIQTR
+
+# import pyLIQTR
 # from memory_profiler import profile
 
-# ignore monkey-patching for now
-from pyLIQTR.BlockEncodings.PauliStringLCU import PauliStringLCU
-from pyLIQTR.qubitization.qubitized_gates import QubitizedRotation
-
-import monkey_patching.lazy_load as monkey_patching
-
+# from pyLIQTR.BlockEncodings import PauliStringLCU
+# from pyLIQTR.qubitization.qubitized_gates import QubitizedRotation
+#
+# import monkey_patching.lazy_load as monkey_patching
+#
 # pyLIQTR.qubitization.qubitized_gates.QubitizedRotation = \
 #     lambda *args, **kwargs: monkey_patching.LazyProxy(QubitizedRotation, None, *args, **kwargs)
 # pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU = \
 #     lambda *args, **kwargs: monkey_patching.LazyProxy(PauliStringLCU, None, *args, **kwargs)
 
-from pyLIQTR.utils.circuit_decomposition import generator_decompose, circuit_decompose_multi
-
+from pandora.pyLIQTR.pyliqtr_circuit_decomposition import generator_decompose, circuit_decompose_multi
 from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list
 from pandora.connection_util import get_connection, insert_single_batch
-from pandora.pyliqtr_to_pandora_util import make_fh_circuit
-from pandora.qualtran_to_pandora_util import generator_get_pandora_compatible_batch_via_pyliqtr
+# from pandora.pyliqtr_to_pandora_util import make_fh_circuit
+from pandora.qualtran_to_pandora_util import generator_get_pandora_compatible_batch_via_pyliqtr, get_RSA
 
 
 def parallel_decompose_and_insert(N: int,
@@ -91,8 +90,8 @@ def parallel_decompose_multi_and_insert(N: int,
     # each process will generate its own copy of the pyLIQTR circuit
     print(f"Hello, I am process {proc_id} and I am creating my own FH circuit.")
 
-    proc_circuit = make_fh_circuit(N=N, p_algo=0.9999999904, times=0.01)
-
+    # proc_circuit = make_fh_circuit(N=N, p_algo=0.9999999904, times=0.01)
+    proc_circuit = get_RSA()
     circuit_decomposed_shallow = circuit_decompose_multi(proc_circuit, N=2)
 
     high_level_op_list = [op for mom in circuit_decomposed_shallow for op in mom]

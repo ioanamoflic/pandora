@@ -7,7 +7,7 @@ import numpy as np
 
 from qualtran import Bloq, QUInt
 from qualtran.bloqs.chemistry.hubbard_model.qubitization import PrepareHubbard
-from qualtran.bloqs.mod_arithmetic import ModAddK
+from qualtran.bloqs.mod_arithmetic import ModAddK, CModAddK
 from qualtran.bloqs.arithmetic.addition import Add
 from qualtran.bloqs.data_loading import QROM
 from qualtran.bloqs.basic_gates import CNOT, TwoBitCSwap, XGate
@@ -15,12 +15,16 @@ from qualtran.cirq_interop import BloqAsCirqGate
 from qualtran._infra.gate_with_registers import get_named_qubits
 from qualtran.bloqs.qubitization import QubitizationWalkOperator
 from qualtran.bloqs.qubitization.qubitization_walk_operator_test import get_walk_operator_for_1d_ising_model
+from qualtran.bloqs.cryptography.rsa import RSAPhaseEstimate
 
-from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
-from pyLIQTR.circuits.operators.AddMod import Add
+# from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
+from pandora.pyLIQTR.pyliqtr_addmod import AddMod as pyLAM
 
-from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
-from pyLIQTR.utils.circuit_decomposition import generator_decompose
+# from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
+from pandora.pyLIQTR.pyliqtr_cirq_transforms import _perop_clifford_plus_t_direct_transform
+
+# from pyLIQTR.utils.circuit_decomposition import generator_decompose
+from pandora.pyLIQTR.pyliqtr_circuit_decomposition import generator_decompose
 
 from pandora.cirq_to_pandora_util import windowed_cirq_to_pandora_from_op_list
 from pandora.exceptions import WindowSizeError
@@ -114,6 +118,7 @@ def decompose_fredkin(op: cirq.Operation):
 def decompose_qualtran_bloq_gate(bloq: Bloq):
     cirq_quregs = get_named_qubits(bloq.signature.lefts())
     circuit = bloq.as_composite_bloq().to_cirq_circuit(cirq_quregs=cirq_quregs)
+
     decomp_circuit = cirq.Circuit(cirq.decompose(next(circuit.all_operations())))
 
     fully_decomposed_ops = []
@@ -178,8 +183,22 @@ def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit,
             print(f'Encountered GlobalPhaseGate with qubits = {dop.qubits}')
             pass
         elif isinstance(dop.gate, BloqAsCirqGate):
-            atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq)
-            window_ops.extend(atomic_ops)
+            # use pyLAM as a placeholder for now
+            dop = dop.without_classical_controls()
+            if isinstance(dop.gate.bloq, CModAddK):
+                top = pyLAM(bitsize=dop.gate.bloq.bitsize + 1,
+                            add_val=dop.gate.bloq.k,
+                            mod=dop.gate.bloq.mod,
+                            cvs=()).on(*dop.qubits)
+                for d_top in generator_decompose(top):
+                    atomic_ops = _perop_clifford_plus_t_direct_transform(d_top,
+                                                                         use_rotation_decomp_gates=KEEP_RZ,
+                                                                         use_random_decomp=True,
+                                                                         warn_if_not_decomposed=True)
+                    window_ops.extend(atomic_ops)
+            else:
+                atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq)
+                window_ops.extend(atomic_ops)
         elif isinstance(dop.gate, ModAddK):
             top = pyLAM(bitsize=dop.gate.bitsize,
                         add_val=dop.gate.add_val,
@@ -395,3 +414,9 @@ def get_qrom_as_cirq_circuit(data) -> cirq.Circuit:
     bloq = QROM.build_from_data(data)
     qrom_circuit = get_cirq_circuit_for_bloq(bloq)
     return qrom_circuit
+
+
+def get_RSA():
+    rsa_pe_small = RSAPhaseEstimate.make_for_shor(big_n=13 * 17, g=9)
+    circuit = rsa_pe_small.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(rsa_pe_small.signature.lefts()))
+    return circuit
