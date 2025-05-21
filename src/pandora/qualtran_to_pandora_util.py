@@ -17,14 +17,11 @@ from qualtran.bloqs.qubitization import QubitizationWalkOperator
 from qualtran.bloqs.qubitization.qubitization_walk_operator_test import get_walk_operator_for_1d_ising_model
 from qualtran.bloqs.cryptography.rsa import RSAPhaseEstimate
 
-# from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
-from pandora.pyLIQTR.pyliqtr_addmod import AddMod as pyLAM
+from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
 
-# from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
-from pandora.pyLIQTR.pyliqtr_cirq_transforms import _perop_clifford_plus_t_direct_transform
+from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
 
-# from pyLIQTR.utils.circuit_decomposition import generator_decompose
-from pandora.pyLIQTR.pyliqtr_circuit_decomposition import generator_decompose
+from pyLIQTR.utils.circuit_decomposition import generator_decompose
 
 from pandora.cirq_to_pandora_util import windowed_cirq_to_pandora_from_op_list
 from pandora.exceptions import WindowSizeError

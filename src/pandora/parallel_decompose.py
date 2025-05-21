@@ -13,7 +13,8 @@ import time
 # pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU = \
 #     lambda *args, **kwargs: monkey_patching.LazyProxy(PauliStringLCU, None, *args, **kwargs)
 
-from pandora.pyLIQTR.pyliqtr_circuit_decomposition import generator_decompose, circuit_decompose_multi
+from pyLIQTR.utils.circuit_decomposition import generator_decompose, circuit_decompose_multi
+
 from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list
 from pandora.connection_util import get_connection, insert_single_batch
 # from pandora.pyliqtr_to_pandora_util import make_fh_circuit
