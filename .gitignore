@@ -6,3 +6,4 @@ trace*
 circuitsharing/
 venv
 */__pycache__/*
+/src/pandora/pyLIQTR/
