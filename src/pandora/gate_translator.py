@@ -88,7 +88,8 @@ MAX_QUBITS_PER_GATE = 3
 GLOBAL_IN_ID = -1
 GLOBAL_OUT_ID = -2
 
-KEEP_RZ = True
+KEEP_RZ = False
+RANDOM_DECOMP = True
 
 PANDORA_TO_CIRQ = {
     PandoraGateTranslator.Rx.value: cirq.ops.common_gates.Rx,

@@ -21,7 +21,7 @@ class PandoraConfig:
     def __init__(self):
         pass
 
-    def update_from_file(self, path):
+    def update_from_file(self, path, verbose=False):
         import json
         with open(path, "r") as file:
             data = json.load(file)
@@ -33,7 +33,8 @@ class PandoraConfig:
             self.password = data["password"]
         CRED = '\033[91m'
         CEND = '\033[0m'
-        print(f"{CRED}Loaded Pandora config from file: {path}", self.__dict__, f"{CEND}")
+        if verbose:
+            print(f"{CRED}Loaded Pandora config from file: {path}", self.__dict__, f"{CEND}")
 
 
 class Pandora:
@@ -68,7 +69,7 @@ class Pandora:
         except psycopg2.errors.DuplicateDatabase as e:
             print(e)
 
-    def get_connection(self, autocommit=True):
+    def get_connection(self, autocommit=True, verbose=False):
         """
         Creates and returns a database connection object.
         """
@@ -81,10 +82,11 @@ class Pandora:
 
         connection.set_session(autocommit=autocommit)
 
-        if connection:
-            print("Connection to the PostgreSQL established successfully.")
-        else:
-            print("Connection to the PostgreSQL encountered and error.")
+        if verbose:
+            if connection:
+                print("Connection to the PostgreSQL established successfully.")
+            else:
+                print("Connection to the PostgreSQL encountered and error.")
 
         return connection
 

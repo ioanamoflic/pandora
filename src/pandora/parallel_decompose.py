@@ -1,13 +1,9 @@
 import time
-import pyLIQTR
-# from memory_profiler import profile
 
 # ignore monkey-patching for now
-from pyLIQTR.BlockEncodings.PauliStringLCU import PauliStringLCU
-from pyLIQTR.qubitization.qubitized_gates import QubitizedRotation
-
-import monkey_patching.lazy_load as monkey_patching
-
+# from pyLIQTR.BlockEncodings.PauliStringLCU import PauliStringLCU
+# from pyLIQTR.qubitization.qubitized_gates import QubitizedRotation
+# import monkey_patching.lazy_load as monkey_patching
 # pyLIQTR.qubitization.qubitized_gates.QubitizedRotation = \
 #     lambda *args, **kwargs: monkey_patching.LazyProxy(QubitizedRotation, None, *args, **kwargs)
 # pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU = \
@@ -74,7 +70,6 @@ def parallel_decompose_and_insert(N: int,
     print(f"Hello, I am process {proc_id} finished in {time.time() - start_time}")
 
 
-# @profile
 def parallel_decompose_multi_and_insert(N: int,
                                         proc_id: int,
                                         nprocs: int,
@@ -119,7 +114,7 @@ def parallel_decompose_multi_and_insert(N: int,
                                         batch=per_process_gate_list,
                                         table_name=table_name,
                                         close_conn=True)
-                    per_process_gate_list = []
+                    per_process_gate_list.clear()
 
     # insert last batch
     if len(per_process_gate_list) > 0:
@@ -130,4 +125,5 @@ def parallel_decompose_multi_and_insert(N: int,
                             close_conn=True)
 
     print(f"Hello, I am process {proc_id} finished in {time.time() - start_time}")
-    # proc_conn.close()
+
+

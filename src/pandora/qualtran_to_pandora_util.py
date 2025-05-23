@@ -24,7 +24,7 @@ from pyLIQTR.utils.circuit_decomposition import generator_decompose
 
 from pandora.cirq_to_pandora_util import windowed_cirq_to_pandora_from_op_list
 from pandora.exceptions import WindowSizeError
-from pandora.gate_translator import In, Out, SINGLE_QUBIT_GATES, TWO_QUBIT_GATES, KEEP_RZ
+from pandora.gate_translator import In, Out, SINGLE_QUBIT_GATES, TWO_QUBIT_GATES, KEEP_RZ, RANDOM_DECOMP
 from pandora.gates import PandoraGate
 
 sys.setrecursionlimit(10000000)
@@ -188,13 +188,13 @@ def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit,
             for d_top in generator_decompose(top):
                 atomic_ops = _perop_clifford_plus_t_direct_transform(d_top,
                                                                      use_rotation_decomp_gates=KEEP_RZ,
-                                                                     use_random_decomp=True,
+                                                                     use_random_decomp=RANDOM_DECOMP,
                                                                      warn_if_not_decomposed=True)
                 window_ops.extend(atomic_ops)
         else:
             atomic_ops = _perop_clifford_plus_t_direct_transform(dop,
                                                                  use_rotation_decomp_gates=KEEP_RZ,
-                                                                 use_random_decomp=True,
+                                                                 use_random_decomp=RANDOM_DECOMP,
                                                                  warn_if_not_decomposed=True)
             window_ops.extend(atomic_ops)
 
