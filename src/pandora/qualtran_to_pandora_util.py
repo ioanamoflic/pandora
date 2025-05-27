@@ -1,20 +1,15 @@
 import time
-from typing import Iterator, Tuple, List
+from typing import Iterator
 
 import cirq
 import sys
-import numpy as np
 
-from qualtran import Bloq, QUInt
-from qualtran.bloqs.chemistry.hubbard_model.qubitization import PrepareHubbard
+from qualtran import Bloq
 from qualtran.bloqs.mod_arithmetic import ModAddK, CModAddK
-from qualtran.bloqs.arithmetic.addition import Add
-from qualtran.bloqs.data_loading import QROM
-from qualtran.bloqs.basic_gates import CNOT, TwoBitCSwap, XGate
+from qualtran.bloqs.arithmetic.addition import Add, And
+from qualtran.bloqs.basic_gates import CNOT, TwoBitCSwap, XGate, CZ
 from qualtran.cirq_interop import BloqAsCirqGate
 from qualtran._infra.gate_with_registers import get_named_qubits
-from qualtran.bloqs.qubitization import QubitizationWalkOperator
-from qualtran.bloqs.qubitization.qubitization_walk_operator_test import get_walk_operator_for_1d_ising_model
 from qualtran.bloqs.cryptography.rsa import RSAPhaseEstimate
 
 from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
@@ -32,11 +27,16 @@ sys.setrecursionlimit(10000000)
 # Increase recursion limit from default since adder bloq has a recursive implementation.
 
 cirq_and_bloq_gate_set = cirq.Gateset(
-    cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel,
-    cirq.GlobalPhaseGate, cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
-    cirq.CZPowGate, cirq.CXPowGate, cirq.ZZPowGate, cirq.XXPowGate, cirq.CCXPowGate,
+    cirq.Rz, cirq.Rx, cirq.Ry,
+    cirq.MeasurementGate, cirq.ResetChannel,
+    cirq.GlobalPhaseGate,
+    cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
+    cirq.CZPowGate, cirq.CXPowGate,
+    cirq.ZZPowGate, cirq.XXPowGate,
+    cirq.CCXPowGate, cirq.CCZPowGate, cirq.TOFFOLI,
     cirq.X, cirq.Y, cirq.Z,
-    ModAddK,
+    And,
+    cirq.CSwapGate,
     BloqAsCirqGate
 )
 
@@ -44,6 +44,8 @@ pandora_ingestible_gate_set = cirq.Gateset(
     cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel,
     cirq.GlobalPhaseGate, cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
     cirq.CZPowGate, cirq.CXPowGate, cirq.ZZPowGate, cirq.XXPowGate, cirq.CCXPowGate,
+    And,
+    cirq.CSwapGate,
     cirq.X, cirq.Y, cirq.Z,
 )
 
@@ -115,7 +117,6 @@ def decompose_fredkin(op: cirq.Operation):
 def decompose_qualtran_bloq_gate(bloq: Bloq):
     cirq_quregs = get_named_qubits(bloq.signature.lefts())
     circuit = bloq.as_composite_bloq().to_cirq_circuit(cirq_quregs=cirq_quregs)
-
     decomp_circuit = cirq.Circuit(cirq.decompose(next(circuit.all_operations())))
 
     fully_decomposed_ops = []
@@ -127,7 +128,8 @@ def decompose_qualtran_bloq_gate(bloq: Bloq):
             elif isinstance(op.gate.bloq, XGate):
                 fully_decomposed_ops.append(cirq.X.on(op.qubits[0]))
             elif isinstance(op.gate.bloq, TwoBitCSwap):
-                fully_decomposed_ops = fully_decomposed_ops + decompose_fredkin(op)
+                ctrl, x, y = op.qubits
+                fully_decomposed_ops.append(cirq.CSWAP.on(ctrl, x, y))
         else:
             fully_decomposed_ops.append(op)
     return fully_decomposed_ops
@@ -180,22 +182,8 @@ def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit,
             print(f'Encountered GlobalPhaseGate with qubits = {dop.qubits}')
             pass
         elif isinstance(dop.gate, BloqAsCirqGate):
-            # use pyLAM as a placeholder for now
-            dop = dop.without_classical_controls()
-            if isinstance(dop.gate.bloq, CModAddK):
-                top = pyLAM(bitsize=dop.gate.bloq.bitsize + 1,
-                            add_val=dop.gate.bloq.k,
-                            mod=dop.gate.bloq.mod,
-                            cvs=()).on(*dop.qubits)
-                for d_top in generator_decompose(top):
-                    atomic_ops = _perop_clifford_plus_t_direct_transform(d_top,
-                                                                         use_rotation_decomp_gates=KEEP_RZ,
-                                                                         use_random_decomp=True,
-                                                                         warn_if_not_decomposed=True)
-                    window_ops.extend(atomic_ops)
-            else:
-                atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq)
-                window_ops.extend(atomic_ops)
+            atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq)
+            window_ops.extend(atomic_ops)
         elif isinstance(dop.gate, ModAddK):
             top = pyLAM(bitsize=dop.gate.bitsize,
                         add_val=dop.gate.add_val,
@@ -218,7 +206,36 @@ def generator_get_pandora_compatible_batch_via_pyliqtr(circuit: cirq.Circuit,
             window_ops = list(flatten(window_ops))
             assert_op_list_is_pandora_ingestible(window_ops)
             yield window_ops, time.time() - start_dop
-            window_ops = []
+            window_ops.clear()
+
+    start_last = time.time()
+    if len(window_ops) > 0:
+        window_ops = list(flatten(window_ops))
+        assert_op_list_is_pandora_ingestible(window_ops)
+        yield window_ops, time.time() - start_last
+
+
+def generator_get_RSA_compatible_batch(circuit: cirq.Circuit,
+                                       window_size: int) -> Iterator[list[cirq.Operation]]:
+    window_ops = []
+
+    for dop in generator_decompose(circuit, keep=keep):
+        start_dop = time.time()
+        if isinstance(dop.gate, BloqAsCirqGate):
+            try:
+                atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq)
+                window_ops.extend(atomic_ops)
+            except ValueError as e:
+                """There is no Cirq equivalent for <0|"""
+                print(e)
+        else:
+            window_ops.append(dop)
+
+        if len(window_ops) >= window_size:
+            window_ops = list(flatten(window_ops))
+            assert_op_list_is_pandora_ingestible(window_ops)
+            yield window_ops, time.time() - start_dop
+            window_ops.clear()
 
     start_last = time.time()
     if len(window_ops) > 0:
@@ -289,131 +306,18 @@ def windowed_cirq_to_pandora(circuit: cirq.Circuit | Bloq, window_size: int, is_
     yield list(pandora_out_gates.values()), time.time() - start_final
 
 
-def get_resource_state(m: int):
-    r"""Returns a state vector representing the resource state on m qubits from Eq.17 of Ref-1.
-
-    Returns a numpy array of size 2^{m} representing the state vector corresponding to the state
-    $$
-        \sqrt{\frac{2}{2^m + 1}} \sum_{n=0}^{2^{m}-1} \sin{\frac{\pi(n + 1)}{2^{m}+1}}\ket{n}
-    $$
-
-    Args:
-        m: Number of qubits to prepare the resource state on.
-
-    Ref:
-        1) [Encoding Electronic Spectra in Quantum Circuits with Linear T Complexity]
-            (https://arxiv.org/abs/1805.03662)
-            Eq. 17
-    """
-    den = 1 + 2 ** m
-    norm = np.sqrt(2 / den)
-    return norm * np.sin(np.pi * (1 + np.arange(2 ** m)) / den)
-
-
-def phase_estimation(walk: QubitizationWalkOperator, m: int) -> cirq.OP_TREE:
-    """Heisenberg limited phase estimation circuit for learning eigenphase of `walk`.
-
-    The method yields an OPTREE to construct Heisenberg limited phase estimation circuit
-    for learning eigenphases of the `walk` operator with `m` bits of accuracy. The
-    circuit is implemented as given in Fig.2 of Ref-1.
-
-    Args:
-        walk: Qubitization walk operator.
-        m: Number of bits of accuracy for phase estimation.
-
-    Ref:
-        1) [Encoding Electronic Spectra in Quantum Circuits with Linear T Complexity]
-            (https://arxiv.org/abs/1805.03662)
-            Fig. 2
-    """
-    reflect = walk.reflect
-    walk_regs = get_named_qubits(walk.signature)
-    reflect_regs = {reg.name: walk_regs[reg.name] for reg in reflect.signature}
-
-    reflect_controlled = reflect.controlled(control_values=[0])
-    walk_controlled = walk.controlled(control_values=[1])
-
-    m_qubits = [cirq.q(f'm_{i}') for i in range(m)]
-    state_prep = cirq.StatePreparationChannel(get_resource_state(m), name='chi_m')
-
-    # yield state_prep.on(*m_qubits)
-    yield walk_controlled.on_registers(**walk_regs, control=m_qubits[0])
-    for i in range(1, m):
-        yield reflect_controlled.on_registers(control=m_qubits[i], **reflect_regs)
-        walk = walk ** 2
-        yield walk.on_registers(**walk_regs)
-        yield reflect_controlled.on_registers(control=m_qubits[i], **reflect_regs)
-
-    yield cirq.qft(*m_qubits, inverse=True)
-
-
-def get_adder(n_bits, window_size=100, is_test=False) -> Iterator[tuple[list[PandoraGate], float]]:
-    """
-    Returns a decomposed Qualtran Adder into a Pandora compatible gate format.
-    """
-    bloq = Add(QUInt(n_bits))
-    circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts())).unfreeze()
-    return windowed_cirq_to_pandora(circuit=circuit, window_size=window_size, is_test=is_test)
-
-
-def get_qrom(data, window_size=100, is_test=False) -> Iterator[tuple[list[PandoraGate], float]]:
-    """
-    Returns a decomposed Qualtran QROM into a Pandora compatible gate format.
-    """
-    bloq = QROM.build_from_data(data)
-    circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts())).unfreeze()
-    return windowed_cirq_to_pandora(circuit=circuit, window_size=window_size, is_test=is_test)
-
-
-def get_qpe_of_1d_ising_model(num_sites=1, eps=1e-5, m_bits=1) -> Iterator[tuple[list[PandoraGate], float]]:
-    """
-    Returns a decomposed Qualtran QPE of a 1d ising model into a Pandora compatible gate format.
-
-    Implementation from https://github.com/quantumlib/Qualtran/blob/main/qualtran/bloqs/phase_estimation/phase_estimation_of_quantum_walk.ipynb
-    """
-    walk_op = get_walk_operator_for_1d_ising_model(num_sites, eps)
-    circuit = cirq.Circuit(phase_estimation(walk_op, m=m_bits))
-    return windowed_cirq_to_pandora(circuit=circuit, window_size=1000000)
-
-
-def get_2d_hubbard_model(dim: tuple[int, int] = (2, 2), t=1.0, u=4) -> Iterator[tuple[list[PandoraGate], float]]:
-    """
-    PREPARE bloq taken from https://github.com/quantumlib/Qualtran/blob/main/qualtran/bloqs/chemistry/hubbard_model/qubitization/hubbard_model.ipynb
-    Args:
-        dim: the number of sites along the x/y-axis.
-        t: coefficient for hopping terms in the Hubbard model hamiltonian.
-        u: coefficient for single body Z term and two-body ZZ terms in the Hubbard model hamiltonian.
-
-    Returns:
-        A decomposed PREPARE operation optimized for the 2D Hubbard model into a Pandora compatible gate format.
-
-    """
-    x_dim, y_dim = dim
-    bloq = PrepareHubbard(x_dim, y_dim, t=t, u=u)
-    circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts())).unfreeze()
-    return windowed_cirq_to_pandora(circuit=circuit, window_size=1000000)
-
-
-def get_adder_as_cirq_circuit(n_bits) -> cirq.Circuit:
-    """
-    Used of testing.
-    """
-    bloq = Add(QUInt(n_bits))
-    clifford_t_circuit = get_cirq_circuit_for_bloq(bloq)
-    assert_circuit_is_pandora_ingestible(clifford_t_circuit)
-    return clifford_t_circuit
-
-
-def get_qrom_as_cirq_circuit(data) -> cirq.Circuit:
-    """
-    Used of testing.
-    """
-    bloq = QROM.build_from_data(data)
-    qrom_circuit = get_cirq_circuit_for_bloq(bloq)
-    return qrom_circuit
-
-
 def get_RSA():
-    rsa_pe_small = RSAPhaseEstimate.make_for_shor(big_n=13 * 17, g=9)
-    circuit = rsa_pe_small.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(rsa_pe_small.signature.lefts()))
+    n_100 = int("1522605027922533360535618378132637429718068114961380688657908494580122963258952897654000350692006139")
+    # n_2048 = int("2519590847565789349402718324004839857142928212620403202777713783604366202070"
+    #              "7595556264018525880784406918290641249515082189298559149176184502808489120072"
+    #              "8449926873928072877767359714183472702618963750149718246911650776133798590957"
+    #              "0009733045974880842840179742910064245869181719511874612151517265463228221686"
+    #              "9987549182422433637259085141865462043576798423387184774447920739934236584823"
+    #              "8242811981638150106748104516603773060562016196762561338441436038339044149526"
+    #              "3443219011465754445417842402092461651572335077870774981712577246796292638635"
+    #              "6373289912154831438167899885040445364023527381951378636564391212010397122822"
+    #              "120720357")
+    rsa_pe_small = RSAPhaseEstimate.make_for_shor(big_n=n_100, g=9)
+    circuit = rsa_pe_small.decompose_bloq().to_cirq_circuit(
+        cirq_quregs=get_named_qubits(rsa_pe_small.signature.lefts()))
     return circuit

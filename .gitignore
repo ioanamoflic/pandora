@@ -7,3 +7,4 @@ circuitsharing/
 venv
 */__pycache__/*
 /pyLIQTR/
+/venv_new/

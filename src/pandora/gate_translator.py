@@ -2,6 +2,7 @@ from abc import ABC
 from enum import Enum
 import cirq
 import numpy as np
+from qualtran.bloqs.arithmetic.addition import And
 
 
 class In(cirq.Gate, ABC):
@@ -80,15 +81,16 @@ class PandoraGateTranslator(Enum):
     Toffoli = 21
     And = 22
     CCXPowGate = 23
-    GlobalIn = 24
-    GlobalOut = 25
+    CSwapGate = 24
+    GlobalIn = 25
+    GlobalOut = 26
 
 
 MAX_QUBITS_PER_GATE = 3
 GLOBAL_IN_ID = -1
 GLOBAL_OUT_ID = -2
 
-KEEP_RZ = True
+KEEP_RZ = False
 
 PANDORA_TO_CIRQ = {
     PandoraGateTranslator.Rx.value: cirq.ops.common_gates.Rx,
@@ -115,7 +117,8 @@ PANDORA_TO_CIRQ = {
     PandoraGateTranslator.ZZPowGate.value: cirq.ZZPowGate,
     PandoraGateTranslator.Toffoli.value: cirq.CCX,
     PandoraGateTranslator.CCXPowGate.value: cirq.CCXPowGate,
-    # PandoraGateTranslator.And.value: qualtran.bloqs.mcmt.And,
+    PandoraGateTranslator.And.value: And,
+    PandoraGateTranslator.CSwapGate: cirq.CSwapGate
 }
 
 PANDORA_TO_READABLE = {
@@ -142,6 +145,7 @@ PANDORA_TO_READABLE = {
     PandoraGateTranslator.ZZPowGate.value: "ZZ",
     PandoraGateTranslator.Toffoli.value: "CCX",
     PandoraGateTranslator.And.value: "And",
+    PandoraGateTranslator.CSwapGate.value: "CSwap",
     PandoraGateTranslator.CCXPowGate.value: "CCXp",
     PandoraGateTranslator.GlobalIn.value: "G_In",
     PandoraGateTranslator.GlobalOut.value: "G_Out",
@@ -173,7 +177,8 @@ TWO_QUBIT_GATES = [PandoraGateTranslator.CNOT.value,
 
 THREE_QUBIT_GATES = [PandoraGateTranslator.Toffoli.value,
                      PandoraGateTranslator.And.value,
-                     PandoraGateTranslator.CCXPowGate.value]
+                     PandoraGateTranslator.CCXPowGate.value,
+                     PandoraGateTranslator.CSwapGate.value]
 
 REQUIRES_ROTATION = [PandoraGateTranslator.Rx.value,
                      PandoraGateTranslator.Ry.value,
@@ -186,7 +191,9 @@ REQUIRES_EXPONENT = [PandoraGateTranslator.XPowGate.value,
                      PandoraGateTranslator.CZPowGate.value,
                      PandoraGateTranslator.CXPowGate.value,
                      PandoraGateTranslator.XXPowGate.value,
-                     PandoraGateTranslator.ZZPowGate.value]
+                     PandoraGateTranslator.ZZPowGate.value,
+                     PandoraGateTranslator.CCXPowGate.value]
+
 
 PYLIQTR_ROTATION_TO_PANDORA = {
     'rz_decomp': 'Rz',

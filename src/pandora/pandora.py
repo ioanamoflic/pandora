@@ -1,9 +1,8 @@
-import time
 import datetime
 
 import psycopg2
 
-from .parallel_decompose import parallel_decompose_and_insert, parallel_decompose_multi_and_insert
+from .parallel_decompose import parallel_decompose_multi_and_insert
 from .qualtran_to_pandora_util import *
 from benchmarking.benchmark_adders import get_maslov_adder
 
@@ -186,7 +185,7 @@ class Pandora:
 
     def parallel_build_pyliqtr_circuit(self,
                                        nprocs: int,
-                                       N: int,
+                                       N: int = None,
                                        config_file_path: str = None,
                                        window_size=1000,
                                        conn_lifetime=120) -> None:
@@ -219,10 +218,10 @@ class Pandora:
 
             self.build_dedicated_table(table_name=table_name)
 
-            p = Process(target=parallel_decompose_multi_and_insert, args=(N,
-                                                                          i,
+            p = Process(target=parallel_decompose_multi_and_insert, args=(i,
                                                                           nprocs,
                                                                           table_name,
+                                                                          N,
                                                                           config_file_path,
                                                                           window_size,
                                                                           conn_lifetime
