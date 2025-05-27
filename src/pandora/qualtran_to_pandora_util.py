@@ -148,10 +148,6 @@ def get_pandora_compatible_circuit(circuit: cirq.Circuit, decompose_from_high_le
 
     final_ops = []
     for op in circuit.all_operations():
-        # TODO: should we ignore GlobalPhaseGate?
-        if isinstance(op.gate, cirq.GlobalPhaseGate):
-            print(f'Encountered GlobalPhaseGate with qubits = {op.qubits}')
-            continue
         if isinstance(op.gate, BloqAsCirqGate):
             atomic_ops = list(decompose_qualtran_bloq_gate(op.gate.bloq))
             final_ops = final_ops + atomic_ops
@@ -222,12 +218,16 @@ def generator_get_RSA_compatible_batch(circuit: cirq.Circuit,
     for dop in generator_decompose(circuit, keep=keep):
         start_dop = time.time()
         if isinstance(dop.gate, BloqAsCirqGate):
-            try:
+            if isinstance(dop.gate.bloq, CModAddK):
+                top = pyLAM(bitsize=dop.gate.bloq.bitsize + 1,
+                            add_val=dop.gate.bloq.k,
+                            mod=dop.gate.bloq.mod,
+                            cvs=()).on(*dop.qubits)
+                for d_top in generator_decompose(top):
+                    window_ops.append(d_top)
+            else:
                 atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq)
                 window_ops.extend(atomic_ops)
-            except ValueError as e:
-                """There is no Cirq equivalent for <0|"""
-                print(e)
         else:
             window_ops.append(dop)
 
