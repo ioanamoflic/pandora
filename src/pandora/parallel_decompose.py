@@ -13,7 +13,7 @@ import time
 # pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU = \
 #     lambda *args, **kwargs: monkey_patching.LazyProxy(PauliStringLCU, None, *args, **kwargs)
 
-from pyLIQTR.utils.circuit_decomposition import generator_decompose, circuit_decompose_multi
+from pyLIQTR.utils.circuit_decomposition import generator_decompose, circuit_decompose_multi, decompose_once
 
 from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list
 from pandora.connection_util import get_connection, insert_single_batch
@@ -32,7 +32,6 @@ def parallel_decompose_multi_and_insert(proc_id: int,
                                         conn_lifetime: int = 120):
     """
     Embarrassingly parallel version of the generator decomposition.
-    This is now only working for Fermi-Hubbard circuits.
     """
     start_time = time.time()
 
@@ -43,6 +42,9 @@ def parallel_decompose_multi_and_insert(proc_id: int,
     circuit_decomposed_shallow = circuit_decompose_multi(proc_circuit, N=2)
 
     high_level_op_list = [op for mom in circuit_decomposed_shallow for op in mom]
+
+    del circuit_decomposed_shallow
+
     op_count = len(high_level_op_list)
 
     proc_start = (op_count * proc_id) // nprocs
@@ -77,4 +79,3 @@ def parallel_decompose_multi_and_insert(proc_id: int,
                             close_conn=True)
 
     print(f"Hello, I am process {proc_id} finished in {time.time() - start_time}")
-    # proc_conn.close()

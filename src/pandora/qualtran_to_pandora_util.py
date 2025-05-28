@@ -4,7 +4,7 @@ from typing import Iterator
 import cirq
 import sys
 
-from qualtran import Bloq
+from qualtran import Bloq, DecomposeTypeError
 from qualtran.bloqs.mod_arithmetic import ModAddK, CModAddK
 from qualtran.bloqs.arithmetic.addition import Add, And
 from qualtran.bloqs.basic_gates import CNOT, TwoBitCSwap, XGate, CZ
@@ -36,9 +36,8 @@ cirq_and_bloq_gate_set = cirq.Gateset(
     cirq.CCXPowGate, cirq.CCZPowGate, cirq.TOFFOLI,
     cirq.X, cirq.Y, cirq.Z,
     And,
-    cirq.CSwapGate,
-    BloqAsCirqGate
-)
+    BloqAsCirqGate,
+    cirq.CSwapGate)
 
 pandora_ingestible_gate_set = cirq.Gateset(
     cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel,
@@ -116,22 +115,30 @@ def decompose_fredkin(op: cirq.Operation):
 
 def decompose_qualtran_bloq_gate(bloq: Bloq):
     cirq_quregs = get_named_qubits(bloq.signature.lefts())
-    circuit = bloq.as_composite_bloq().to_cirq_circuit(cirq_quregs=cirq_quregs)
-    decomp_circuit = cirq.Circuit(cirq.decompose(next(circuit.all_operations())))
+    try:
+        circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=cirq_quregs)
+    except DecomposeTypeError:
+        # there could be a specific error for atomic ops?
+        circuit = bloq.as_composite_bloq().to_cirq_circuit(cirq_quregs=cirq_quregs)
 
     fully_decomposed_ops = []
-    for op in decomp_circuit.all_operations():
+    for op in generator_decompose(circuit, keep=keep):
         if isinstance(op.gate, BloqAsCirqGate):
-            if isinstance(op.gate.bloq, CNOT):
-                ctrl, tgt = op.qubits
-                fully_decomposed_ops.append(cirq.CX.on(ctrl, tgt))
-            elif isinstance(op.gate.bloq, XGate):
-                fully_decomposed_ops.append(cirq.X.on(op.qubits[0]))
-            elif isinstance(op.gate.bloq, TwoBitCSwap):
+            if isinstance(op.gate.bloq, TwoBitCSwap):
                 ctrl, x, y = op.qubits
                 fully_decomposed_ops.append(cirq.CSWAP.on(ctrl, x, y))
+            elif isinstance(op.gate.bloq, CModAddK):
+                top = pyLAM(bitsize=op.gate.bloq.bitsize + 1,
+                            add_val=op.gate.bloq.k,
+                            mod=op.gate.bloq.mod,
+                            cvs=()).on(*op.qubits)
+                for d_top in generator_decompose(top):
+                    fully_decomposed_ops.append(d_top)
+            else:
+                fully_decomposed_ops.append(op)
         else:
             fully_decomposed_ops.append(op)
+
     return fully_decomposed_ops
 
 
@@ -218,16 +225,8 @@ def generator_get_RSA_compatible_batch(circuit: cirq.Circuit,
     for dop in generator_decompose(circuit, keep=keep):
         start_dop = time.time()
         if isinstance(dop.gate, BloqAsCirqGate):
-            if isinstance(dop.gate.bloq, CModAddK):
-                top = pyLAM(bitsize=dop.gate.bloq.bitsize + 1,
-                            add_val=dop.gate.bloq.k,
-                            mod=dop.gate.bloq.mod,
-                            cvs=()).on(*dop.qubits)
-                for d_top in generator_decompose(top):
-                    window_ops.append(d_top)
-            else:
-                atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq)
-                window_ops.extend(atomic_ops)
+            atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq)
+            window_ops.extend(atomic_ops)
         else:
             window_ops.append(dop)
 
@@ -317,7 +316,9 @@ def get_RSA():
     #              "3443219011465754445417842402092461651572335077870774981712577246796292638635"
     #              "6373289912154831438167899885040445364023527381951378636564391212010397122822"
     #              "120720357")
+
     rsa_pe_small = RSAPhaseEstimate.make_for_shor(big_n=n_100, g=9)
-    circuit = rsa_pe_small.decompose_bloq().to_cirq_circuit(
-        cirq_quregs=get_named_qubits(rsa_pe_small.signature.lefts()))
+    circuit = rsa_pe_small.as_composite_bloq()\
+        .to_cirq_circuit(cirq_quregs=get_named_qubits(rsa_pe_small.signature.lefts()))
+
     return circuit
