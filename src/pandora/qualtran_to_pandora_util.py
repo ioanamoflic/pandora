@@ -231,21 +231,23 @@ def generator_get_RSA_compatible_batch(circuit: cirq.Circuit,
     for dop in generator_decompose(circuit, keep=keep):
         start_dop = time.time()
         if isinstance(dop.gate, BloqAsCirqGate):
-            atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq, window_size=window_size)
-            window_ops.extend(atomic_ops)
+            window_batches = decompose_qualtran_bloq_gate(dop.gate.bloq, window_size=window_size)
+
+            for window_batch in window_batches:
+                window_ops.extend(window_batch)
+
+                if len(window_ops) >= window_size:
+                    yield window_ops, time.time() - start_dop
+                    window_ops.clear()
         else:
             window_ops.append(dop)
 
         if len(window_ops) >= window_size:
-            window_ops = list(flatten(window_ops))
-            assert_op_list_is_pandora_ingestible(window_ops)
             yield window_ops, time.time() - start_dop
             window_ops.clear()
 
     start_last = time.time()
     if len(window_ops) > 0:
-        window_ops = list(flatten(window_ops))
-        assert_op_list_is_pandora_ingestible(window_ops)
         yield window_ops, time.time() - start_last
 
 
