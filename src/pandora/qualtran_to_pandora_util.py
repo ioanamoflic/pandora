@@ -113,7 +113,7 @@ def decompose_fredkin(op: cirq.Operation):
     return ops
 
 
-def decompose_qualtran_bloq_gate(bloq: Bloq):
+def decompose_qualtran_bloq_gate(bloq: Bloq, window_size: int):
     cirq_quregs = get_named_qubits(bloq.signature.lefts())
     try:
         circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=cirq_quregs)
@@ -121,25 +121,31 @@ def decompose_qualtran_bloq_gate(bloq: Bloq):
         # there could be a specific error for atomic ops?
         circuit = bloq.as_composite_bloq().to_cirq_circuit(cirq_quregs=cirq_quregs)
 
-    fully_decomposed_ops = []
+    window_ops = []
     for op in generator_decompose(circuit, keep=keep):
         if isinstance(op.gate, BloqAsCirqGate):
             if isinstance(op.gate.bloq, TwoBitCSwap):
                 ctrl, x, y = op.qubits
-                fully_decomposed_ops.append(cirq.CSWAP.on(ctrl, x, y))
+                window_ops.append(cirq.CSWAP.on(ctrl, x, y))
             elif isinstance(op.gate.bloq, CModAddK):
                 top = pyLAM(bitsize=op.gate.bloq.bitsize + 1,
                             add_val=op.gate.bloq.k,
                             mod=op.gate.bloq.mod,
                             cvs=()).on(*op.qubits)
                 for d_top in generator_decompose(top):
-                    fully_decomposed_ops.append(d_top)
+                    window_ops.append(d_top)
             else:
-                fully_decomposed_ops.append(op)
+                window_ops.append(op)
         else:
-            fully_decomposed_ops.append(op)
+            window_ops.append(op)
 
-    return fully_decomposed_ops
+        if len(window_ops) >= window_size:
+            yield window_ops
+            window_ops.clear()
+
+    if len(window_ops) > 0:
+        yield window_ops
+        window_ops.clear()
 
 
 def get_pandora_compatible_circuit(circuit: cirq.Circuit, decompose_from_high_level=True) -> cirq.Circuit:
@@ -225,7 +231,7 @@ def generator_get_RSA_compatible_batch(circuit: cirq.Circuit,
     for dop in generator_decompose(circuit, keep=keep):
         start_dop = time.time()
         if isinstance(dop.gate, BloqAsCirqGate):
-            atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq)
+            atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq, window_size=window_size)
             window_ops.extend(atomic_ops)
         else:
             window_ops.append(dop)
