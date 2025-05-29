@@ -1,28 +1,12 @@
 import time
 
-# import pyLIQTR
-# from memory_profiler import profile
-
-# from pyLIQTR.BlockEncodings import PauliStringLCU
-# from pyLIQTR.qubitization.qubitized_gates import QubitizedRotation
-#
-# import monkey_patching.lazy_load as monkey_patching
-#
-# pyLIQTR.qubitization.qubitized_gates.QubitizedRotation = \
-#     lambda *args, **kwargs: monkey_patching.LazyProxy(QubitizedRotation, None, *args, **kwargs)
-# pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU = \
-#     lambda *args, **kwargs: monkey_patching.LazyProxy(PauliStringLCU, None, *args, **kwargs)
-
-from pyLIQTR.utils.circuit_decomposition import generator_decompose, circuit_decompose_multi, decompose_once
+from pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
 
 from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list
 from pandora.connection_util import get_connection, insert_single_batch
-# from pandora.pyliqtr_to_pandora_util import make_fh_circuit
-from pandora.qualtran_to_pandora_util import generator_get_pandora_compatible_batch_via_pyliqtr, get_RSA, \
-    generator_get_RSA_compatible_batch
+from pandora.qualtran_to_pandora_util import get_RSA, generator_get_RSA_compatible_batch
 
 
-# @profile
 def parallel_decompose_multi_and_insert(proc_id: int,
                                         nprocs: int,
                                         table_name: str,

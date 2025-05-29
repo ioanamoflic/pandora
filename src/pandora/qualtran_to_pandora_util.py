@@ -48,6 +48,18 @@ pandora_ingestible_gate_set = cirq.Gateset(
     cirq.X, cirq.Y, cirq.Z,
 )
 
+pylam_gate_set = cirq.Gateset(
+    cirq.Rz, cirq.Rx, cirq.Ry,
+    cirq.MeasurementGate, cirq.ResetChannel,
+    cirq.GlobalPhaseGate,
+    cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
+    cirq.CZPowGate, cirq.CXPowGate,
+    cirq.ZZPowGate, cirq.XXPowGate,
+    cirq.CCXPowGate, cirq.CCZPowGate, cirq.TOFFOLI,
+    cirq.X, cirq.Y, cirq.Z,
+    And,
+    cirq.CSwapGate)
+
 
 def flatten(nested: list):
     for i in nested:
@@ -63,6 +75,14 @@ def keep(op: cirq.Operation):
     ret = gate in cirq_and_bloq_gate_set
     if isinstance(gate, cirq.ops.raw_types._InverseCompositeGate):
         ret |= op.gate._original in cirq_and_bloq_gate_set
+    return ret
+
+
+def keep_pylam(op: cirq.Operation):
+    gate = op.without_classical_controls().gate
+    ret = gate in pylam_gate_set
+    if isinstance(gate, cirq.ops.raw_types._InverseCompositeGate):
+        ret |= op.gate._original in pylam_gate_set
     return ret
 
 
@@ -132,7 +152,7 @@ def decompose_qualtran_bloq_gate(bloq: Bloq, window_size: int):
                             add_val=op.gate.bloq.k,
                             mod=op.gate.bloq.mod,
                             cvs=()).on(*op.qubits)
-                for d_top in generator_decompose(top):
+                for d_top in generator_decompose(top, keep=keep_pylam):
                     window_ops.append(d_top)
             else:
                 window_ops.append(op)
