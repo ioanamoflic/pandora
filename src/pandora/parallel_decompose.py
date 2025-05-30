@@ -1,5 +1,7 @@
 import time
 
+from qualtran.bloqs.qft import QFTTextBook
+
 from pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
 
 from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list
@@ -25,7 +27,10 @@ def parallel_decompose_multi_and_insert(proc_id: int,
     proc_circuit = get_RSA()
     circuit_decomposed_shallow = circuit_decompose_multi(proc_circuit, N=2)
 
-    high_level_op_list = [op for mom in circuit_decomposed_shallow for op in mom]
+    high_level_op_list = [op
+                          for mom in circuit_decomposed_shallow
+                          for op in mom
+                          if not isinstance(op.gate, QFTTextBook)]
 
     del circuit_decomposed_shallow
 
