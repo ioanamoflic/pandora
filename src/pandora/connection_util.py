@@ -150,7 +150,7 @@ def create_named_circuit_table(connection, table_name: str) -> None:
         prev_q2 int,
         prev_q3 int,
         type    smallint,
-        param   real,
+        param   numeric,
         global_shift real,
         switch  boolean,
         next_q1 int,
