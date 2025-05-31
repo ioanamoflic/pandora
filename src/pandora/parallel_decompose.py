@@ -1,7 +1,5 @@
 import time
 
-from qualtran.bloqs.qft import QFTTextBook
-
 from pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
 
 from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list
@@ -11,11 +9,11 @@ from pandora.qualtran_to_pandora_util import get_RSA, generator_get_RSA_compatib
 
 def parallel_decompose_multi_and_insert(proc_id: int,
                                         nprocs: int,
+                                        container_id: int,
+                                        n_containers: int,
                                         table_name: str,
-                                        N: int = None,
                                         config_file_path: str = None,
-                                        window_size: int = 1000,
-                                        conn_lifetime: int = 120):
+                                        window_size: int = 1000):
     """
     Embarrassingly parallel version of the generator decomposition.
     """
@@ -30,19 +28,27 @@ def parallel_decompose_multi_and_insert(proc_id: int,
     high_level_op_list = [op
                           for mom in circuit_decomposed_shallow
                           for op in mom
-                          if not isinstance(op.gate, QFTTextBook)]
+                          ]
+    op_count = len(high_level_op_list)
 
     del circuit_decomposed_shallow
 
-    op_count = len(high_level_op_list)
+    container_start = (op_count * container_id) // n_containers
+    container_end = (op_count * (container_id + 1)) // n_containers
 
-    proc_start = (op_count * proc_id) // nprocs
-    proc_end = (op_count * (proc_id + 1)) // nprocs
+    container_op_list = high_level_op_list[container_start:container_end]
+    container_op_count = len(container_op_list)
 
-    print(f"Hello, I am process {proc_id}, I have range [{proc_start}, {proc_end}) out of [0, {op_count}]")
+    del high_level_op_list
+
+    proc_start = (container_op_count * proc_id) // nprocs
+    proc_end = (container_op_count * (proc_id + 1)) // nprocs
+
+    print(f"Hello, I am process {proc_id} of container {container_id}, "
+          f"I have range [{proc_start}, {proc_end}) out of [0, {op_count}]")
 
     per_process_gate_list = []
-    for i, high_level_op in enumerate(high_level_op_list):
+    for i, high_level_op in enumerate(container_op_list):
         if proc_start <= i < proc_end:
             process_batches = generator_get_RSA_compatible_batch(circuit=high_level_op,
                                                                  window_size=window_size)

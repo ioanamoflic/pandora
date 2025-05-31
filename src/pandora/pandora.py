@@ -187,8 +187,10 @@ class Pandora:
 
     def parallel_build_pyliqtr_circuit(self,
                                        nprocs: int,
-                                       N: int = None,
+                                       container_id: int = None,
+                                       n_containers: int = None,
                                        config_file_path: str = None,
+                                       N=None,
                                        window_size=1000,
                                        conn_lifetime=120) -> None:
         """
@@ -202,7 +204,9 @@ class Pandora:
 
         Args:
             nprocs: the number of parallel workers
-            N: N parameter of the Fermi-Hubbard circuit instance
+            container_id:
+            n_containers:
+            N:
             config_file_path: config file name. If None, will use defaults from PandoraConfig.
             window_size: size of decomposition window
             conn_lifetime: lifetime (in seconds) of a database connection. This is needed as long-running connections
@@ -216,17 +220,17 @@ class Pandora:
         process_list = []
         for i in range(nprocs):
 
-            table_name = f"batched_proc_{i}"
+            table_name = f"batched_proc_{i}_{container_id}"
 
             self.build_dedicated_table(table_name=table_name)
 
             p = Process(target=parallel_decompose_multi_and_insert, args=(i,
                                                                           nprocs,
+                                                                          container_id,
+                                                                          n_containers,
                                                                           table_name,
-                                                                          N,
                                                                           config_file_path,
-                                                                          window_size,
-                                                                          conn_lifetime
+                                                                          window_size
                                                                           ))
             process_list.append(p)
 
