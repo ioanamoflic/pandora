@@ -25,7 +25,7 @@ create table IF NOT EXISTS public.batched_circuit
     prev_q2 int,
     prev_q3 int,
     type    smallint,
-    param   real,
+    param   numeric,
     global_shift real,
     switch  boolean,
     next_q1 int,

@@ -45,7 +45,9 @@ def parallel_decompose_multi_and_insert(proc_id: int,
     proc_end = (container_op_count * (proc_id + 1)) // nprocs
 
     print(f"Hello, I am process {proc_id} of container {container_id}, "
-          f"I have range [{proc_start}, {proc_end}) out of [0, {op_count}]")
+          f"I have range [{container_start + proc_start}, {container_start + proc_end}) "
+          f"out of container range [{container_start}, {container_end}] "
+          f"out of total_range [0, {op_count})")
 
     per_process_gate_list = []
     for i, high_level_op in enumerate(container_op_list):
