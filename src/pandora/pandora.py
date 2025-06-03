@@ -1,10 +1,6 @@
 import datetime
 
-import psycopg2
-
 from .parallel_decompose import parallel_decompose_multi_and_insert
-from .qualtran_to_pandora_util import *
-from benchmarking.benchmark_adders import get_maslov_adder
 
 from pandora.connection_util import *
 from .widgetization.union_find import UnionFindWidgetizer
@@ -144,26 +140,15 @@ class Pandora:
                           connection=self.connection,
                           table_name='linked_circuit')
 
-    def build_maslov_adder(self, m_bits):
-        self.build_pandora()
-
-        db_tuples = get_maslov_adder(conn=self.connection,
-                                     n_bits=m_bits)
-        insert_in_batches(pandora_gates=db_tuples,
-                          connection=self.connection,
-                          batch_size=self.decomposition_window_size,
-                          table_name='linked_circuit',
-                          reset_id=False)
-
-        self.decompose_toffolis()
-
-    def build_pyliqtr_circuit(self,
-                              pyliqtr_circuit: Any) -> None:
+    def build_circuit(self,
+                      circuit: Any,
+                      build_edge_list=False) -> None:
         """
-        This method tries to build an arbitrary pyLIQTR circuit into Pandora. Note that the pyLIQTR decomposition
-        might fail due to missing decompositions.
+        This method tries to build an arbitrary cirq/Qualtran/pyLIQTR circuit into Pandora.
+        Note that the decomposition might fail due to missing decompositions.
         Args:
-            pyliqtr_circuit: the pyLIQTR circuit object
+            circuit: the cirq/Qualtran/pyLIQTR circuit object
+            build_edge_list: if True, also builds the edge list of the circuit
         """
         CRED = '\033[91m'
         CEND = '\033[0m'
@@ -172,7 +157,7 @@ class Pandora:
 
         print("Decomposing circuit for pandora...")
         start_decomp = time.time()
-        batches = windowed_cirq_to_pandora(circuit=pyliqtr_circuit,
+        batches = windowed_cirq_to_pandora(circuit=circuit,
                                            window_size=self.decomposition_window_size)
 
         for i, (batch, decomposition_time) in enumerate(batches):
@@ -181,18 +166,19 @@ class Pandora:
             print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
 
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
-        print("Building edge list...")
 
-        self.build_edge_list()
+        if build_edge_list:
+            print("Building edge list...")
+            self.build_edge_list()
 
-    def parallel_build_pyliqtr_circuit(self,
-                                       nprocs: int,
-                                       container_id: int = None,
-                                       n_containers: int = None,
-                                       config_file_path: str = None,
-                                       N=None,
-                                       window_size=1000,
-                                       conn_lifetime=120) -> None:
+    def build_circuit_in_parallel(self,
+                                  nprocs: int,
+                                  container_id: int = None,
+                                  n_containers: int = None,
+                                  config_file_path: str = None,
+                                  N=None,
+                                  window_size=1000,
+                                  conn_lifetime=120) -> None:
         """
         This method tries to build an arbitrary pyLIQTR circuit into Pandora. Note that the pyLIQTR decomposition
         might fail due to missing decompositions.
@@ -219,7 +205,6 @@ class Pandora:
         start_decomp = time.time()
         process_list = []
         for i in range(nprocs):
-
             table_name = f"batched_proc_{i}_{container_id}"
 
             self.build_dedicated_table(table_name=table_name)

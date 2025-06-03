@@ -1,4 +1,5 @@
-from typing import Optional, Iterator
+import time
+from typing import Optional, Iterator, Any
 import cirq
 
 from pandora.exceptions import *
@@ -7,6 +8,7 @@ from pandora.gate_translator import In, Out, PandoraGateTranslator, \
     REQUIRES_ROTATION, REQUIRES_EXPONENT, PYLIQTR_ROTATION_TO_PANDORA
 
 from pandora.gates import PandoraGate, PandoraGateWrapper
+from pandora.qualtran_to_pandora_util import generator_get_pandora_compatible_batch_via_pyliqtr
 
 
 def remove_classically_controlled_ops(circuit: cirq.Circuit) -> cirq.Circuit:
@@ -478,3 +480,65 @@ def cirq_to_pandora_from_op_list(op_list: list[cirq.Operation] | Iterator[list[c
         last_id += 1
 
     return list(pandora_gates.values())
+
+
+def windowed_cirq_to_pandora(circuit: Any, window_size: int, is_test: bool = False) \
+        -> Iterator[tuple[list[PandoraGate], float]]:
+    """
+    This method traverses a cirq circuit in windows of arbitrary size and returns the PandoraGate operations equivalent
+    to the cirq operations in the window. Especially useful for very large circuits which do not fit into memory. The
+    list of qubits in the resulting circuit will be a permutation of the original one.
+    Args:
+        is_test: boolean which takes qubit ordering into account during testing for 1:1 reconstruction.
+        circuit: the high-level cirq circuit
+        window_size: the size of each decomposition window
+    Returns:
+        Generator over the PandoraGate objects of each batch.
+    """
+    if window_size <= 1:
+        raise WindowSizeError
+
+    qubit_set = set()
+    pandora_dictionary = dict()
+    latest_conc_on_qubit = dict()
+    last_id = 0
+
+    batches = generator_get_pandora_compatible_batch_via_pyliqtr(circuit=circuit,
+                                                                 window_size=window_size)
+    for i, (current_batch, cliff_decomp_time) in enumerate(batches):
+        for op in current_batch:
+            qubit_set.update(set(list(op.qubits)))
+
+        start_cirq_to_pandora = time.time()
+        # the idea is to add anything that is not null on "next link" from the pandora gates dictionary
+        pandora_dictionary, latest_conc_on_qubit, last_id = windowed_cirq_to_pandora_from_op_list(
+            op_list=current_batch,
+            pandora_dictionary=pandora_dictionary,
+            latest_conc_on_qubit=latest_conc_on_qubit,
+            last_id=last_id,
+            label='x',
+            is_test=is_test
+        )
+        dictionary_copy = pandora_dictionary.copy()
+        batch_elements: list[PandoraGate] = []
+        for pandora_gate in dictionary_copy.values():
+            if (pandora_gate.type in SINGLE_QUBIT_GATES
+                and pandora_gate.next_q1 is not None) \
+                    or (pandora_gate.type in TWO_QUBIT_GATES
+                        and pandora_gate.next_q1 is not None
+                        and pandora_gate.next_q2 is not None):
+                batch_elements.append(pandora_gate)
+                pandora_dictionary.pop(pandora_gate.id)
+
+        yield batch_elements, time.time() - start_cirq_to_pandora + cliff_decomp_time
+
+    start_final = time.time()
+    final_batch: list[cirq.Operation] = [Out().on(q) for q in qubit_set]
+    pandora_out_gates, _, _ = windowed_cirq_to_pandora_from_op_list(
+        op_list=final_batch,
+        pandora_dictionary=pandora_dictionary,
+        latest_conc_on_qubit=latest_conc_on_qubit,
+        last_id=last_id,
+        label='x',
+        is_test=is_test)
+    yield list(pandora_out_gates.values()), time.time() - start_final

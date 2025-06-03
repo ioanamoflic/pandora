@@ -19,7 +19,7 @@ def parallel_decompose_multi_and_insert(proc_id: int,
     """
     start_time = time.time()
 
-    # each process will generate its own copy of the pyLIQTR circuit
+    # each process will generate its own copy of the pyLIQTR/Qualtran circuit
     print(f"Hello, I am process {proc_id} and I am creating my own circuit.")
 
     proc_circuit = get_RSA()
