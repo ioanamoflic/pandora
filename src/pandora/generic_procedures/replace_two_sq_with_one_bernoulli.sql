@@ -1,4 +1,4 @@
-create or replace procedure replace_two_qubit_bernoulli(type_1 int, type_2 int, type_replace int, param1 float, param2 float, param_replace real, sys_range int, run_nr int)
+create or replace procedure fuse_single_qubit_bernoulli(type_1 int, type_2 int, type_replace int, param1 float, param2 float, param_replace float, sys_range int, run_nr int)
     language plpgsql
 as
 $$
