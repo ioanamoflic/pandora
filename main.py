@@ -34,15 +34,17 @@ if __name__ == "__main__":
                                                window_size=10000,
                                                conn_lifetime=120)
     elif sys.argv[next_arg] == 'rsa':
-        NPROC = int(sys.argv[next_arg + 1])
-        CONTAINER_ID = int(sys.argv[next_arg + 2])
-        print(f"Starting RSA with {NPROC} processes.")
+        BIG_N = int(sys.argv[next_arg + 1])
+        NPROC = int(sys.argv[next_arg + 2])
+        CONTAINER_ID = int(sys.argv[next_arg + 3])
+        NCONT = int(sys.argv[next_arg + 4])
+
+        print(f"Starting RSA {BIG_N} with {NPROC} processes in {CONTAINER_ID}/{NCONT} containers.")
         abs_path = os.path.abspath(sys.argv[1])
-        n_containers = 11
         pandora.parallel_build_pyliqtr_circuit(nprocs=NPROC,
                                                container_id=CONTAINER_ID,
-                                               n_containers=n_containers,
-                                               N=None,
+                                               n_containers=NCONT,
+                                               N=BIG_N,
                                                config_file_path=abs_path,
                                                window_size=10000,
                                                conn_lifetime=120)

@@ -13,16 +13,17 @@ def parallel_decompose_multi_and_insert(proc_id: int,
                                         n_containers: int,
                                         table_name: str,
                                         config_file_path: str = None,
-                                        window_size: int = 1000):
+                                        window_size: int = 1000,
+                                        N: int = None):
     """
     Embarrassingly parallel version of the generator decomposition.
     """
     start_time = time.time()
 
-    # each process will generate its own copy of the pyLIQTR circuit
+    # each process will generate its own copy of the pyLIQTR/Qualtran circuit
     print(f"Hello, I am process {proc_id} and I am creating my own circuit.")
 
-    proc_circuit = get_RSA()
+    proc_circuit = get_RSA(n=N)
     circuit_decomposed_shallow = circuit_decompose_multi(proc_circuit, N=2)
 
     high_level_op_list = [op
@@ -31,7 +32,15 @@ def parallel_decompose_multi_and_insert(proc_id: int,
                           ]
     op_count = len(high_level_op_list)
 
+    for op in high_level_op_list:
+        if str(op.gate) == 'bloq.CtrlScaleModAdd':
+            high_level_op_list = [op]
+            op_count = 1
+            break
+
     del circuit_decomposed_shallow
+
+    print(len(high_level_op_list))
 
     container_start = (op_count * container_id) // n_containers
     container_end = (op_count * (container_id + 1)) // n_containers
@@ -46,7 +55,7 @@ def parallel_decompose_multi_and_insert(proc_id: int,
 
     print(f"Hello, I am process {proc_id} of container {container_id}, "
           f"I have range [{container_start + proc_start}, {container_start + proc_end}) "
-          f"out of container range [{container_start}, {container_end}] "
+          f"out of container range [{container_start}, {container_end}) "
           f"out of total_range [0, {op_count})")
 
     per_process_gate_list = []

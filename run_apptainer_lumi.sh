@@ -45,9 +45,9 @@ psql -U $USER -d $DB_NAME -p $PORT -c \"SELECT schemaname, relname, n_live_tup F
 # preferably on scratch if we're running on Lumi
 # up to 50TB of storage
 
-PGDATA="/scratch/project_462000921/db_data/$SLURM_JOBID/pgdata"+
+PGDATA="/scratch/project_462000921/one_rsa2048/db_data/$SLURM_JOBID/pgdata"
 rm -rf $PGDATA
-PGRUN="/scratch/project_462000921/db_data/$SLURM_JOBID/pgrun"
+PGRUN="/scratch/project_462000921/one_rsa2048/db_data/$SLURM_JOBID/pgrun"
 rm -rf $PGRUN
 mkdir -p $PGDATA $PGRUN
 
