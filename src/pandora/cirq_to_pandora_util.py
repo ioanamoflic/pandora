@@ -482,7 +482,10 @@ def cirq_to_pandora_from_op_list(op_list: list[cirq.Operation] | Iterator[list[c
     return list(pandora_gates.values())
 
 
-def windowed_cirq_to_pandora(circuit: Any, window_size: int, is_test: bool = False) \
+def windowed_cirq_to_pandora(circuit: Any,
+                             window_size: int,
+                             is_test: bool = False,
+                             ) \
         -> Iterator[tuple[list[PandoraGate], float]]:
     """
     This method traverses a cirq circuit in windows of arbitrary size and returns the PandoraGate operations equivalent

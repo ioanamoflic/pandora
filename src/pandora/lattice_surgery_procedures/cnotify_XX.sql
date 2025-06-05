@@ -28,7 +28,7 @@ begin
 	    if stop=True then
             exit;
         end if;
-    	select * into xx from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it where it.type='XXPowGate' for update skip locked limit 1;
+    	select * into xx from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it where it.type=19 for update skip locked limit 1;
 
     	if xx.id is not null then
     	    xx_next_id_q1 :=  div(xx.next_q1, 10);
@@ -45,13 +45,13 @@ begin
 		    select count(*) into distinct_existing from (select id from linked_circuit where id in (xx_next_id_q1, xx_next_id_q2, xx_prev_id_q1, xx_prev_id_q2)
 			                                                                               for update skip locked) as it;
 			if distinct_count = distinct_existing then
-			    insert into linked_circuit values (default, null, null, null, 'In', 1, false, null, null, null, false, xx.label, false, '|+>')
+			    insert into linked_circuit values (default, null, null, null, 0, 1, 0, false, null, null, null, false, xx.label, false, 0)
                                                       returning id into plus_id;
-                insert into linked_circuit values (default, plus_id * 10, xx.prev_q1, null, 'CXPowGate', 1, false, null, xx.next_q1, null, false, xx.label, false, null)
+                insert into linked_circuit values (default, plus_id * 10, xx.prev_q1, null, 18, 1, 0, false, null, xx.next_q1, null, false, xx.label, false, null)
                                                       returning id into xc_id;
-                insert into linked_circuit values (default, xc_id * 10, xx.prev_q2, null, 'CXPowGate', 1, false, null, xx.next_q2, null, false, xx.label, false, null)
+                insert into linked_circuit values (default, xc_id * 10, xx.prev_q2, null, 18, 1, 0, false, null, xx.next_q2, null, false, xx.label, false, null)
                                                       returning id into cx_id;
-                insert into linked_circuit values (default, cx_id * 10, null, null, 'Out', 1, false, null, null, null, false, xx.label, false, 'Mx')
+                insert into linked_circuit values (default, cx_id * 10, null, null, 1, 1, 0, false, null, null, null, false, xx.label, false, 1)
                                                       returning id into m_out_id;
 
 			    update linked_circuit set next_q1 = xc_id * 10 where id = plus_id;

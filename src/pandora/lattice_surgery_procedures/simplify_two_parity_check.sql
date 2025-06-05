@@ -1,4 +1,4 @@
-create or replace procedure simplify_two_parity_check(type_1 varchar(25), type_2 varchar(25), sys_range int, run_nr int)
+create or replace procedure simplify_two_parity_check(type_1 int, type_2 int, sys_range int, run_nr int)
     language plpgsql
 as
 $$

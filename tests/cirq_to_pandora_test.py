@@ -1,7 +1,30 @@
 import benchmarking.benchmark_cirq
-from pandora.qualtran_to_pandora_util import get_adder, get_qrom, get_adder_as_cirq_circuit, \
-    get_qrom_as_cirq_circuit
 from pandora.connection_util import *
+
+from qualtran.bloqs.arithmetic.addition import Add
+from qualtran.bloqs.data_loading import QROM
+from qualtran import QUInt
+
+from pandora.qualtran_to_pandora_util import get_cirq_circuit_for_bloq, assert_circuit_is_pandora_ingestible
+
+
+def get_adder_as_cirq_circuit(n_bits) -> cirq.Circuit:
+    """
+    Used of testing.
+    """
+    bloq = Add(QUInt(n_bits))
+    clifford_t_circuit = get_cirq_circuit_for_bloq(bloq)
+    assert_circuit_is_pandora_ingestible(clifford_t_circuit)
+    return clifford_t_circuit
+
+
+def get_qrom_as_cirq_circuit(data) -> cirq.Circuit:
+    """
+    Used of testing.
+    """
+    bloq = QROM.build_from_data(data)
+    qrom_circuit = get_cirq_circuit_for_bloq(bloq)
+    return qrom_circuit
 
 
 def test_random_reconstruction(n_circuits=100):
@@ -39,6 +62,14 @@ def test_random_reconstruction(n_circuits=100):
 
 def test_qualtran_adder_reconstruction(connection):
     # append i, op_count, time for cirq_to_db and time for db_to_cirq
+
+    cirq_gate_set_test = cirq.Gateset(
+        cirq.Rz, cirq.Rx, cirq.Ry,
+        cirq.MeasurementGate, cirq.ResetChannel,
+        cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
+        cirq.CZPowGate, cirq.CXPowGate,
+        cirq.X, cirq.Y, cirq.Z)
+
     for n_bits in range(2, 30):
         print(f'Adder test {n_bits}')
 
@@ -46,13 +77,19 @@ def test_qualtran_adder_reconstruction(connection):
         refresh_all_stored_procedures(connection=connection)
         reset_database_id(connection, table_name='linked_circuit_test', large_buffer_value=100000)
 
-        adder_batches = get_adder(n_bits, window_size=2, is_test=True)
         full_adder_circuit = get_adder_as_cirq_circuit(n_bits=n_bits)
+
+        adder_batches = windowed_cirq_to_pandora(circuit=full_adder_circuit,
+                                                 window_size=2,
+                                                 is_test=True)
 
         qubit_dict = dict((str(qubit), i) for i, qubit in enumerate(sorted(full_adder_circuit.all_qubits(),
                                                                            key=lambda q: str(q))))
         for i, (batch, _) in enumerate(adder_batches):
-            insert_single_batch(connection=connection, batch=batch, is_test=True)
+            insert_single_batch(connection=connection,
+                                batch=batch,
+                                is_test=True,
+                                table_name='linked_circuit_test')
 
         extracted_circuit: cirq.Circuit = extract_cirq_circuit(connection=connection,
                                                                circuit_label='x',
@@ -93,13 +130,18 @@ def test_qualtran_qrom_reconstruction(connection):
         refresh_all_stored_procedures(connection=connection)
         reset_database_id(connection, table_name='linked_circuit_test', large_buffer_value=100000)
 
-        qrom_batches = get_qrom(data=data, window_size=2, is_test=True)
         full_qrom_circuit = get_qrom_as_cirq_circuit(data=data)
+        qrom_batches = windowed_cirq_to_pandora(circuit=full_qrom_circuit,
+                                                window_size=2,
+                                                is_test=True)
 
         qubit_dict = dict((str(qubit), i) for i, qubit in enumerate(sorted(full_qrom_circuit.all_qubits(),
                                                                            key=lambda q: str(q))))
         for i, (batch, _) in enumerate(qrom_batches):
-            insert_single_batch(connection=connection, batch=batch, is_test=True)
+            insert_single_batch(connection=connection,
+                                is_test=True,
+                                batch=batch,
+                                table_name='linked_circuit_test')
 
         extracted_circuit: cirq.Circuit = extract_cirq_circuit(connection=connection,
                                                                circuit_label='x',

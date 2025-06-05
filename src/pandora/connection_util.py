@@ -272,6 +272,7 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
 def insert_single_batch(connection,
                         batch: list[PandoraGate],
                         table_name: str = 'linked_circuit',
+                        is_test=False,
                         close_conn=False):
     """
     Insert a single batch of entries into the database.
@@ -281,12 +282,11 @@ def insert_single_batch(connection,
         if table_name == 'linked_circuit_test':
             args = ','.join(
                 cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                               tup.to_tuple())
+                               tup.to_tuple(is_test=is_test))
                 .decode('utf-8') for tup in batch)
             sql_statement = \
-                ("INSERT INTO linked_circuit_test(id, "
-                 "prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, "
-                 "next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key, qubit_name) VALUES" + args)
+                ("""INSERT INTO linked_circuit_test(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, 
+                next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key, qubit_name) VALUES """ + args)
             cursor.execute(sql_statement)
             connection.commit()
         else:
