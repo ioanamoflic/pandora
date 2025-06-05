@@ -215,7 +215,8 @@ class Pandora:
                                                                           n_containers,
                                                                           table_name,
                                                                           config_file_path,
-                                                                          window_size
+                                                                          window_size,
+                                                                          N
                                                                           ))
             process_list.append(p)
 
