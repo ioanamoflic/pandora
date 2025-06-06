@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
     pandora_optimizer = PandoraOptimizer(utilize_bernoulli=True,
                                          bernoulli_percentage=5,
-                                         timeout=10,
+                                         timeout=500,
                                          logger_id=8,
                                          nproc=4)
     pandora_optimizer.build_circuit(circuit=adder_circuit)
@@ -153,5 +153,3 @@ if __name__ == "__main__":
         Start
     """
     pandora_optimizer.start()
-
-    pandora_optimizer.stop()
