@@ -70,7 +70,9 @@ if __name__ == "__main__":
 
     pandora_optimizer = PandoraOptimizer(utilize_bernoulli=True,
                                          bernoulli_percentage=5,
-                                         timeout=10)
+                                         timeout=10,
+                                         logger_id=8,
+                                         nproc=4)
     pandora_optimizer.build_circuit(circuit=adder_circuit)
 
     # decompose Toffoli gates in Pandora
@@ -142,6 +144,14 @@ if __name__ == "__main__":
     pandora_optimizer.cx_to_hhcxhh(dedicated_nproc=1)
 
     """
+        Log
+    """
+
+    pandora_optimizer.log()
+
+    """
         Start
     """
     pandora_optimizer.start()
+
+    pandora_optimizer.stop()

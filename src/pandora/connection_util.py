@@ -40,6 +40,7 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
     """
     procedures = [
         # bernoulli sample version
+        'generic_procedures/_generate_optimisation_stats.sql',
         'generic_procedures/cancel_single_qubit_bernoulli.sql',
         'generic_procedures/cancel_two_qubit_bernoulli.sql',
         'generic_procedures/commute_single_control_left_bernoulli.sql',
@@ -95,7 +96,8 @@ def drop_and_replace_tables(connection,
                                     'linked_circuit_test',
                                     'stop_condition',
                                     'edge_list',
-                                    'benchmark_results'),
+                                    'benchmark_results',
+                                    'optimization_results'),
                             verbose=False) -> None:
     """
     This method drops all tables of Pandora and rebuilds them according to the configuration in

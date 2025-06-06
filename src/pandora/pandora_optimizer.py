@@ -1,5 +1,3 @@
-import math
-
 from pandora import Pandora
 from pandora.connection_util import db_multi_threaded, stop_all_lurking_procedures, reset_database_id
 from pandora.gate_translator import PandoraGateTranslator
@@ -41,6 +39,7 @@ class PandoraOptimizer(Pandora):
 
     LARGE_RUN_NR = int(1e6)
     RESET_ID = int(1e6)
+    LOG_SLEEP_FOR = 0.5  # sleep for 5 seconds when logging optimisations
 
     def __init__(self,
                  bernoulli_percentage: float = False,
@@ -49,6 +48,7 @@ class PandoraOptimizer(Pandora):
                  timeout: int = 100,
                  block_size: int = None,
                  run_nr: int = LARGE_RUN_NR,
+                 logger_id: int = None
                  ):
         super().__init__()
         self.run_nr = run_nr
@@ -57,6 +57,7 @@ class PandoraOptimizer(Pandora):
         self.utilize_bernoulli = utilize_bernoulli
         self.bernoulli_percentage = bernoulli_percentage
         self.timeout = timeout
+        self.logger_id = logger_id
 
         self._thread_proc = list()
 
@@ -100,6 +101,13 @@ class PandoraOptimizer(Pandora):
         Stop all procedures currently running in Pandora.
         """
         stop_all_lurking_procedures(self.connection)
+
+    def log(self):
+        """
+        Log the optimisation results at fixed intervals. Used for plotting.
+        """
+        logger_proc = f"call generate_optimisation_stats({self.LOG_SLEEP_FOR}, {self.logger_id})"
+        self._call_thread_proc((1, logger_proc))
 
     def cancel_single_qubit_gates(self,
                                   gate_types: tuple[PandoraGateTranslator, PandoraGateTranslator],
@@ -283,4 +291,3 @@ class PandoraOptimizer(Pandora):
             stored_procedure = f"call commute_cx_ctrl_target_bernoulli({self.bernoulli_percentage},{self.run_nr})"
 
         self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
-

@@ -17,6 +17,18 @@ create table IF NOT EXISTS public.linked_circuit
     meas_key smallint
 );
 
+create table IF NOT EXISTS public.optimization_results
+(
+    id int,
+    logger_id int,
+    total_count int,
+    t_count int,
+    s_count int,
+    h_count int,
+    cx_count int,
+    x_count int
+);
+
 create table IF NOT EXISTS public.batched_circuit
 (
     id int,
