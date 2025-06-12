@@ -1,5 +1,7 @@
 import time
 
+from qualtran.bloqs.mod_arithmetic import CtrlScaleModAdd
+
 from pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
 
 from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list
@@ -32,7 +34,15 @@ def parallel_decompose_multi_and_insert(proc_id: int,
                           ]
     op_count = len(high_level_op_list)
 
+    for op in high_level_op_list:
+        if str(op.gate) == 'bloq.CtrlScaleModAdd':
+            high_level_op_list = [op]
+            op_count = 1
+            break
+
     del circuit_decomposed_shallow
+
+    print(len(high_level_op_list))
 
     container_start = (op_count * container_id) // n_containers
     container_end = (op_count * (container_id + 1)) // n_containers
