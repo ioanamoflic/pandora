@@ -268,7 +268,7 @@ def generator_get_RSA_compatible_batch(circuit: cirq.Circuit,
 
 def get_RSA(n):
     if n == 64:
-        big_n = int("18446744073709551615")
+        big_n = int("18446744073709551605")
 
     elif n == 128:
         big_n = int("340282366920938463463374607431768211455")
