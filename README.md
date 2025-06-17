@@ -24,7 +24,7 @@ c) multi-threaded speed-up (vertical) when reverting the direction of CNOT gates
 
 ## Whole pipeline
 
-![pipeline.png](pipeline.png)
+![pipeline.jpg](pipeline.jpg)
 
 ## Apptainer Setup
 Installation instructions can be found in the `README.md` of the `apptainer` folder. In a nutshell, you need to have
