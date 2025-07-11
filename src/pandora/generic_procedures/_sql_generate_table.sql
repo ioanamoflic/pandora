@@ -95,6 +95,11 @@ create table if not exists public.edge_list
     target bigint
 );
 
+create table if not exists public.mem_cx
+(
+    id bigint primary key
+);
+
 
 create table IF NOT EXISTS public.layered_cliff_t
 (

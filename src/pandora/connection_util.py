@@ -9,6 +9,7 @@ import psycopg2
 
 from pandora.cirq_to_pandora_util import *
 from pandora.gate_translator import PANDORA_TO_READABLE, GLOBAL_IN_ID, GLOBAL_OUT_ID
+from pandora.pandora_util import pandora_to_circuit
 
 
 def get_connection(autocommit=True, config_file_path=None):
@@ -40,7 +41,6 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
     """
     procedures = [
         # bernoulli sample version
-        'generic_procedures/_generate_optimisation_stats.sql',
         'generic_procedures/cancel_single_qubit_bernoulli.sql',
         'generic_procedures/cancel_two_qubit_bernoulli.sql',
         'generic_procedures/commute_single_control_left_bernoulli.sql',
@@ -49,7 +49,6 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
         'generic_procedures/insert_two_qubit_bernoulli.sql',
         'generic_procedures/cx_to_hhcxhh_bernoulli.sql',
         'generic_procedures/hhcxhh_to_cx_bernoulli.sql',
-        'generic_procedures/generate_edge_list.sql',
         'generic_procedures/commute_cx_ctrl_target_bernoulli.sql',
 
         # system sample version
@@ -66,9 +65,13 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
         # worker procedures
         'generic_procedures/stopper.sql',
         'generic_procedures/for_loop.sql',
+        'generic_procedures/generate_edge_list.sql',
 
         # benchmarking only procedures
+        'generic_procedures/memorize_cx_ids.sql',
         'generic_procedures/cx_to_hhcxhh_visit.sql',
+        'generic_procedures/cx_to_hhcxhh_cached.sql',
+        'generic_procedures/_generate_optimisation_stats.sql',
 
         # ls style procedures
         'lattice_surgery_procedures/simplify_two_parity_check.sql',
@@ -96,6 +99,7 @@ def drop_and_replace_tables(connection,
                                     'linked_circuit_test',
                                     'stop_condition',
                                     'edge_list',
+                                    'mem_cx',
                                     'benchmark_results',
                                     'optimization_results'),
                             verbose=False) -> None:
@@ -183,8 +187,6 @@ def reset_database_id(connection,
     """
     If there are no elements in table table_name, the starting index is set to 0.
     If large_buffer_value is non-null, reset the id to this value.
-
-    TODO: Set ID seq to MAXid + 1 - Urgent!
     """
     cursor = connection.cursor()
 
@@ -349,9 +351,9 @@ def extract_cirq_circuit(connection,
     tuples: list[tuple] = cursor.fetchall()
 
     pandora_gates: list[PandoraGate] = [PandoraGate(*tup) for tup in tuples]
-    final_circ: cirq.Circuit = pandora_to_cirq(pandora_gates=pandora_gates,
-                                               original_qubits_test=original_qubits_test,
-                                               is_test=is_test)
+    final_circ: cirq.Circuit = pandora_to_circuit(pandora_gates=pandora_gates,
+                                                  original_qubits_test=original_qubits_test,
+                                                  is_test=is_test)
 
     if remove_io_gates:
         return remove_io_gates_from_circuit(final_circ)

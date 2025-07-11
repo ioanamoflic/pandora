@@ -16,6 +16,7 @@ myZPow = PandoraGateTranslator.ZPowGate.value
 myPauliX = PandoraGateTranslator._PauliX.value
 myPauliZ = PandoraGateTranslator._PauliZ.value
 
+
 def get_adder_as_cirq_circuit(n_bits) -> cirq.Circuit:
     """
     Used of testing.
@@ -33,6 +34,7 @@ def get_qrom_as_cirq_circuit(data) -> cirq.Circuit:
     bloq = QROM.build_from_data(data)
     qrom_circuit = get_cirq_circuit_for_bloq(bloq)
     return qrom_circuit
+
 
 def test_cancel_single_qubit(connection):
     cursor = connection.cursor()
@@ -681,68 +683,74 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
 
 
 def check_logical_correctness_random(connection, stop_after: int):
-    for n_qubits in range(2, 5):
-        for n_templates in range(1, 50):
-            print(f'Testing for {n_qubits} qubits and {n_templates} templates.')
+    all_thread_proc = [
+        (1, f"CALL cancel_single_qubit_bernoulli({myH}, {myH}, 1, 1, 10, 10000000)"),
+        (1, f"CALL cancel_single_qubit_bernoulli({myPauliZ}, {myPauliZ}, 1, 1, 10, 10000000)"),
+        (1, f"CALL cancel_single_qubit_bernoulli({myZPow}, {myZPow}, 0.25, -0.25, 10, 10000000)"),
+        (1, f"CALL cancel_single_qubit_bernoulli({myPauliX}, {myPauliX}, 1, 1, 10, 10000000)"),
+        (1, f"CALL cancel_two_qubit_bernoulli({myCX}, {myCX}, 1, 10, 10000000)"),
+        (1, f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, 10, 10000000)"),
+        (
+            1,
+            f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, 10, 10000000)"),
+        (
+            1,
+            f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, 10, 10000000)"),
+        (1, f"CALL commute_single_control_left_bernoulli({myZPow}, 0.25, 10, 10000000)"),
+        (1, f"CALL commute_single_control_left_bernoulli({myZPow}, -0.25, 10, 10000000)"),
+        (1, f"CALL commute_single_control_left_bernoulli({myZPow}, 0.5, 10, 10000000)"),
+        (1, f"CALL commute_single_control_left_bernoulli({myZPow}, -0.5, 10, 10000000)"),
+        (1, f"CALL linked_hhcxhh_to_cx_bernoulli(10, 10000000)"),
+        (1, f"CALL linked_cx_to_hhcxhh_bernoulli(10, 10000000)"),
+    ]
 
-            drop_and_replace_tables(connection=connection, clean=True)
-            refresh_all_stored_procedures(connection=connection)
-            reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
+    thread_procedures = [(1, f"CALL stopper({stop_after})")]
 
-            initial_circuit = benchmark_cirq.create_random_circuit(n_qubits=n_qubits, n_templates=n_templates,
-                                                                   templates=['add_two_hadamards',
-                                                                              'add_two_cnots',
-                                                                              'add_base_change',
-                                                                              'add_t_t_dag',
-                                                                              'add_t_cx',
-                                                                              'add_cx_t'],
-                                                                   add_margins=False)
-            print('----------------------------------------------')
-            print('Initial:')
-            print(initial_circuit)
+    for current_proc in all_thread_proc:
+        thread_procedures.append(current_proc)
+        print()
+        print(f'current_proc = {thread_procedures}')
+        print()
 
-            pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                               last_id=0,
-                                               label='t',
-                                               add_margins=True)
-            insert_in_batches(pandora_gates=pandora_gates,
-                              connection=connection,
-                              table_name='linked_circuit')
+        for n_qubits in range(2, 5):
+            for n_templates in range(49, 50):
+                print(f'Testing for {n_qubits} qubits and {n_templates} templates.')
 
-            thread_procedures = [
-                (1, f"CALL cancel_single_qubit_bernoulli({myH}, {myH}, 1, 1, 10, 10000000)"),
-                (1, f"CALL cancel_single_qubit_bernoulli({myPauliZ}, {myPauliZ}, 1, 1, 10, 10000000)"),
-                (1, f"CALL cancel_single_qubit_bernoulli({myZPow}, {myZPow}, 0.25, -0.25, 10, 10000000)"),
-                (1, f"CALL cancel_single_qubit_bernoulli({myPauliX}, {myPauliX}, 1, 1, 10, 10000000)"),
-                (1, f"CALL cancel_two_qubit_bernoulli({myCX}, {myCX}, 1, 10, 10000000)"),
-                (1, f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, 10, 10000000)"),
-                (
-                    1,
-                    f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, 10, 10000000)"),
-                (
-                    1,
-                    f"CALL replace_two_qubit_bernoulli({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, 10, 10000000)"),
-                (1, f"CALL commute_single_control_left_bernoulli({myZPow}, 0.25, 10, 10000000)"),
-                (1, f"CALL commute_single_control_left_bernoulli({myZPow}, -0.25, 10, 10000000)"),
-                (1, f"CALL commute_single_control_left_bernoulli({myZPow}, 0.5, 10, 10000000)"),
-                (1, f"CALL commute_single_control_left_bernoulli({myZPow}, -0.5, 10, 10000000)"),
-                (1, f"CALL linked_hhcxhh_to_cx_bernoulli(10, 10000000)"),
-                (1, f"CALL linked_cx_to_hhcxhh_bernoulli(10, 10000000)"),
-                (1, f"CALL stopper({stop_after})")
-            ]
+                drop_and_replace_tables(connection=connection, clean=True)
+                refresh_all_stored_procedures(connection=connection)
+                reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
 
-            db_multi_threaded(thread_proc=thread_procedures)
-            stop_all_lurking_procedures(connection)
-            extracted_circuit = extract_cirq_circuit(connection=connection,
-                                                     circuit_label='t',
-                                                     remove_io_gates=False,
-                                                     table_name='linked_circuit',
-                                                     is_test=False
-                                                     )
+                initial_circuit = benchmark_cirq.create_random_circuit(n_qubits=n_qubits, n_templates=n_templates,
+                                                                       templates=['add_two_hadamards',
+                                                                                  'add_two_cnots',
+                                                                                  'add_base_change',
+                                                                                  'add_t_t_dag',
+                                                                                  'add_t_cx',
+                                                                                  'add_cx_t'],
+                                                                       add_margins=False)
+                # print('----------------------------------------------')
+                # print('Initial:')
+                # print(initial_circuit)
 
-            print('Final:')
-            print(extracted_circuit)
-            assert np.allclose(initial_circuit.unitary(), extracted_circuit.unitary())
+                pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
+                                                   last_id=0,
+                                                   label='t',
+                                                   add_margins=True)
+                insert_in_batches(pandora_gates=pandora_gates,
+                                  connection=connection,
+                                  table_name='linked_circuit')
+
+                db_multi_threaded(thread_proc=thread_procedures)
+                stop_all_lurking_procedures(connection)
+                extracted_circuit = extract_cirq_circuit(connection=connection,
+                                                         circuit_label='t',
+                                                         remove_io_gates=False,
+                                                         table_name='linked_circuit',
+                                                         is_test=False
+                                                         )
+                # print('Final:')
+                # print(extracted_circuit)
+                assert np.allclose(initial_circuit.unitary(), extracted_circuit.unitary())
 
 
 def test_BVZ_optimization(connection, stop_after):
@@ -783,23 +791,23 @@ def test_BVZ_optimization(connection, stop_after):
 
 if __name__ == "__main__":
     conn = get_connection()
-    test_commute_cx_ctrl_target_case_1(conn)
-    test_commute_cx_ctrl_target_case_2(conn)
-    test_cancel_single_qubit(conn)
-    test_cancel_two_qubit(conn)
-    test_commute_single_control_right(conn)
-    test_commute_single_control_left(conn)
-    test_cx_to_hhcxhh_a(conn)
-    test_cx_to_hhcxhh_b(conn)
-    test_hhcxhh_to_cx_a(conn)
-    test_hhcxhh_to_cx_b(conn)
-    test_replace_two_sq_with_one(conn)
-    test_case_1(conn)
-    test_case_2(conn)
-    test_case_1_repeated(conn, n=10)
-    test_case_2_repeated(conn, n=10)
+    # test_commute_cx_ctrl_target_case_1(conn)
+    # test_commute_cx_ctrl_target_case_2(conn)
+    # test_cancel_single_qubit(conn)
+    # test_cancel_two_qubit(conn)
+    # test_commute_single_control_right(conn)
+    # test_commute_single_control_left(conn)
+    # test_cx_to_hhcxhh_a(conn)
+    # test_cx_to_hhcxhh_b(conn)
+    # test_hhcxhh_to_cx_a(conn)
+    # test_hhcxhh_to_cx_b(conn)
+    # test_replace_two_sq_with_one(conn)
+    # test_case_1(conn)
+    # test_case_2(conn)
+    # test_case_1_repeated(conn, n=10)
+    # test_case_2_repeated(conn, n=10)
     # TODO this fails sometimes
-    # check_logical_correctness_random(conn, stop_after=3)
-    test_qualtran_adder_opt_reconstruction(conn, stop_after=5)
-    test_BVZ_optimization(conn, stop_after=3)
+    check_logical_correctness_random(conn, stop_after=10)
+    # test_qualtran_adder_opt_reconstruction(conn, stop_after=5)
+    # test_BVZ_optimization(conn, stop_after=3)
     conn.close()

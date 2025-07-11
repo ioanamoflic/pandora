@@ -1,8 +1,9 @@
 import numpy as np
+import qiskit
 
 from pandora.exceptions import *
 from pandora.gate_translator import PandoraGateTranslator, PANDORA_TO_CIRQ, CAN_HAVE_KEY, REQUIRES_EXPONENT, \
-    REQUIRES_ROTATION, SINGLE_QUBIT_GATES, TWO_QUBIT_GATES, THREE_QUBIT_GATES
+    REQUIRES_ROTATION, SINGLE_QUBIT_GATES, TWO_QUBIT_GATES, THREE_QUBIT_GATES, PANDORA_TO_QISKIT, IS_IO
 import cirq
 
 
@@ -125,7 +126,7 @@ class PandoraGateWrapper:
             return connection_value
         return connection_value // 10
 
-    def get_gate_qubits_from_list(self, cirq_qubit_list) -> list:
+    def get_gate_qubits_from_list(self, qubit_list) -> list:
         """
         Given a list of arbitrary cirq qubits, return the values of the qubits in that list which correspond to
         indices q1, q2, q3.
@@ -133,19 +134,19 @@ class PandoraGateWrapper:
         if self.pandora_gate.type in SINGLE_QUBIT_GATES:
             if self.q1 is None:
                 raise PandoraGateWrappedMissingQubits
-            return [cirq_qubit_list[self.q1]]
+            return [qubit_list[self.q1]]
         if self.pandora_gate.type in TWO_QUBIT_GATES:
             if self.q1 is None or self.q2 is None:
                 raise PandoraGateWrappedMissingQubits
-            return [cirq_qubit_list[self.q1], cirq_qubit_list[self.q2]]
+            return [qubit_list[self.q1], qubit_list[self.q2]]
         if self.pandora_gate.type in THREE_QUBIT_GATES:
             if self.q1 is None or self.q2 is None or self.q3 is None:
                 raise PandoraGateWrappedMissingQubits
-            return [cirq_qubit_list[self.q1], cirq_qubit_list[self.q2], cirq_qubit_list[self.q3]]
+            return [qubit_list[self.q1], qubit_list[self.q2], qubit_list[self.q3]]
 
     def to_cirq_operation(self) -> cirq.GateOperation:
         """
-        Convert the pandora wrapped gate to a cirq GateOperation object without assigned qubits.
+        Convert the pandora wrapped gate to a qiskit CircuitOperation object without assigned qubits.
         """
         cirq_op = PANDORA_TO_CIRQ[self.pandora_gate.type]
 
@@ -164,3 +165,19 @@ class PandoraGateWrapper:
                 cirq_op.key = self.pandora_gate.meas_key
 
         return cirq_op
+
+    def to_qiskit_gate(self) -> qiskit.circuit.Gate:
+        """
+        Convert the pandora wrapped gate to a qiskit Gate object without assigned qubits.
+        """
+        gate_type = self.pandora_gate.type
+
+        qiskit_gate_class = PANDORA_TO_QISKIT[gate_type]
+
+        if gate_type in REQUIRES_ROTATION:
+            return qiskit_gate_class(phi=self.pandora_gate.param)
+
+        if gate_type in IS_IO:
+            return qiskit_gate_class
+        return qiskit_gate_class()
+

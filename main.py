@@ -40,7 +40,7 @@ if __name__ == "__main__":
         print(f"Starting RSA with {NPROC} processes.")
         # abs_path = os.path.abspath(sys.argv[1])
         abs_path = None
-        n_containers = 11
+        n_containers = 1
         pandora.build_circuit_in_parallel(nprocs=NPROC,
                                           container_id=CONTAINER_ID,
                                           n_containers=n_containers,

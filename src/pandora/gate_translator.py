@@ -2,6 +2,8 @@ from abc import ABC
 from enum import Enum
 import cirq
 import numpy as np
+import qiskit
+from qiskit import QuantumCircuit
 from qualtran.bloqs.arithmetic.addition import And
 
 
@@ -84,6 +86,11 @@ class PandoraGateTranslator(Enum):
     CSwapGate = 24
     GlobalIn = 25
     GlobalOut = 26
+    S = 27
+    S_dag = 28
+    T = 29
+    T_dag = 30
+    Swap = 31
 
 
 MAX_QUBITS_PER_GATE = 3
@@ -91,6 +98,50 @@ GLOBAL_IN_ID = -1
 GLOBAL_OUT_ID = -2
 
 KEEP_RZ = False
+
+# accepted gates for now
+QISKIT_TO_PANDORA = {
+    "rx": PandoraGateTranslator.Rx.value,
+    "ry": PandoraGateTranslator.Rx.value,
+    "rz": PandoraGateTranslator.Rx.value,
+    "h": PandoraGateTranslator.HPowGate.value,
+    "x": PandoraGateTranslator._PauliX.value,
+    "y": PandoraGateTranslator._PauliY.value,
+    "z": PandoraGateTranslator._PauliZ.value,
+    "s": PandoraGateTranslator.S.value,
+    "sdg": PandoraGateTranslator.S_dag.value,
+    "t": PandoraGateTranslator.T.value,
+    "tdg": PandoraGateTranslator.T_dag.value,
+    "cx": PandoraGateTranslator.CXPowGate.value,
+    "cz": PandoraGateTranslator.CZPowGate.value,
+    "ccx": PandoraGateTranslator.CCXPowGate.value,
+    "swap": PandoraGateTranslator.Swap.value,
+    "measure": PandoraGateTranslator.M.value,
+    "In": PandoraGateTranslator.In.value,
+    "Out": PandoraGateTranslator.Out.value,
+}
+
+PANDORA_TO_QISKIT = {
+    PandoraGateTranslator.In.value: QuantumCircuit(1, name="In").to_gate(label="In"),
+    PandoraGateTranslator.Out.value: QuantumCircuit(1, name="Out").to_gate(label="Out"),
+    PandoraGateTranslator.Rx.value: qiskit.circuit.library.RXGate,
+    PandoraGateTranslator.Ry.value: qiskit.circuit.library.RYGate,
+    PandoraGateTranslator.Rz.value: qiskit.circuit.library.RZGate,
+    PandoraGateTranslator.HPowGate.value: qiskit.circuit.library.HGate,
+    PandoraGateTranslator.S.value: qiskit.circuit.library.SGate,
+    PandoraGateTranslator.S_dag.value: qiskit.circuit.library.SdgGate,
+    PandoraGateTranslator.T.value: qiskit.circuit.library.TGate,
+    PandoraGateTranslator.T_dag.value: qiskit.circuit.library.TdgGate,
+    PandoraGateTranslator._PauliX.value: qiskit.circuit.library.XGate,
+    PandoraGateTranslator._PauliZ.value: qiskit.circuit.library.ZGate,
+    PandoraGateTranslator._PauliY.value: qiskit.circuit.library.YGate,
+    PandoraGateTranslator.CXPowGate.value: qiskit.circuit.library.CXGate,
+    PandoraGateTranslator.CZPowGate.value: qiskit.circuit.library.CZGate,
+    PandoraGateTranslator.CCXPowGate.value: qiskit.circuit.library.CCXGate,
+    PandoraGateTranslator.Swap.value: qiskit.circuit.library.SwapGate
+}
+
+IS_IO = [PandoraGateTranslator.In.value, PandoraGateTranslator.Out.value]
 
 PANDORA_TO_CIRQ = {
     PandoraGateTranslator.Rx.value: cirq.ops.common_gates.Rx,
@@ -166,10 +217,15 @@ SINGLE_QUBIT_GATES = [PandoraGateTranslator.Rx.value,
                       PandoraGateTranslator.In.value,
                       PandoraGateTranslator.Out.value,
                       PandoraGateTranslator.M.value,
+                      PandoraGateTranslator.S.value,
+                      PandoraGateTranslator.S_dag.value,
+                      PandoraGateTranslator.T.value,
+                      PandoraGateTranslator.T_dag.value
                       ]
 
 TWO_QUBIT_GATES = [PandoraGateTranslator.CNOT.value,
                    PandoraGateTranslator.CZ.value,
+                   PandoraGateTranslator.Swap.value,
                    PandoraGateTranslator.CZPowGate.value,
                    PandoraGateTranslator.CXPowGate.value,
                    PandoraGateTranslator.XXPowGate.value,

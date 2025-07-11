@@ -5,6 +5,7 @@ from qualtran.bloqs.arithmetic.addition import Add
 from qualtran.bloqs.data_loading import QROM
 from qualtran import QUInt
 
+from pandora.pandora_util import pandora_to_circuit
 from pandora.qualtran_to_pandora_util import get_cirq_circuit_for_bloq, assert_circuit_is_pandora_ingestible
 
 
@@ -43,7 +44,7 @@ def test_random_reconstruction(n_circuits=100):
         print(f'Time for cirq_to_db: {time.time() - start_time}')
 
         start_time = time.time()
-        reconstructed_circuit = pandora_to_cirq(pandora_gates=db_tuples)
+        reconstructed_circuit = pandora_to_circuit(pandora_gates=db_tuples)
         print(f'Time for db_to_cirq: {time.time() - start_time}')
 
         qubit_map = dict(

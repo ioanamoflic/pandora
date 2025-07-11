@@ -1,4 +1,4 @@
-create or replace procedure linked_cx_to_hhcxhh_visit(sys_range int, run_nr int)
+create or replace procedure linked_cx_to_hhcxhh_cached()
     language plpgsql
 as
 $$
@@ -25,18 +25,16 @@ declare
     cx_id_ctrl bigint;
     cx_id_tgt bigint;
 	start_time timestamptz;
-    stop boolean;
+
+    t_curs cursor for select * from mem_cx;
+    t_row mem_cx%rowtype;
+
 begin
     start_time := clock_timestamp();
 
-    while run_nr > 0 loop
-        select st.stop into stop from stop_condition as st limit 1;
-	    if stop=True then
-            exit;
-        end if;
-        -- note that 15 and 18 are both CX gates
-        select * into cx from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
-                         where it.type in (15, 18) and visited = false for update skip locked limit 1;
+    for t_row in t_curs loop
+        select * into cx from linked_circuit where id = t_row.id;
+
         if cx.id is not null then
             cx_prev_q1_id := div(cx.prev_q1, 10);
             cx_prev_q2_id := div(cx.prev_q2, 10);
@@ -72,11 +70,9 @@ begin
                 execute 'update linked_circuit set ' || modulus_left_cx_q2 || ' = $1 where id = $2' using left_q2_id, cx_prev_q2_id;
                 execute 'update linked_circuit set ' || modulus_right_cx_q1 || ' = $1 where id = $2' using right_q1_id, cx_next_q1_id;
                 execute 'update linked_circuit set ' || modulus_right_cx_q2 || ' = $1 where id = $2' using right_q2_id, cx_next_q2_id;
-                run_nr = run_nr - 1;
             end if;
             commit;
         end if;
     end loop;
-    raise notice 'Time spent for all cx -> hhcxhh =%', clock_timestamp() - start_time;
 end;$$;
 
