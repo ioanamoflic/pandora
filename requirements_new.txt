@@ -3,3 +3,4 @@ psycopg2-binary
 requests
 pytest
 gmpy2
+qiskit
