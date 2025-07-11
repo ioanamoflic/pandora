@@ -1,9 +1,8 @@
 import cirq
 import qiskit
 
-from pandora import PandoraGateTranslator
 from pandora.exceptions import PandoraGateOrderingError, PandoraWrappedGateMissingLinks
-from pandora.gate_translator import SINGLE_QUBIT_GATES, TWO_QUBIT_GATES
+from pandora.gate_translator import SINGLE_QUBIT_GATES, TWO_QUBIT_GATES, PandoraGateTranslator
 from pandora.gates import PandoraGateWrapper, PandoraGate
 
 

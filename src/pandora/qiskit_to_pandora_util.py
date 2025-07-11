@@ -1,7 +1,6 @@
 from qiskit.converters import circuit_to_dag, dag_to_circuit
 
-from pandora import PandoraGateTranslator
-from pandora.gate_translator import MAX_QUBITS_PER_GATE, QISKIT_TO_PANDORA
+from pandora.gate_translator import MAX_QUBITS_PER_GATE, QISKIT_TO_PANDORA, PandoraGateTranslator
 from pandora.gates import PandoraGate
 
 from qiskit import QuantumCircuit
