@@ -2,13 +2,13 @@ Bootstrap: localimage
 From: images/postgres:latest.sif
 
 %files
-    ../requirements.txt requirements.txt
+    ../requirements_new.txt requirements_new.txt
 
 %post
     apt update
     apt-get -y install python3 git
     apt install python3-pip -y
-    pip3 install --break-system-packages -r requirements.txt
+    pip3 install --break-system-packages -r requirements_new.txt
 
 #%runscript
 #    julia --project="/opt/." "/opt/src/cli.jl" "$@"
