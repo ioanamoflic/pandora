@@ -1,4 +1,5 @@
 import csv
+import sys
 import time
 import random
 
@@ -73,35 +74,34 @@ def run_benchmark(input_dag: DAGCircuit,
 """
 
 if __name__ == "__main__":
-    n_qubits = [10, 100, 1000]
-    n_ratios = [8, 4, 2, 1]
+    if len(sys.argv) == 1:
+        sys.exit(0)
+
+    next_arg = 0
+
+    N_QUB = int(sys.argv[next_arg + 1])
+    RATIO = int(sys.argv[next_arg + 2])
+
+    print(f'Benchmark for ... N_QUB = {N_QUB} and RATIO = {RATIO}')
 
     times = []
-    for qubits in n_qubits:
-        print('N_qubits...', qubits)
 
-        qc = random_clifford(num_qubits=qubits, seed=0).to_circuit()
-        qc_dag = qiskit.converters.circuit_to_dag(qc)
-        nr_cnots = qc.count_ops()['cx']
+    qc = random_clifford(num_qubits=N_QUB, seed=0).to_circuit()
+    qc_dag = qiskit.converters.circuit_to_dag(qc)
+    nr_cnots = qc.count_ops()['cx']
 
-        print('CX count: ', nr_cnots)
+    total_times = run_benchmark(qc_dag,
+                                sample_percentage=0.1,
+                                nr_rewrites=nr_cnots // RATIO)
+    # Merge the times
+    total_search = sum(total_times[0])
+    total_rewrite = sum(total_times[1])
 
-        rtimes = []
-        for ratio in n_ratios:
-            print('Ratio... ', ratio)
+    print('Time to optimize S+R=T:', total_search, total_rewrite, total_search + total_rewrite, flush=True)
 
-            total_times = run_benchmark(qc_dag,
-                                        sample_percentage=0.1,
-                                        nr_rewrites=nr_cnots // ratio)
-            # Merge the times
-            total_search = sum(total_times[0])
-            total_rewrite = sum(total_times[1])
+    times.append((N_QUB, RATIO, total_search, total_rewrite))
 
-            print('Time to optimize S+R=T:', total_search, total_rewrite, total_search + total_rewrite, flush=True)
-
-            times.append((qubits, ratio, total_search, total_rewrite))
-
-    with open('qiskit_cx_flip.csv', 'w') as f:
+    with open('qiskit_cx_flip.csv', 'a') as f:
         writer = csv.writer(f)
         for row in times:
             writer.writerow(row)
