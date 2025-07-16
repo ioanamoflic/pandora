@@ -35,7 +35,7 @@ begin
             exit;
         end if;
         -- note that 15 and 18 are both CX gates
-        select * into cx from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
+        select * into cx from (select * from linked_circuit lc tablesample bernoulli(sys_range)) as it
                          where it.type in (15, 18) and visited = false for update skip locked limit 1;
         if cx.id is not null then
             cx_prev_q1_id := div(cx.prev_q1, 10);
@@ -77,6 +77,5 @@ begin
             commit;
         end if;
     end loop;
-    raise notice 'Time spent for all cx -> hhcxhh =%', clock_timestamp() - start_time;
 end;$$;
 

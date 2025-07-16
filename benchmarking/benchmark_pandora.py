@@ -1,4 +1,3 @@
-import random
 import csv
 
 import qiskit
@@ -8,25 +7,6 @@ from qiskit.dagcircuit import DAGCircuit
 
 from pandora.connection_util import *
 from pandora.qiskit_to_pandora_util import convert_qiskit_to_pandora
-
-
-def generate_random_CX_circuit(n_templates, n_qubits=50):
-    qubits = [cirq.LineQubit(i) for i in range(n_qubits)]
-    c = cirq.Circuit()
-    for _ in range(n_templates):
-        q1, q2 = random.choices(qubits, k=2)
-        while q1 == q2:
-            q1, q2 = random.choices(qubits, k=2)
-        c.append(cirq.CNOT.on(q1, q2))
-
-    return c
-
-
-def gate_count(circuit):
-    cnt = 0
-    for mom in circuit:
-        cnt += len(mom)
-    return cnt
 
 
 def test_cx_to_hhcxhh_bernoulli(connection,
@@ -52,22 +32,18 @@ def test_cx_to_hhcxhh_bernoulli(connection,
                       table_name='linked_circuit',
                       large_buffer_value=10000000)
 
-    st_time = time.time()
     print('I started optimizing...')
+
+    st_time = time.time()
     cursor.execute(f"call linked_cx_to_hhcxhh_bernoulli({bernoulli_percentage}, {repetitions})")
-    print('I finished optimizing...')
 
     return time.time() - st_time
 
 
 def test_cx_to_hhcxhh_visit(connection,
                             initial_circuit: qiskit.QuantumCircuit,
-                            n_qubits: int):
-    # make sure you use the right sampling method
-    if n_qubits < 1000:
-        sys_percent = 1
-    else:
-        sys_percent = 0.1
+                            ratio: int,
+                            sys_percentage=10):
 
     cursor = connection.cursor()
 
@@ -79,9 +55,6 @@ def test_cx_to_hhcxhh_visit(connection,
 
     op_count = dag.count_ops()
     cx_count = op_count['cx']
-    total_gate_count = sum(op_count.values())
-
-    sys_percentage = int(total_gate_count * sys_percent)
 
     db_tuples, _ = convert_qiskit_to_pandora(qiskit_circuit=initial_circuit,
                                              add_margins=True,
@@ -96,10 +69,9 @@ def test_cx_to_hhcxhh_visit(connection,
                       table_name='linked_circuit',
                       large_buffer_value=10000000)
 
-    st_time = time.time()
     print('I started optimizing...')
-    cursor.execute(f"call linked_cx_to_hhcxhh_visit({sys_percentage}, {cx_count})")
-    print('I finished optimizing...')
+    st_time = time.time()
+    cursor.execute(f"call linked_cx_to_hhcxhh_visit({sys_percentage}, {cx_count // ratio})")
 
     return time.time() - st_time
 
@@ -139,25 +111,28 @@ def test_cx_to_hhcxhh_cached_ids(connection,
 
 if __name__ == "__main__":
     conn = get_connection()
-    n_qub = [10, 100, 1000, 10000, 100000]
+
+    n_qub = [10, 100, 1000]
+    ratios = [8, 4, 2, 1]
 
     times = []
 
     for nq in n_qub:
-        print('number of qubits:', nq)
-        qc = random_clifford(num_qubits=nq, seed=0).to_circuit()
+        for ratio in ratios:
+            print('Number of qubits:', nq)
+            print('Ratio:', ratio)
 
-        start_time = time.time()
-        tot_time = test_cx_to_hhcxhh_cached_ids(connection=conn,
-                                                initial_circuit=qc)
-        print('time to optimize:', tot_time)
-        times.append(tot_time)
+            qc = random_clifford(num_qubits=nq, seed=0).to_circuit()
 
-    rows = zip(n_qub, times)
+            tot_time = test_cx_to_hhcxhh_visit(connection=conn,
+                                               initial_circuit=qc,
+                                               ratio=ratio)
+            times.append((nq, ratio, tot_time))
+            print('time to optimize:', tot_time)
 
-    with open('results/db_random.csv', 'w') as f:
+    with open('pandora_cx_flip.csv', 'w') as f:
         writer = csv.writer(f)
-        for row in rows:
+        for row in times:
             writer.writerow(row)
 
     conn.close()

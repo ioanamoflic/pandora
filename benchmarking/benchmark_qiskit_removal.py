@@ -4,20 +4,17 @@ import random
 
 import qiskit
 from qiskit import QuantumCircuit
-from qiskit.circuit.library import CXGate
+from qiskit.circuit.library import HGate
 
 from qiskit.dagcircuit import DAGCircuit
 from qiskit.quantum_info import random_clifford
 
 
-def get_replacement():
-    replacement = QuantumCircuit(2)
+def get_replacement_hh():
+    replacement = QuantumCircuit(1)
 
     replacement.h(0)
-    replacement.h(1)
-    replacement.cx(1, 0)
     replacement.h(0)
-    replacement.h(1)
 
     dag = qiskit.converters.circuit_to_dag(replacement)
 
@@ -38,9 +35,41 @@ def get_random_gate_from_dag_visit_once(op_nodes, visited, sample_size=100, gate
                 return node
 
 
+def replace_h_with_hh_all(input_dag):
+    """
+    Replace all H gates with HH.
+    """
+    op_nodes = input_dag.op_nodes()
+    for node in op_nodes:
+        if isinstance(node.op, HGate):
+            replacement = get_replacement_hh()
+            input_dag.substitute_node_with_dag(node, replacement)
+
+    return input_dag
+
+
+def find_hh_pair(input_dag, visit_dict, sample_size):
+    op_nodes = input_dag.op_nodes()
+    while True:
+        h_node = get_random_gate_from_dag_visit_once(op_nodes, visit_dict, sample_size, HGate)
+
+        if h_node is not None:
+            left_h = list(input_dag.predecessors(h_node))[0]
+            if left_h is not None and not isinstance(left_h, qiskit._accelerate.circuit.DAGInNode) \
+                    and isinstance(left_h.op, HGate):
+                return left_h, h_node
+            right_h = list(input_dag.successors(h_node))[0]
+            if right_h is not None and isinstance(right_h.op, HGate):
+                return h_node, right_h
+
+
 def run_benchmark(input_dag: DAGCircuit,
                   sample_percentage=0.1,
                   nr_rewrites=10):
+
+    # replace all H with HH
+    input_dag = replace_h_with_hh_all(input_dag=input_dag)
+
     op_nodes = input_dag.op_nodes()
     op_nodes_length = len(op_nodes)
     sample_size = round(op_nodes_length * sample_percentage)
@@ -53,12 +82,19 @@ def run_benchmark(input_dag: DAGCircuit,
     for i in range(nr_rewrites):
         t0 = time.time()
 
-        cx_node = get_random_gate_from_dag_visit_once(op_nodes, visit_dict, sample_size, CXGate)
+        h_left, h_right = find_hh_pair(input_dag=input_dag,
+                                       visit_dict=visit_dict,
+                                       sample_size=sample_size)
+
+        assert isinstance(h_left.op, HGate) and isinstance(h_right.op, HGate)
+
+        visit_dict[h_left] = True
+        visit_dict[h_right] = True
 
         t1 = time.time()
 
-        replacement = get_replacement()
-        input_dag.substitute_node_with_dag(cx_node, replacement)
+        input_dag.remove_op_node(h_left)
+        input_dag.remove_op_node(h_right)
 
         t2 = time.time()
 
@@ -82,9 +118,7 @@ if __name__ == "__main__":
 
         qc = random_clifford(num_qubits=qubits, seed=0).to_circuit()
         qc_dag = qiskit.converters.circuit_to_dag(qc)
-        nr_cnots = qc.count_ops()['cx']
-
-        print('CX count: ', nr_cnots)
+        nr_hadamards = qc.count_ops()['h']
 
         rtimes = []
         for ratio in n_ratios:
@@ -92,7 +126,7 @@ if __name__ == "__main__":
 
             total_times = run_benchmark(qc_dag,
                                         sample_percentage=0.1,
-                                        nr_rewrites=nr_cnots // ratio)
+                                        nr_rewrites=nr_hadamards // ratio)
             # Merge the times
             total_search = sum(total_times[0])
             total_rewrite = sum(total_times[1])
@@ -101,7 +135,7 @@ if __name__ == "__main__":
 
             times.append((qubits, ratio, total_search, total_rewrite))
 
-    with open('qiskit_cx_flip.csv', 'w') as f:
+    with open('qiskit_hh_removal.csv', 'w') as f:
         writer = csv.writer(f)
         for row in times:
             writer.writerow(row)
