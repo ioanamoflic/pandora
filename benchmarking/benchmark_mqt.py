@@ -84,7 +84,7 @@ def pandora_verify(connection,
         # (1, f"call cancel_two_qubit_equiv({CX}, {CX}, 0, {window}, 500)"),
     ]
 
-    db_multi_threaded(thread_proc=thread_procedures)
+    db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
 
     return time.time() - st_time
 
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     # watch "psql -p 5432 postgres -c \"select count(*) from linked_circuit;\""
 
     FILENAME = sys.argv[1]
-    conn = get_connection(config_file_path=f"../{FILENAME}")
+    conn = get_connection(config_file_path=FILENAME)
 
     print(f"Running config file {FILENAME}")
 
