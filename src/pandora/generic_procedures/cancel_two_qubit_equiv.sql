@@ -29,7 +29,9 @@ begin
 
         for first in
             (select * from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
-    	                    where it.type=type_1 and it.param = parameter for update skip locked)
+    	                    where it.type=type_1
+                            and it.next_q1 / 10 = it.next_q2 / 10 -- two gates sharing the same wires
+                            and it.param = parameter for update skip locked)
         loop
             if first.id is not null then
                 first_id_plus_one := first.id * 10 + 1;
