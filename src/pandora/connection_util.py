@@ -40,6 +40,9 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
             None.
     """
     procedures = [
+        #
+        'generic_procedures/cancel_two_qubit_equiv.sql',
+
         # bernoulli sample version
         'generic_procedures/cancel_single_qubit_bernoulli.sql',
         'generic_procedures/cancel_two_qubit_bernoulli.sql',
