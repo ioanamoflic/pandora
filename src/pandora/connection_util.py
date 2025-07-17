@@ -518,6 +518,7 @@ def parallel_insert(pandora_gates: list[PandoraGate], nprocs: int, bs_per_proces
 
 def map_hack(aff,
              proc_call: str,
+             config_file_path: None,
              verbose: bool = False) -> None:
     """
     Calls an individual stored procedure in the autocommit mode (asynchronous call) from process with rank = my_pid.
@@ -537,7 +538,7 @@ def map_hack(aff,
         if verbose:
             print("My pid is {} and my old affinity was {}, my new affinity is {}".format(*x))
 
-    connection = get_connection()
+    connection = get_connection(config_file_path=config_file_path)
     cursor = connection.cursor()
     connection.set_session(autocommit=True)
     if verbose:
@@ -545,7 +546,7 @@ def map_hack(aff,
     cursor.execute(proc_call)
 
 
-def db_multi_threaded(thread_proc: list[tuple[int, str]]) -> None:
+def db_multi_threaded(thread_proc: list[tuple[int, str]], config_file_path=None) -> None:
     """
     Spawns n processes and maps each process to a database procedure call.
     For linux platforms, the affinity of the process is also set.
@@ -565,9 +566,9 @@ def db_multi_threaded(thread_proc: list[tuple[int, str]]) -> None:
     for (n, proc) in thread_proc:
         for _ in range(n):
             if sys.platform == "linux":
-                p = Process(target=map_hack, args=(cpus.pop(), proc))
+                p = Process(target=map_hack, args=(cpus.pop(), proc, config_file_path))
             else:
-                p = Process(target=map_hack, args=(None, proc))
+                p = Process(target=map_hack, args=(None, proc, config_file_path))
             process_list.append(p)
 
     for i in range(n_threads):
