@@ -1,4 +1,5 @@
 import csv
+import sys
 
 import qiskit.qasm3
 from mqt.qcec import verify
@@ -96,7 +97,11 @@ if __name__ == "__main__":
     # watch
     # watch "psql -p 5432 postgres -c \"select count(*) from linked_circuit;\""
 
-    conn = get_connection()
+    FILENAME = sys.argv[1]
+    conn = get_connection(config_file_path=f"../{FILENAME}")
+
+    print(f"Running config file {FILENAME}")
+
     times = []
 
     for q in range(30, 31, 2):
