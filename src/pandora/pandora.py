@@ -16,7 +16,7 @@ class PandoraConfig:
     def __init__(self):
         pass
 
-    def update_from_file(self, path, verbose=True):
+    def update_from_file(self, path, verbose=False):
         import json
         with open(path, "r") as file:
             data = json.load(file)

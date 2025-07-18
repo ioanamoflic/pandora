@@ -1,9 +1,8 @@
 import csv
-import sys
-import time
 
 import qiskit.qasm3
 from mqt.qcec import verify
+from mqt.qcec.pyqcec import Configuration
 
 from qiskit import QuantumCircuit
 
@@ -38,8 +37,6 @@ def remove_random_gate(circuit: QuantumCircuit) -> QuantumCircuit:
         return circuit
 
     gate_index_to_remove = random.randint(0, len(circuit.data) - 1)
-    # print(f"Removing gate at index: {gate_index_to_remove}")
-
     new_qc = QuantumCircuit(circuit.num_qubits, circuit.num_clbits)
 
     for i, instruction in enumerate(circuit.data):
@@ -79,7 +76,6 @@ def pandora_verify(connection,
     ]
 
     db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
-
     end_time = time.time() - st_time
 
     circuit = extract_cirq_circuit(connection=connection,
@@ -99,19 +95,24 @@ if __name__ == "__main__":
 
     FILENAME = None
     EQUIV = 0
+    BENCH = None
+    conn = None
 
-    if len(sys.argv) == 1:
+    if len(sys.argv) != 4:
         sys.exit(0)
-    elif len(sys.argv) == 2:
-        EQUIV = int(sys.argv[1])
-    elif len(sys.argv) == 3:
+    elif len(sys.argv) == 4:
         FILENAME = sys.argv[1]
         EQUIV = int(sys.argv[2])
+        BENCH = sys.argv[3]
 
-    conn = get_connection(config_file_path=FILENAME)
-    print(f"Running config file {FILENAME}")
+    if BENCH == 'pandora':
+        conn = get_connection(config_file_path=FILENAME)
+        print(f"Running config file {FILENAME}")
 
-    benchmark_equiv = EQUIV
+    # set timeout for MQT
+    config = Configuration()
+    config.execution.timeout = 600
+
     times = []
 
     for q in range(20, 21, 2):
@@ -119,36 +120,17 @@ if __name__ == "__main__":
         nr_runs = 10
 
         for i in range(nr_runs):
-            circ1 = generate_random_cnot_circuit(q, q ** 3)
+            if EQUIV == 0:
+                print(q, i, "correct")
+            else:
+                print(q, i, "incorrect")
 
-            # circ1 = qiskit.qasm3.load(f"circ1_{q}_{0}.qasm")
-
-            # with open(f"circ1_{q}_{i}.qasm", "w") as f:
-            #     qiskit.qasm3.dump(circ1, f)
-
-            if benchmark_equiv == 0:
-                print(q, i, "correct ", end="")
-
-                circ2 = circ1.copy()
-                check_time, equiv = pandora_verify(connection=conn,
-                                                   circ1=circ1,
-                                                   circ2=circ2)
-                print('Pandora time: ', check_time)
-                print('Equiv: ', equiv)
-
-                # result = verify(circ1, circ2)
-                # check_time = result.check_time
-                # print('MQT time: ', check_time)
-
-                total = total + check_time
-                times.append((q, i, equiv, check_time))
-
-            elif benchmark_equiv == 1:
-                print(q, i, "wrong ", end="")
-
-                circ2 = circ1.copy()
-                # remove one gate
-                circ2 = remove_random_gate(circ2)
+            if BENCH == 'pandora':
+                circ1 = qiskit.qasm3.load(f"circ1_{q}_{i}_{EQUIV}.qasm")
+                if EQUIV == 0:
+                    circ2 = circ1.copy()
+                else:
+                    circ2 = qiskit.qasm3.load(f"circ2_{q}_{i}_{EQUIV}.qasm")
 
                 check_time, equiv = pandora_verify(connection=conn,
                                                    circ1=circ1,
@@ -156,18 +138,33 @@ if __name__ == "__main__":
                 print('Pandora time: ', check_time)
                 print('Equiv: ', equiv)
 
-                # result = verify(circ1, circ2)
-                # time = result.check_time
-                # print('MQT time: ', time)
+            else:
+                circ1 = generate_random_cnot_circuit(q, q ** 3)
+                with open(f"circ1_{q}_{i}_{EQUIV}.qasm", "w") as f:
+                    qiskit.qasm3.dump(circ1, f)
 
-                total = total + check_time
-                times.append((q, i, equiv, check_time))
+                if EQUIV == 0:
+                    circ2 = circ1.copy()
+                else:
+                    circ2 = remove_random_gate(circ1)
+                    with open(f"circ2_{q}_{i}_{EQUIV}.qasm", "w") as f:
+                        qiskit.qasm3.dump(circ2, f)
+
+                result = verify(circ1, circ2, configuration=config)
+                equiv = result.equivalence
+                check_time = result.check_time
+                print('MQT time: ', check_time)
+                print(result.equivalence)
+
+            total = total + check_time
+            times.append((q, i, equiv, check_time, BENCH))
 
         print("----- ", total / nr_runs)
 
-    with open('mqt_verification.csv', 'w') as f:
+    with open(f'{BENCH}_{EQUIV}_verification.csv', 'w') as f:
         writer = csv.writer(f)
         for row in times:
             writer.writerow(row)
 
-    conn.close()
+    if BENCH == 'pandora':
+        conn.close()
