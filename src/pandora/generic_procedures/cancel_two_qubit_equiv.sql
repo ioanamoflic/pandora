@@ -19,14 +19,28 @@ declare
     second record;
     stop boolean;
     compare record;
+    rounds_missed smallint := 0;
+    is_missed_round boolean;
+--     max_missed int;
 begin
+--     insert into max_missed_rounds values (0);
 	while run_nr > 0 loop
+
+        if rounds_missed >= 500 then
+            exit;
+        end if;
+
+--         select max(mm.missed) into max_missed from max_missed_rounds as mm;
+--         if rounds_missed > max_missed then
+--             insert into max_missed_rounds values (rounds_missed);
+--         end if;
 
 	    select st.stop into stop from stop_condition as st limit 1;
 	    if stop=True then
             exit;
         end if;
 
+	    is_missed_round := true;
         for first in
             (select * from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
     	                    where it.type=type_1
@@ -73,17 +87,24 @@ begin
 
                         delete from linked_circuit lc where lc.id in (first.id, second.id);
                         run_nr = run_nr - 1;
---                         raise notice 'run_nr: %', run_nr;
+
+                        is_missed_round = false;
+                        rounds_missed = 0;
+
                     end if;
                 end if;
                 commit;
+
                 if run_nr = 0 then
-                    -- break the current loop
                     exit;
                 end if;
+
             end if;
 		end loop;
-	end loop;
 
---     raise notice 'RUN_NR: %', run_nr;
+	    if is_missed_round = true then
+            rounds_missed := rounds_missed + 1;
+        end if;
+
+	end loop;
 end;$$;

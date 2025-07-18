@@ -1,5 +1,6 @@
 import csv
 import sys
+import time
 
 import qiskit.qasm3
 from mqt.qcec import verify
@@ -11,6 +12,7 @@ from pandora.connection_util import *
 import random
 
 from pandora.qiskit_to_pandora_util import convert_qiskit_to_pandora
+
 
 def generate_random_cnot_circuit(num_qubits=2, num_gates=8):
     if num_qubits < 2:
@@ -49,16 +51,11 @@ def remove_random_gate(circuit: QuantumCircuit) -> QuantumCircuit:
 
 def pandora_verify(connection,
                    circ1: QuantumCircuit,
-                   circ2: QuantumCircuit,
-                   one_missing=False):
-    """
-
-    """
+                   circ2: QuantumCircuit):
     concatenated = circ1.compose(circ2.inverse())
     nr_cnots = concatenated.count_ops()['cx'] // 2
     print(nr_cnots)
 
-    cursor = connection.cursor()
     drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
     db_tuples, _ = convert_qiskit_to_pandora(qiskit_circuit=concatenated,
@@ -68,84 +65,109 @@ def pandora_verify(connection,
                       connection=connection,
                       table_name='linked_circuit',
                       reset_id=False)
+
     CX = PandoraGateTranslator.CXPowGate.value
 
     st_time = time.time()
-
-    nr_rewrites = nr_cnots - (1 if one_missing else 0)
-    nr_procs = 4
+    nr_rewrites = nr_cnots
+    nr_procs = 24
     window = 1000
     thread_procedures = [
-        #(1, f"call stopper({600});"),
         (nr_procs - 1, f"call cancel_two_qubit_equiv({CX}, {CX}, 0, {window}, {nr_rewrites // nr_procs})"),
-        (1, f"call cancel_two_qubit_equiv({CX}, {CX}, 0, {window}, {nr_rewrites - (nr_procs - 1) * (nr_rewrites // nr_procs)})"),
-
-        # (nr_procs - 1, f"call cancel_two_qubit_equiv({CX}, {CX}, 0, {window}, 500)"),
-        # (1, f"call cancel_two_qubit_equiv({CX}, {CX}, 0, {window}, 500)"),
+        (1,
+         f"call cancel_two_qubit_equiv({CX}, {CX}, 0, {window}, {nr_rewrites - (nr_procs - 1) * (nr_rewrites // nr_procs)})"),
     ]
 
     db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
 
-    return time.time() - st_time
+    end_time = time.time() - st_time
+
+    circuit = extract_cirq_circuit(connection=connection,
+                                   table_name='linked_circuit',
+                                   circuit_label=None,
+                                   is_test=False,
+                                   remove_io_gates=True)
+    is_equivalent = False
+    if len(circuit) == 0:
+        is_equivalent = True
+
+    return end_time, is_equivalent
 
 
 if __name__ == "__main__":
-
-    # in case shit happens!
-    # pg_ctl - D /opt/homebrew/var/postgresql@14 restart
-
-    # watch
     # watch "psql -p 5432 postgres -c \"select count(*) from linked_circuit;\""
 
-    FILENAME = sys.argv[1]
-    conn = get_connection(config_file_path=FILENAME)
+    FILENAME = None
+    EQUIV = 0
 
+    if len(sys.argv) == 1:
+        sys.exit(0)
+    elif len(sys.argv) == 2:
+        EQUIV = int(sys.argv[1])
+    elif len(sys.argv) == 3:
+        FILENAME = sys.argv[1]
+        EQUIV = int(sys.argv[2])
+
+    conn = get_connection(config_file_path=FILENAME)
     print(f"Running config file {FILENAME}")
 
+    benchmark_equiv = EQUIV
     times = []
 
-    for q in range(30, 31, 2):
-
+    for q in range(10, 11, 2):
         total = 0
         nr_runs = 3
+
         for i in range(nr_runs):
             circ1 = generate_random_cnot_circuit(q, q ** 3)
 
             # circ1 = qiskit.qasm3.load(f"circ1_{q}_{0}.qasm")
 
-            print(q, i, "correct ", end="")
+            # with open(f"circ1_{q}_{i}.qasm", "w") as f:
+            #     qiskit.qasm3.dump(circ1, f)
 
-            with open(f"circ1_{q}_{i}.qasm", "w") as f:
-                qiskit.qasm3.dump(circ1, f)
+            if benchmark_equiv == 0:
+                print(q, i, "correct ", end="")
 
-            circ2 = circ1.copy()
-            pandora_time_1 = pandora_verify(connection=conn,
-                                            circ1=circ1,
-                                            circ2=circ2)
-            print('Pandora time: ', pandora_time_1)
-            total = total + pandora_time_1
+                circ2 = circ1.copy()
+                check_time, equiv = pandora_verify(connection=conn,
+                                                   circ1=circ1,
+                                                   circ2=circ2)
+                print('Pandora time: ', check_time)
+                print('Equiv: ', equiv)
 
-            # result_1 = verify(circ1, circ2)
-            # print('MQT: ', result_1.check_time)
-            # total = total + result_1.check_time
+                # result = verify(circ1, circ2)
+                # check_time = result.check_time
+                # print('MQT time: ', check_time)
 
-            # print(q, i, "wrong ", end="")
-            # circ2 = remove_random_gate(circ1)
-            # # result_2 = verify(circ1, circ2)
-            # # print('MQT: ', result_2.check_time)
-            #
-            # pandora_time_2 = pandora_verify(connection=conn,
-            #                                 circ1=circ1,
-            #                                 circ2=circ2,
-            #                                 one_missing=True)
-            # print('Pandora time: ', pandora_time_2)
+                total = total + check_time
+                times.append((q, i, equiv, check_time))
 
-            # times.append((q, i, result_1, pandora_time_1, result_2, pandora_time_2))
+            elif benchmark_equiv == 1:
+                print(q, i, "wrong ", end="")
+
+                circ2 = circ1.copy()
+                # remove one gate
+                circ2 = remove_random_gate(circ2)
+
+                check_time, equiv = pandora_verify(connection=conn,
+                                                   circ1=circ1,
+                                                   circ2=circ2)
+                print('Pandora time: ', check_time)
+                print('Equiv: ', equiv)
+
+                # result = verify(circ1, circ2)
+                # time = result.check_time
+                # print('MQT time: ', time)
+
+                total = total + check_time
+                times.append((q, i, equiv, check_time))
+
         print("----- ", total / nr_runs)
 
-    # with open('pandora_mqt_verification.csv', 'w') as f:
-    #     writer = csv.writer(f)
-    #     for row in times:
-    #         writer.writerow(row)
+    with open('mqt_verification.csv', 'w') as f:
+        writer = csv.writer(f)
+        for row in times:
+            writer.writerow(row)
 
     conn.close()

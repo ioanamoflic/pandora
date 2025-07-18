@@ -89,6 +89,11 @@ create table if not exists public.stop_condition
     stop boolean default false
 );
 
+create table if not exists public.max_missed_rounds
+(
+    missed int default 0
+);
+
 create table if not exists public.edge_list
 (
     source bigint,

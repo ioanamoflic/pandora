@@ -3,7 +3,6 @@ import os
 import sys
 from itertools import cycle
 from multiprocessing import Process
-from typing import Any, Iterator
 
 import psycopg2
 
@@ -103,6 +102,7 @@ def drop_and_replace_tables(connection,
                                     'stop_condition',
                                     'edge_list',
                                     'mem_cx',
+                                    'max_missed_rounds',
                                     'benchmark_results',
                                     'optimization_results'),
                             verbose=False) -> None:
@@ -352,6 +352,8 @@ def extract_cirq_circuit(connection,
     cursor = connection.cursor()
     cursor.execute(sql, args)
     tuples: list[tuple] = cursor.fetchall()
+
+    print(f"Count left in the database: {len(tuples)}")
 
     pandora_gates: list[PandoraGate] = [PandoraGate(*tup) for tup in tuples]
     final_circ: cirq.Circuit = pandora_to_circuit(pandora_gates=pandora_gates,
