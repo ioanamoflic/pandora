@@ -114,9 +114,9 @@ if __name__ == "__main__":
     benchmark_equiv = EQUIV
     times = []
 
-    for q in range(10, 11, 2):
+    for q in range(20, 21, 2):
         total = 0
-        nr_runs = 3
+        nr_runs = 10
 
         for i in range(nr_runs):
             circ1 = generate_random_cnot_circuit(q, q ** 3)
