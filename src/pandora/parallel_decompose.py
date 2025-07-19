@@ -1,12 +1,12 @@
 import time
 
-from qualtran.bloqs.mod_arithmetic import CtrlScaleModAdd
-
 from pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
 
 from pandora.cirq_to_pandora_util import cirq_to_pandora_from_op_list
 from pandora.connection_util import get_connection, insert_single_batch
 from pandora.qualtran_to_pandora_util import get_RSA, generator_get_RSA_compatible_batch
+
+JUST_COUNT_OPS = True
 
 
 def parallel_decompose_multi_and_insert(proc_id: int,
@@ -25,65 +25,84 @@ def parallel_decompose_multi_and_insert(proc_id: int,
     # each process will generate its own copy of the pyLIQTR/Qualtran circuit
     print(f"Hello, I am process {proc_id} and I am creating my own circuit.")
 
+    circuit_creation_start = time.time()
+
     proc_circuit = get_RSA(n=N)
     circuit_decomposed_shallow = circuit_decompose_multi(proc_circuit, N=2)
+
+    circuit_creation_time = time.time() - circuit_creation_start
 
     high_level_op_list = [op
                           for mom in circuit_decomposed_shallow
                           for op in mom
                           ]
+
     op_count = len(high_level_op_list)
+    CtrlScaleModAdd_count = 0
+    op_types = set()
 
     for op in high_level_op_list:
+        op_types.add(str(op.gate))
         if str(op.gate) == 'bloq.CtrlScaleModAdd':
-            high_level_op_list = [op]
-            op_count = 1
-            break
+            CtrlScaleModAdd_count += 1
 
-    del circuit_decomposed_shallow
+    if not JUST_COUNT_OPS:
+        for op in high_level_op_list:
+            if str(op.gate) == 'bloq.CtrlScaleModAdd':
+                high_level_op_list = [op]
+                op_count = 1
+                break
 
-    print(len(high_level_op_list))
+        del circuit_decomposed_shallow
 
-    container_start = (op_count * container_id) // n_containers
-    container_end = (op_count * (container_id + 1)) // n_containers
+        print(len(high_level_op_list))
 
-    container_op_list = high_level_op_list[container_start:container_end]
-    container_op_count = len(container_op_list)
+        container_start = (op_count * container_id) // n_containers
+        container_end = (op_count * (container_id + 1)) // n_containers
 
-    del high_level_op_list
+        container_op_list = high_level_op_list[container_start:container_end]
+        container_op_count = len(container_op_list)
 
-    proc_start = (container_op_count * proc_id) // nprocs
-    proc_end = (container_op_count * (proc_id + 1)) // nprocs
+        del high_level_op_list
 
-    print(f"Hello, I am process {proc_id} of container {container_id}, "
-          f"I have range [{container_start + proc_start}, {container_start + proc_end}) "
-          f"out of container range [{container_start}, {container_end}] "
-          f"out of total_range [0, {op_count})")
+        proc_start = (container_op_count * proc_id) // nprocs
+        proc_end = (container_op_count * (proc_id + 1)) // nprocs
 
-    per_process_gate_list = []
-    for i, high_level_op in enumerate(container_op_list):
-        if proc_start <= i < proc_end:
-            process_batches = generator_get_RSA_compatible_batch(circuit=high_level_op,
-                                                                 window_size=window_size)
-            for batch, _ in process_batches:
-                pandora_gates = cirq_to_pandora_from_op_list(op_list=batch,
-                                                             label=i)
-                per_process_gate_list.extend(pandora_gates)
+        print(f"Hello, I am process {proc_id} of container {container_id}, "
+              f"I have range [{container_start + proc_start}, {container_start + proc_end}) "
+              f"out of container range [{container_start}, {container_end}] "
+              f"out of total_range [0, {op_count})")
 
-                if len(per_process_gate_list) >= window_size:
-                    proc_conn = get_connection(autocommit=False, config_file_path=config_file_path)
-                    insert_single_batch(connection=proc_conn,
-                                        batch=per_process_gate_list,
-                                        table_name=table_name,
-                                        close_conn=True)
-                    per_process_gate_list.clear()
+        per_process_gate_list = []
+        for i, high_level_op in enumerate(container_op_list):
+            if proc_start <= i < proc_end:
+                process_batches = generator_get_RSA_compatible_batch(circuit=high_level_op,
+                                                                     window_size=window_size)
+                for batch, _ in process_batches:
+                    pandora_gates = cirq_to_pandora_from_op_list(op_list=batch,
+                                                                 label=i)
+                    per_process_gate_list.extend(pandora_gates)
 
-    # insert last batch
-    if len(per_process_gate_list) > 0:
-        proc_conn = get_connection(autocommit=False, config_file_path=config_file_path)
-        insert_single_batch(connection=proc_conn,
-                            batch=per_process_gate_list,
-                            table_name=table_name,
-                            close_conn=True)
+                    if len(per_process_gate_list) >= window_size:
+                        proc_conn = get_connection(autocommit=False, config_file_path=config_file_path)
+                        insert_single_batch(connection=proc_conn,
+                                            batch=per_process_gate_list,
+                                            table_name=table_name,
+                                            close_conn=True)
+                        per_process_gate_list.clear()
 
-    print(f"Hello, I am process {proc_id} finished in {time.time() - start_time}")
+        # insert last batch
+        if len(per_process_gate_list) > 0:
+            proc_conn = get_connection(autocommit=False, config_file_path=config_file_path)
+            insert_single_batch(connection=proc_conn,
+                                batch=per_process_gate_list,
+                                table_name=table_name,
+                                close_conn=True)
+
+        print(f"Hello, I am process {proc_id} finished in {time.time() - start_time}")
+
+    print(f"Circuit creation time: {circuit_creation_time}")
+    print(f"Number of CtrlScaleModAdd bloqs: {CtrlScaleModAdd_count}")
+    print(f"Total bloq count: {op_count}")
+    print(f"Op types: {op_types}")
+
