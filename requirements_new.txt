@@ -6,3 +6,4 @@ gmpy2
 qiskit
 mqt.qcec
 qiskit_qasm3_import
+pytket

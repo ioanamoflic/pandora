@@ -1,20 +1,30 @@
 import random
+import sys
 import time
 import csv
+
+import qiskit
 from pytket import Circuit, OpType
 from pytket._tket.passes import RemoveRedundancies
 
+from pandora.connection_util import get_connection, drop_and_replace_tables, refresh_all_stored_procedures, \
+    insert_in_batches, reset_database_id
+from pandora.qiskit_to_pandora_util import convert_qiskit_to_pandora
+
 
 def generate_random_CX_circuit(n_templates, n_qubits):
-    circ = Circuit(n_qubits)
+    circ_tket = Circuit(n_qubits)
+    circ_pandora = qiskit.QuantumCircuit(n_qubits, n_qubits)
+
     for t in range(n_templates):
         q1, q2 = random.choices(range(0, n_qubits), k=2)
         while q1 == q2:
             q1, q2 = random.choices(range(0, n_qubits), k=2)
 
-        circ.CX(q1, q2, opgroup=str(t))
+        circ_tket.CX(q1, q2, opgroup=str(t))
+        circ_pandora.cx(q1, q2)
 
-    return circ
+    return circ_tket, circ_pandora
 
 
 def optimize_circuit(circuit):
@@ -142,25 +152,76 @@ def x_to_hzh(circ: Circuit) -> Circuit:
     return circ_prime
 
 
+def test_cx_to_hhcxhh_bernoulli(connection,
+                                initial_circuit: qiskit.QuantumCircuit,
+                                repetitions: int,
+                                bernoulli_percentage=10):
+    cursor = connection.cursor()
+
+    drop_and_replace_tables(connection=connection,
+                            clean=True)
+    refresh_all_stored_procedures(connection=connection)
+
+    db_tuples, _ = convert_qiskit_to_pandora(qiskit_circuit=initial_circuit,
+                                             add_margins=True,
+                                             label='q')
+
+    insert_in_batches(pandora_gates=db_tuples,
+                      connection=connection,
+                      table_name='linked_circuit',
+                      reset_id=False)
+
+    reset_database_id(connection=connection,
+                      table_name='linked_circuit',
+                      large_buffer_value=10000000)
+
+    cursor.execute(f"call linked_cx_to_hhcxhh_bernoulli({bernoulli_percentage}, {repetitions})")
+
+
 if __name__ == "__main__":
 
     n_CX = [1000, 10000, 100000, 1000000, 10000000]
 
+    FILENAME = None
+    EQUIV = 0
+    BENCH = None
+    conn = None
+
+    if len(sys.argv) != 3:
+        sys.exit(0)
+    elif len(sys.argv) == 3:
+        FILENAME = sys.argv[1]
+        BENCH = sys.argv[2]
+
+    if BENCH == 'pandora':
+        conn = get_connection(config_file_path=FILENAME)
+        print(f"Running config file {FILENAME}")
+
     times = []
     for cx_count in n_CX:
+        print('Testing CX count:', cx_count)
 
-        input_circ = generate_random_CX_circuit(n_templates=cx_count, n_qubits=50)
-        start_time = time.time()
-        print('cx count:', cx_count)
-        circuit = cx_to_hhcxhh_transform_random(input_circ)
-        # circuit = cx_to_hhcxhh_transform_append(input_circ)
-        # circuit = cx_to_hhcxhh_transform_blocked(input_circ, block_size=n_t//10)
-        print('time to optimize:', time.time() - start_time)
+        tket_circ, pandora_circ = generate_random_CX_circuit(n_templates=cx_count, n_qubits=50)
 
-        times.append(time.time() - start_time)
+        if BENCH == 'pandora':
+            start_time = time.time()
+            test_cx_to_hhcxhh_bernoulli(connection=conn,
+                                        initial_circuit=pandora_circ,
+                                        repetitions=cx_count)
+            op_time = time.time() - start_time
+            print('Pandora time: ', op_time)
+        else:
+            start_time = time.time()
+            tket_circ = cx_to_hhcxhh_transform_random(tket_circ)
+            op_time = time.time() - start_time
+            print('TKET time:', op_time)
 
-    rows = zip(n_CX, times)
-    with open('results/tket_random.csv', 'w') as f:
+        times.append((cx_count, op_time, BENCH))
+
+    with open(f'{BENCH}_rma.csv', 'w') as f:
         writer = csv.writer(f)
-        for row in rows:
+        for row in times:
             writer.writerow(row)
+
+    if BENCH == 'pandora':
+        conn.close()
