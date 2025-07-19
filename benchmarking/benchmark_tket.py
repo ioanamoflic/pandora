@@ -179,6 +179,7 @@ def test_cx_to_hhcxhh_bernoulli(connection,
 
 
 if __name__ == "__main__":
+    random.seed(0)
 
     n_CX = [1000, 10000, 100000, 1000000, 10000000]
 

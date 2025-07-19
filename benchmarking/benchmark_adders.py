@@ -1,7 +1,8 @@
 import cirq
 import re
 
-from pandora import PandoraOptimizer, PandoraGateTranslator
+from pandora import PandoraOptimizer
+from pandora.gate_translator import PandoraGateTranslator
 
 
 def parse_controls(ctr_str):
