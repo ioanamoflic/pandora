@@ -110,8 +110,7 @@ if __name__ == "__main__":
         print(f"Running config file {FILENAME}")
 
     # set timeout for MQT
-    config = Configuration()
-    config.execution.timeout = 600
+    timeout = 600
 
     times = []
 
@@ -150,7 +149,7 @@ if __name__ == "__main__":
                     with open(f"circ2_{q}_{i}_{EQUIV}.qasm", "w") as f:
                         qiskit.qasm3.dump(circ2, f)
 
-                result = verify(circ1, circ2, configuration=config)
+                result = verify(circ1, circ2, timeout=timeout)
                 equiv = result.equivalence
                 check_time = result.check_time
                 print('MQT time: ', check_time)
