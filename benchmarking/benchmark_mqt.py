@@ -65,7 +65,6 @@ def pandora_verify(connection,
 
     CX = PandoraGateTranslator.CXPowGate.value
 
-    st_time = time.time()
     nr_rewrites = nr_cnots
     nr_procs = 24
     window = 1000
@@ -76,7 +75,6 @@ def pandora_verify(connection,
     ]
 
     db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
-    end_time = time.time() - st_time
 
     circuit = extract_cirq_circuit(connection=connection,
                                    table_name='linked_circuit',
@@ -87,7 +85,7 @@ def pandora_verify(connection,
     if len(circuit) == 0:
         is_equivalent = True
 
-    return end_time, is_equivalent
+    return is_equivalent
 
 
 if __name__ == "__main__":
@@ -131,9 +129,11 @@ if __name__ == "__main__":
                 else:
                     circ2 = qiskit.qasm3.load(f"circ2_{q}_{i}_{EQUIV}.qasm")
 
-                check_time, equiv = pandora_verify(connection=conn,
-                                                   circ1=circ1,
-                                                   circ2=circ2)
+                start_time_pandora = time.time()
+                equiv = pandora_verify(connection=conn,
+                                       circ1=circ1,
+                                       circ2=circ2)
+                check_time = time.time() - start_time_pandora
                 print('Pandora time: ', check_time)
                 print('Equiv: ', equiv)
 
@@ -149,9 +149,10 @@ if __name__ == "__main__":
                     with open(f"circ2_{q}_{i}_{EQUIV}.qasm", "w") as f:
                         qiskit.qasm3.dump(circ2, f)
 
+                st_time_mqt = time.time()
                 result = verify(circ1, circ2, timeout=timeout)
                 equiv = result.equivalence
-                check_time = result.check_time
+                check_time = time.time() - st_time_mqt
                 print('MQT time: ', check_time)
                 print(result.equivalence)
 
