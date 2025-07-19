@@ -2,7 +2,6 @@ import csv
 
 import qiskit.qasm3
 from mqt.qcec import verify
-from mqt.qcec.pyqcec import Configuration
 
 from qiskit import QuantumCircuit
 
@@ -122,6 +121,8 @@ if __name__ == "__main__":
             else:
                 print(q, i, "incorrect")
 
+            mqt_check_time = 0
+
             if BENCH == 'pandora':
                 circ1 = qiskit.qasm3.load(f"circ1_{q}_{i}_{EQUIV}.qasm")
                 if EQUIV == 0:
@@ -151,13 +152,14 @@ if __name__ == "__main__":
 
                 st_time_mqt = time.time()
                 result = verify(circ1, circ2, timeout=timeout)
-                equiv = result.equivalence
                 check_time = time.time() - st_time_mqt
+                mqt_check_time = result.check_time
+                equiv = result.equivalence
                 print('MQT time: ', check_time)
                 print(result.equivalence)
 
             total = total + check_time
-            times.append((q, i, equiv, check_time, BENCH))
+            times.append((q, i, equiv, check_time, mqt_check_time, BENCH))
 
         print("----- ", total / nr_runs)
 
