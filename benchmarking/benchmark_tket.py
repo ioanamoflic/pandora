@@ -175,7 +175,7 @@ def test_cx_to_hhcxhh_bernoulli(connection,
                       table_name='linked_circuit',
                       large_buffer_value=10000000)
 
-    cursor.execute(f"call linked_cx_to_hhcxhh_bernoulli({bernoulli_percentage}, {repetitions})")
+    cursor.execute(f"call linked_cx_to_hhcxhh_visit({bernoulli_percentage}, {repetitions})")
 
 
 if __name__ == "__main__":

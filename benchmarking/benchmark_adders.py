@@ -1,3 +1,5 @@
+import sys
+
 import cirq
 import re
 
@@ -67,13 +69,19 @@ def get_adder(n_bits: int):
 
 
 if __name__ == "__main__":
-    adder_circuit = get_adder(n_bits=8)
+    if len(sys.argv) != 2:
+        sys.exit(0)
+    else:
+        N_BITS = int(sys.argv[1])
+
+    adder_circuit = get_adder(n_bits=N_BITS)
 
     pandora_optimizer = PandoraOptimizer(utilize_bernoulli=True,
-                                         bernoulli_percentage=5,
+                                         bernoulli_percentage=10,
                                          timeout=500,
                                          logger_id=8,
                                          nproc=4)
+
     pandora_optimizer.build_circuit(circuit=adder_circuit)
 
     # decompose Toffoli gates in Pandora
@@ -90,7 +98,7 @@ if __name__ == "__main__":
     CX = PandoraGateTranslator.CXPowGate.value
 
     # cancelling Hadamards
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(H, H), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(gate_types=(H, H), gate_params=(1, 1), dedicated_nproc=4)
     # cancelling Z gates
     pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z, Z), gate_params=(1, 1), dedicated_nproc=1)
     # cancelling T+T† gates
