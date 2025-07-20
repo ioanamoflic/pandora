@@ -26,7 +26,7 @@ begin
 --     insert into max_missed_rounds values (0);
 	while run_nr > 0 loop
 
-        if rounds_missed >= 1000 then
+        if rounds_missed >= 1500 then
             exit;
         end if;
 
