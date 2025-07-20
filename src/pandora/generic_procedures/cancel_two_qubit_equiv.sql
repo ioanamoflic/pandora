@@ -26,9 +26,9 @@ begin
 --     insert into max_missed_rounds values (0);
 	while run_nr > 0 loop
 
-        if rounds_missed >= 5000 then
-            exit;
-        end if;
+--         if rounds_missed >= 5000 then
+--             exit;
+--         end if;
 
 --         select max(mm.missed) into max_missed from max_missed_rounds as mm;
 --         if rounds_missed > max_missed then
