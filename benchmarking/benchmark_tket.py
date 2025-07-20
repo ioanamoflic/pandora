@@ -118,7 +118,7 @@ if __name__ == "__main__":
             test_cx_to_hhcxhh_visit_all(connection=conn,
                                         initial_circuit=pandora_circ,
                                         nprocs=NPROCS,
-                                        bernoulli_percentage=10000,
+                                        bernoulli_percentage=100000,
                                         repetitions=cx_count)
             op_time = time.time() - start_time
             print('Pandora time: ', op_time)
