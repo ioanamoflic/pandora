@@ -8,3 +8,4 @@ venv
 */__pycache__/*
 /venv_new/
 /pyLIQTR/.idea/
+.idea/*
