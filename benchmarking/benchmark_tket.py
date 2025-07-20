@@ -79,7 +79,9 @@ def test_cx_to_hhcxhh_visit_all(connection,
          f"call linked_cx_to_hhcxhh_visit({bernoulli_percentage}, {repetitions - (nprocs - 1) * (repetitions // nprocs)})"),
     ]
 
+    start_pandora = time.time()
     db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
+    return time.time() - start_pandora
 
 
 if __name__ == "__main__":
@@ -115,12 +117,12 @@ if __name__ == "__main__":
 
         if BENCH.startswith('pandora'):
             start_time = time.time()
-            test_cx_to_hhcxhh_visit_all(connection=conn,
-                                        initial_circuit=pandora_circ,
-                                        nprocs=NPROCS,
-                                        bernoulli_percentage=100000,
-                                        repetitions=cx_count)
-            op_time = time.time() - start_time
+            op_time = test_cx_to_hhcxhh_visit_all(connection=conn,
+                                                  initial_circuit=pandora_circ,
+                                                  nprocs=NPROCS,
+                                                  bernoulli_percentage=100000,
+                                                  repetitions=cx_count)
+            # op_time = time.time() - start_time
             print('Pandora time: ', op_time)
         else:
             start_time = time.time()
