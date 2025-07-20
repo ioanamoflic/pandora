@@ -194,7 +194,7 @@ if __name__ == "__main__":
         FILENAME = sys.argv[1]
         BENCH = sys.argv[2]
 
-    if BENCH == 'pandora':
+    if BENCH.startswith('pandora'):
         conn = get_connection(config_file_path=FILENAME)
         print(f"Running config file {FILENAME}")
 
@@ -204,7 +204,7 @@ if __name__ == "__main__":
 
         tket_circ, pandora_circ = generate_random_CX_circuit(n_templates=cx_count, n_qubits=50)
 
-        if BENCH == 'pandora':
+        if BENCH.startswith('pandora'):
             start_time = time.time()
             test_cx_to_hhcxhh_bernoulli(connection=conn,
                                         initial_circuit=pandora_circ,
@@ -224,5 +224,5 @@ if __name__ == "__main__":
         for row in times:
             writer.writerow(row)
 
-    if BENCH == 'pandora':
+    if BENCH.startswith('pandora'):
         conn.close()
