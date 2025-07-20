@@ -110,13 +110,15 @@ if __name__ == "__main__":
     for cx_count in n_CX:
         print('Testing CX count:', cx_count)
 
-        tket_circ, pandora_circ = generate_random_CX_circuit(n_templates=cx_count, n_qubits=50)
+        tket_circ, pandora_circ = generate_random_CX_circuit(n_templates=cx_count,
+                                                             n_qubits=50)
 
         if BENCH.startswith('pandora'):
             start_time = time.time()
             test_cx_to_hhcxhh_visit_all(connection=conn,
                                         initial_circuit=pandora_circ,
                                         nprocs=NPROCS,
+                                        bernoulli_percentage=1000,
                                         repetitions=cx_count)
             op_time = time.time() - start_time
             print('Pandora time: ', op_time)
