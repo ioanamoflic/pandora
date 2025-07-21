@@ -5,7 +5,10 @@ pgrun/
 trace*
 circuitsharing/
 venv
+env/
 */__pycache__/*
 /venv_new/
 /pyLIQTR/.idea/
 .idea/*
+random_clifford/
+__pycache__
