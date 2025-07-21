@@ -1,6 +1,6 @@
 create table IF NOT EXISTS public.linked_circuit
 (
-    id      bigserial primary key,
+    id      bigserial,
     prev_q1 bigint,
     prev_q2 bigint,
     prev_q3 bigint,
