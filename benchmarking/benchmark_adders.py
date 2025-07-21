@@ -70,6 +70,7 @@ def get_adder(n_bits: int):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
+        print("Exiting...")
         sys.exit(0)
     else:
         N_BITS = int(sys.argv[1])
@@ -78,9 +79,9 @@ if __name__ == "__main__":
 
     pandora_optimizer = PandoraOptimizer(utilize_bernoulli=True,
                                          bernoulli_percentage=10,
-                                         timeout=500,
-                                         logger_id=8,
-                                         nproc=4)
+                                         timeout=600,
+                                         logger_id=N_BITS,
+                                         nproc=4)  # dedicated_nproc will override this value
 
     pandora_optimizer.build_circuit(circuit=adder_circuit)
 
@@ -100,13 +101,13 @@ if __name__ == "__main__":
     # cancelling Hadamards
     pandora_optimizer.cancel_single_qubit_gates(gate_types=(H, H), gate_params=(1, 1), dedicated_nproc=4)
     # cancelling Z gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z, Z), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z, Z), gate_params=(1, 1), dedicated_nproc=2)
     # cancelling T+T† gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z_rot, Z_rot), gate_params=(0.25, -0.25), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z_rot, Z_rot), gate_params=(0.25, -0.25), dedicated_nproc=2)
     # cancelling S+S† gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z_rot, Z_rot), gate_params=(0.5, -0.5), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z_rot, Z_rot), gate_params=(0.5, -0.5), dedicated_nproc=2)
     # cancelling X gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(X, X), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(gate_types=(X, X), gate_params=(1, 1), dedicated_nproc=2)
 
     """
         Two-qubit gate cancellations
@@ -162,3 +163,8 @@ if __name__ == "__main__":
         Start
     """
     pandora_optimizer.start()
+
+    """
+        For plotting
+    """
+    pandora_optimizer.generate_csv(logger_id=N_BITS)

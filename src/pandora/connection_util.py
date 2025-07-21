@@ -1,3 +1,4 @@
+import csv
 import inspect
 import os
 import sys
@@ -219,6 +220,26 @@ def update_widgetisation_results(connection, id, widgetisation_time, widget_coun
         f"extraction_time={extraction_time} where id={id}"
     cursor.execute(sql_statement)
     connection.commit()
+
+
+def get_stats_for_adder(connection,
+                        n_bits):
+    """
+    Generate the csv of the optimisation output.
+    """
+    args = (n_bits,)
+
+    sql = f"select * from optimization_results where logger_id=%s order by id"
+
+    cursor = connection.cursor()
+    cursor.execute(sql, args)
+    tuples: list[tuple] = cursor.fetchall()
+
+    with open(f'adder_{n_bits}.csv', 'w') as out:
+        csv_out = csv.writer(out)
+        csv_out.writerow(["id", "logger_id", "total_count", "t_count", "s_count", "h_count", "x_count", "cx_count"])
+        for row in tuples:
+            csv_out.writerow(row)
 
 
 def insert_in_batches(pandora_gates: list[PandoraGate],

@@ -1,5 +1,6 @@
 from pandora import Pandora
-from pandora.connection_util import db_multi_threaded, stop_all_lurking_procedures, reset_database_id
+from pandora.connection_util import db_multi_threaded, stop_all_lurking_procedures, reset_database_id, \
+    get_stats_for_adder
 from pandora.gate_translator import PandoraGateTranslator
 
 
@@ -18,7 +19,7 @@ class PandoraOptimizer(Pandora):
         II. when the stored circuit is larger (for ex. > 1e6 gates):
             * we trade speed for the sampling accuracy
             * it is advised to use utilize_bernoulli = False. This performs block-level sampling and returns a
-             set of (maximum) block_size rows
+             set of approx. block_size rows
             * the sample is not completely random but works well enough for large tables
 
         For parallel optimisation:
@@ -39,7 +40,7 @@ class PandoraOptimizer(Pandora):
 
     LARGE_RUN_NR = int(1e6)
     RESET_ID = int(1e6)
-    LOG_SLEEP_FOR = 0.5  # sleep for 5 seconds when logging optimisations
+    LOG_SLEEP_FOR = 1  # sleep for 1 seconds when logging optimisations
 
     def __init__(self,
                  bernoulli_percentage: float = False,
@@ -108,6 +109,13 @@ class PandoraOptimizer(Pandora):
         """
         logger_proc = f"call generate_optimisation_stats({self.LOG_SLEEP_FOR}, {self.logger_id})"
         self._call_thread_proc((1, logger_proc))
+
+    def generate_csv(self, logger_id):
+        """
+            Generate the csv of the optimisation output. The identifier is the logger_id.
+        """
+
+        get_stats_for_adder(self.connection, logger_id)
 
     def cancel_single_qubit_gates(self,
                                   gate_types: tuple[PandoraGateTranslator, PandoraGateTranslator],
