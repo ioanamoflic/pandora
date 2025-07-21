@@ -17,9 +17,6 @@ create table IF NOT EXISTS public.linked_circuit
     meas_key smallint
 );
 
-create index type_visit ON linked_circuit (type, visited);
-
-
 create table IF NOT EXISTS public.optimization_results
 (
     id int,
