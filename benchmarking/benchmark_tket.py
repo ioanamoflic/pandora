@@ -104,7 +104,7 @@ if __name__ == "__main__":
         BENCH = sys.argv[2]
         NPROCS = int(sys.argv[3])
 
-    for nprocs in range(1, NPROCS + 1):
+    for nprocs in [1, 2, 4, 8, 16, 32, 48]:
         for cx_count in n_CX:
 
             if BENCH.startswith('pandora'):
@@ -121,7 +121,7 @@ if __name__ == "__main__":
                 op_time = test_cx_to_hhcxhh_visit_all(connection=conn,
                                                       initial_circuit=pandora_circ,
                                                       nprocs=nprocs,
-                                                      bernoulli_percentage=100000,
+                                                      bernoulli_percentage=1000,
                                                       repetitions=cx_count)
                 print('Pandora time: ', op_time)
             else:
