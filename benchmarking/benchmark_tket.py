@@ -177,13 +177,13 @@ if __name__ == "__main__":
                 op_time = test_cancel_hh(connection=conn,
                                          initial_circuit=pandora_circ,
                                          nprocs=NPROCS,
-                                         bernoulli_percentage=100,
+                                         bernoulli_percentage=1000,
                                          repetitions=gate_count)
             else:
                 op_time = test_cx_to_hhcxhh_visit_all(connection=conn,
                                                       initial_circuit=pandora_circ,
                                                       nprocs=NPROCS,
-                                                      bernoulli_percentage=100,
+                                                      bernoulli_percentage=1000,
                                                       repetitions=gate_count)
             print('Pandora time: ', op_time)
         else:
