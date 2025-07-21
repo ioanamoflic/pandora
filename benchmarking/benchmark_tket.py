@@ -15,7 +15,7 @@ from pandora.qiskit_to_pandora_util import convert_qiskit_to_pandora
 
 def generate_random_CX_circuit(n_templates, n_qubits):
     circ_tket = Circuit(n_qubits)
-    circ_pandora = qiskit.QuantumCircuit(n_qubits, n_qubits)
+    circ_qiskit = qiskit.QuantumCircuit(n_qubits, n_qubits)
 
     for t in range(n_templates):
         q1, q2 = random.choices(range(0, n_qubits), k=2)
@@ -23,9 +23,9 @@ def generate_random_CX_circuit(n_templates, n_qubits):
             q1, q2 = random.choices(range(0, n_qubits), k=2)
 
         circ_tket.CX(q1, q2, opgroup=str(t))
-        circ_pandora.cx(q1, q2)
+        circ_qiskit.cx(q1, q2)
 
-    return circ_tket, circ_pandora
+    return circ_tket, circ_qiskit
 
 
 def generate_random_HH_circuit(n_templates, n_qubits):
@@ -73,10 +73,9 @@ def test_cx_to_hhcxhh_visit_all(connection,
                                 repetitions: int,
                                 nprocs: int = 1,
                                 bernoulli_percentage=10):
-    drop_and_replace_tables(connection=connection,
-                            clean=True)
-    refresh_all_stored_procedures(connection=connection)
 
+    drop_and_replace_tables(connection=connection, clean=True)
+    refresh_all_stored_procedures(connection=connection)
     db_tuples, _ = convert_qiskit_to_pandora(qiskit_circuit=initial_circuit,
                                              add_margins=True,
                                              label='q')
@@ -158,50 +157,48 @@ if __name__ == "__main__":
         NPROCS = int(sys.argv[3])
         TYPE = sys.argv[4]
 
-    for nprocs in [1, 2, 4, 8, 16]:
-        for gate_count in n_gates:
+    for gate_count in n_gates:
+        if BENCH.startswith('pandora'):
+            conn = get_connection(config_file_path=FILENAME)
+            print(f"Running config file {FILENAME}")
 
-            if BENCH.startswith('pandora'):
-                conn = get_connection(config_file_path=FILENAME)
-                print(f"Running config file {FILENAME}")
+        print('Testing template count:', gate_count)
 
-            print('Testing template count:', gate_count)
-
-            if TYPE == 'h':
-                tket_circ, pandora_circ = generate_random_HH_circuit(n_templates=gate_count,
-                                                                     n_qubits=50)
-            else:
-                tket_circ, pandora_circ = generate_random_CX_circuit(n_templates=gate_count,
-                                                                     n_qubits=50)
-
-            if BENCH.startswith('pandora'):
-                start_time = time.time()
-                if TYPE == 'h':
-                    op_time = test_cancel_hh(connection=conn,
-                                             initial_circuit=pandora_circ,
-                                             nprocs=nprocs,
-                                             bernoulli_percentage=1000,
-                                             repetitions=gate_count)
-                else:
-                    op_time = test_cx_to_hhcxhh_visit_all(connection=conn,
-                                                          initial_circuit=pandora_circ,
-                                                          nprocs=nprocs,
-                                                          bernoulli_percentage=1000,
-                                                          repetitions=gate_count)
-                print('Pandora time: ', op_time)
-            else:
-                start_time = time.time()
-                if TYPE == 'h':
-                    tket_circ_commands = optimize_circuit(circuit=tket_circ)
-                else:
-                    tket_circ = cx_to_hhcxhh_transform_random(tket_circ)
-
-                op_time = time.time() - start_time
-                print('TKET time:', op_time)
-
-            with open(f'{BENCH}_{TYPE}_rma_{NPROCS}.csv', 'a') as f:
-                writer = csv.writer(f)
-                writer.writerow((gate_count, op_time, BENCH, nprocs))
+        if TYPE == 'h':
+            tket_circ, pandora_circ = generate_random_HH_circuit(n_templates=gate_count,
+                                                                 n_qubits=50)
+        else:
+            tket_circ, pandora_circ = generate_random_CX_circuit(n_templates=gate_count,
+                                                                 n_qubits=50)
 
         if BENCH.startswith('pandora'):
-            conn.close()
+            start_time = time.time()
+            if TYPE == 'h':
+                op_time = test_cancel_hh(connection=conn,
+                                         initial_circuit=pandora_circ,
+                                         nprocs=NPROCS,
+                                         bernoulli_percentage=1000,
+                                         repetitions=gate_count)
+            else:
+                op_time = test_cx_to_hhcxhh_visit_all(connection=conn,
+                                                      initial_circuit=pandora_circ,
+                                                      nprocs=NPROCS,
+                                                      bernoulli_percentage=1000,
+                                                      repetitions=gate_count)
+            print('Pandora time: ', op_time)
+        else:
+            start_time = time.time()
+            if TYPE == 'h':
+                tket_circ_commands = optimize_circuit(circuit=tket_circ)
+            else:
+                tket_circ = cx_to_hhcxhh_transform_random(tket_circ)
+
+            op_time = time.time() - start_time
+            print('TKET time:', op_time)
+
+        with open(f'{BENCH}_{TYPE}_rma_{NPROCS}.csv', 'a') as f:
+            writer = csv.writer(f)
+            writer.writerow((gate_count, op_time, BENCH, NPROCS))
+
+    if BENCH.startswith('pandora'):
+        conn.close()
