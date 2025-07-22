@@ -30,7 +30,7 @@ begin
             (select * from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
     	                    where it.type in (15, 18)
                             and visited = false
-    	                    for update skip locked
+--     	                    for update skip locked
     	                    )
         loop
             if cx.id is not null then
@@ -40,9 +40,9 @@ begin
                 cx_next_q2_id := div(cx.next_q2, 10);
 
                 perform 1 from linked_circuit
-                where id in (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id)
+                where id in (cx.id, cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id)
                 order by id
-                for update skip locked;
+                for update;
 
                 select count(*) into distinct_count from (select distinct
                                                               unnest(array[cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id])) as it;
