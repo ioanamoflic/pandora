@@ -68,38 +68,6 @@ def cx_to_hhcxhh_transform_random(circ: Circuit) -> Circuit:
     return circ
 
 
-def test_cx_to_hhcxhh_visit_all(connection,
-                                initial_circuit: qiskit.QuantumCircuit,
-                                repetitions: int,
-                                nprocs: int = 1,
-                                bernoulli_percentage=10):
-
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    db_tuples, _ = convert_qiskit_to_pandora(qiskit_circuit=initial_circuit,
-                                             add_margins=True,
-                                             label='q')
-
-    insert_in_batches(pandora_gates=db_tuples,
-                      connection=connection,
-                      table_name='linked_circuit',
-                      reset_id=False)
-
-    reset_database_id(connection=connection,
-                      table_name='linked_circuit',
-                      large_buffer_value=10000000)
-
-    thread_procedures = [
-        (nprocs - 1, f"call linked_cx_to_hhcxhh_visit({bernoulli_percentage}, {repetitions // nprocs})"),
-        (1,
-         f"call linked_cx_to_hhcxhh_visit({bernoulli_percentage}, {repetitions - (nprocs - 1) * (repetitions // nprocs)})"),
-    ]
-
-    start_pandora = time.time()
-    db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
-    return time.time() - start_pandora
-
-
 def test_cancel_hh(connection,
                    initial_circuit: qiskit.QuantumCircuit,
                    repetitions: int,
@@ -128,6 +96,38 @@ def test_cancel_hh(connection,
          f"call cancel_single_qubit({myH}, {myH}, {0}, {0}, {bernoulli_percentage}, {repetitions // nprocs})"),
         (1,
          f"call cancel_single_qubit({myH}, {myH}, {0}, {0}, {bernoulli_percentage}, {repetitions - (nprocs - 1) * (repetitions // nprocs)})"),
+    ]
+
+    start_pandora = time.time()
+    db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
+    return time.time() - start_pandora
+
+
+def test_cx_to_hhcxhh_visit_all(connection,
+                                initial_circuit: qiskit.QuantumCircuit,
+                                repetitions: int,
+                                nprocs: int = 1,
+                                bernoulli_percentage=10):
+
+    drop_and_replace_tables(connection=connection, clean=True)
+    refresh_all_stored_procedures(connection=connection)
+    db_tuples, _ = convert_qiskit_to_pandora(qiskit_circuit=initial_circuit,
+                                             add_margins=True,
+                                             label='q')
+
+    insert_in_batches(pandora_gates=db_tuples,
+                      connection=connection,
+                      table_name='linked_circuit',
+                      reset_id=False)
+
+    reset_database_id(connection=connection,
+                      table_name='linked_circuit',
+                      large_buffer_value=10000000)
+
+    thread_procedures = [
+        (nprocs - 1, f"call linked_cx_to_hhcxhh_batched({bernoulli_percentage}, {repetitions // nprocs})"),
+        (1,
+         f"call linked_cx_to_hhcxhh_batched({bernoulli_percentage}, {repetitions - (nprocs - 1) * (repetitions // nprocs)})"),
     ]
 
     start_pandora = time.time()

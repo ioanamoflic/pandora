@@ -21,19 +21,8 @@ declare
     compare record;
     rounds_missed smallint := 0;
     is_missed_round boolean;
---     max_missed int;
 begin
---     insert into max_missed_rounds values (0);
 	while run_nr > 0 loop
-
---         if rounds_missed >= 5000 then
---             exit;
---         end if;
-
---         select max(mm.missed) into max_missed from max_missed_rounds as mm;
---         if rounds_missed > max_missed then
---             insert into max_missed_rounds values (rounds_missed);
---         end if;
 
 	    select st.stop into stop from stop_condition as st limit 1;
 	    if stop=True then

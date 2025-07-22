@@ -1,4 +1,4 @@
-create or replace procedure linked_cx_to_hhcxhh_visit(sys_range int, run_nr int)
+create or replace procedure linked_cx_to_hhcxhh_seq(run_nr int)
     language plpgsql
 as
 $$
@@ -24,16 +24,11 @@ declare
     right_q2_id bigint;
     cx_id_ctrl bigint;
     cx_id_tgt bigint;
-    stop boolean;
 begin
     while run_nr > 0 loop
-        select st.stop into stop from stop_condition as st limit 1;
-	    if stop=True then
-            exit;
-        end if;
-        -- note that 15 and 18 are both CX gates
-        select * into cx from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
-                         where it.type in (15, 18) and visited = false for update skip locked limit 1;
+        -- might need an index on these?
+        select * into cx from linked_circuit where type in (15, 18) and visited = false limit 1;
+
         if cx.id is not null then
             cx_prev_q1_id := div(cx.prev_q1, 10);
             cx_prev_q2_id := div(cx.prev_q2, 10);
@@ -44,6 +39,7 @@ begin
             modulus_left_cx_q2 := 'next_q' || mod(cx.prev_q2, 10) + 1;
             modulus_right_cx_q1 := 'prev_q' || mod(cx.next_q1, 10) + 1;
             modulus_right_cx_q2 := 'prev_q' || mod(cx.next_q2, 10) + 1;
+
             select count(*) into distinct_count from (select distinct unnest(array[cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id])) as it;
             select count(*) into distinct_existing from
                  (select * from linked_circuit where id in (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id) for update skip locked) as it;
@@ -51,15 +47,15 @@ begin
             if distinct_count = distinct_existing then
                 cx_id_ctrl := cx.id * 10;
                 cx_id_tgt := cx.id * 10 + 1;
-                insert into linked_circuit values (DEFAULT, cx.prev_q1, null, null, 8, 1, 0, false, cx_id_tgt, null, null, false, cx.label, false, null)
+                insert into linked_circuit values (default, cx.prev_q1, null, null, 8, 1, 0, false, cx_id_tgt, null, null, false, cx.label, false, null)
                                                               returning id into left_h_q1_id;
-                insert into linked_circuit values (DEFAULT, cx.prev_q2, null, null, 8, 1, 0, false, cx_id_ctrl, null, null, false, cx.label, false, null)
+                insert into linked_circuit values (default, cx.prev_q2, null, null, 8, 1, 0, false, cx_id_ctrl, null, null, false, cx.label, false, null)
                                                               returning id into left_h_q2_id;
                 left_q1_id := left_h_q1_id * 10;
                 left_q2_id := left_h_q2_id * 10;
-                insert into linked_circuit values (DEFAULT, cx_id_tgt, null, null, 8, 1, 0, false, cx.next_q1, null, null, false, cx.label, false, null)
+                insert into linked_circuit values (default, cx_id_tgt, null, null, 8, 1, 0, false, cx.next_q1, null, null, false, cx.label, false, null)
                                                               returning id into right_h_q1_id;
-                insert into linked_circuit values (DEFAULT, cx_id_ctrl, null, null, 8, 1, 0, false, cx.next_q2, null, null, false, cx.label, false, null)
+                insert into linked_circuit values (default, cx_id_ctrl, null, null, 8, 1, 0, false, cx.next_q2, null, null, false, cx.label, false, null)
                                                               returning id into right_h_q2_id;
                 right_q1_id := right_h_q1_id * 10;
                 right_q2_id := right_h_q2_id * 10;
