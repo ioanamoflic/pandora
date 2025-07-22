@@ -30,7 +30,7 @@ begin
             (select * from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
     	                    where it.type in (15, 18)
                             and visited = false
---     	                    for update skip locked
+    	                    for update
     	                    )
         loop
             if cx.id is not null then
@@ -78,9 +78,9 @@ begin
                     execute 'update linked_circuit set ' || modulus_right_cx_q2 || ' = $1 where id = $2' using right_q2_id, cx_next_q2_id;
                     run_nr = run_nr - 1;
                 end if;
+                commit;
             end if;
         end loop;
-        commit;
     end loop;
 end;$$;
 
