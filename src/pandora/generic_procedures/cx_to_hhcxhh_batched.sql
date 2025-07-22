@@ -5,7 +5,6 @@ $$
 declare
     cx record;
     gate record;
-
     cx_prev_q1_id bigint;
 	cx_prev_q2_id bigint;
 	cx_next_q1_id bigint;
@@ -32,6 +31,7 @@ begin
             select * from linked_circuit lc tablesample system_rows(sys_range)
         loop
             if gate.type in (15, 18) and gate.visited = false then
+                -- hope this is a cache hit due to last select
                 select * into cx from linked_circuit where id = gate.id for update skip locked;
 
                 cx_prev_q1_id := div(cx.prev_q1, 10);
