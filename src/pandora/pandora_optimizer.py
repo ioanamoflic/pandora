@@ -144,7 +144,7 @@ class PandoraOptimizer(Pandora):
 
     def cancel_two_qubit_gates(self,
                                gate_types: tuple[PandoraGateTranslator, PandoraGateTranslator],
-                               gate_params: tuple[float, float] = (1.0, 1.0),
+                               gate_param: float = 1.0,
                                dedicated_nproc: int = None) -> None:
         """
         Cancels pairs of two-qubit gates
@@ -157,12 +157,11 @@ class PandoraOptimizer(Pandora):
 
         """
         type_left, type_right = gate_types
-        param_left, param_right = gate_params
         if not self.utilize_bernoulli:
-            stored_procedure = f"call cancel_two_qubit({type_left}, {type_right}, {param_left}, {param_right},\
+            stored_procedure = f"call cancel_two_qubit({type_left}, {type_right}, {gate_param}, \
                                 {self.block_size},{self.run_nr})"
         else:
-            stored_procedure = f"call cancel_two_qubit_bernoulli({type_left}, {type_right},{param_left},{param_right}," \
+            stored_procedure = f"call cancel_two_qubit_bernoulli({type_left},{type_right},{gate_param}," \
                                f"{self.bernoulli_percentage},{self.run_nr})"
         self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
 

@@ -43,7 +43,6 @@ declare
 	count int = 0;
     distinct_count int;
     distinct_existing int;
-	start_time timestamptz = clock_timestamp();
 begin
 	while found = true loop
 		count := count + 1;
@@ -133,7 +132,6 @@ begin
             commit;
 		end if;
 	end loop;
-	raise notice 'Time spent decomposing all Toffoli gates = %', clock_timestamp() - start_time;
 end;$$;
 
 -- alter procedure linked_toffoli_decomp() owner to postgres;
