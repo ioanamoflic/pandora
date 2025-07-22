@@ -47,6 +47,8 @@ begin
                      (select * from linked_circuit where id in (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id) for update skip locked) as it;
 
                 if distinct_count = distinct_existing then
+                    update linked_circuit set visited = true where id = cx.id;
+
                     cx_id_ctrl := cx.id * 10;
                     cx_id_tgt := cx.id * 10 + 1;
                     insert into linked_circuit values (default, cx.prev_q1, null, null, 8, 1, 0, false, cx_id_tgt, null, null, false, cx.label, false, null)
@@ -62,7 +64,7 @@ begin
                     right_q1_id := right_h_q1_id * 10;
                     right_q2_id := right_h_q2_id * 10;
 
-                    update linked_circuit set (prev_q1, prev_q2, next_q1, next_q2, switch, visited) = (left_q2_id, left_q1_id, right_q2_id, right_q1_id, not cx.switch, true) where id = cx.id;
+                    update linked_circuit set (prev_q1, prev_q2, next_q1, next_q2, switch) = (left_q2_id, left_q1_id, right_q2_id, right_q1_id, not cx.switch) where id = cx.id;
                     execute 'update linked_circuit set ' || modulus_left_cx_q1 || ' = $1 where id = $2' using left_q1_id, cx_prev_q1_id;
                     execute 'update linked_circuit set ' || modulus_left_cx_q2 || ' = $1 where id = $2' using left_q2_id, cx_prev_q2_id;
                     execute 'update linked_circuit set ' || modulus_right_cx_q1 || ' = $1 where id = $2' using right_q1_id, cx_next_q1_id;
