@@ -114,7 +114,7 @@ if __name__ == "__main__":
     """
 
     # cancelling CX gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(CX, CX), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_two_qubit_gates(gate_types=(CX, CX), gate_params=(1, 1), dedicated_nproc=1)
     """
         Fusing gates
     """
