@@ -157,48 +157,49 @@ if __name__ == "__main__":
         NPROCS = int(sys.argv[3])
         TYPE = sys.argv[4]
 
-    for gate_count in n_gates:
-        if BENCH.startswith('pandora'):
-            conn = get_connection(config_file_path=FILENAME)
-            print(f"Running config file {FILENAME}")
+    for nprocs in range(1, NPROCS + 1):
+        for gate_count in n_gates:
+            if BENCH.startswith('pandora'):
+                conn = get_connection(config_file_path=FILENAME)
+                print(f"Running config file {FILENAME}")
 
-        print('Testing template count:', gate_count)
+            print('Testing template count:', gate_count)
 
-        if TYPE == 'h':
-            tket_circ, pandora_circ = generate_random_HH_circuit(n_templates=gate_count,
-                                                                 n_qubits=50)
-        else:
-            tket_circ, pandora_circ = generate_random_CX_circuit(n_templates=gate_count,
-                                                                 n_qubits=50)
-
-        if BENCH.startswith('pandora'):
-            start_time = time.time()
             if TYPE == 'h':
-                op_time = test_cancel_hh(connection=conn,
-                                         initial_circuit=pandora_circ,
-                                         nprocs=NPROCS,
-                                         bernoulli_percentage=10000,
-                                         repetitions=gate_count)
+                tket_circ, pandora_circ = generate_random_HH_circuit(n_templates=gate_count,
+                                                                     n_qubits=50)
             else:
-                op_time = test_cx_to_hhcxhh_visit_all(connection=conn,
-                                                      initial_circuit=pandora_circ,
-                                                      nprocs=NPROCS,
-                                                      bernoulli_percentage=10000,
-                                                      repetitions=gate_count)
-            print('Pandora time: ', op_time)
-        else:
-            start_time = time.time()
-            if TYPE == 'h':
-                tket_circ_commands = optimize_circuit(circuit=tket_circ)
+                tket_circ, pandora_circ = generate_random_CX_circuit(n_templates=gate_count,
+                                                                     n_qubits=50)
+
+            if BENCH.startswith('pandora'):
+                start_time = time.time()
+                if TYPE == 'h':
+                    op_time = test_cancel_hh(connection=conn,
+                                             initial_circuit=pandora_circ,
+                                             nprocs=nprocs,
+                                             bernoulli_percentage=1000,
+                                             repetitions=gate_count)
+                else:
+                    op_time = test_cx_to_hhcxhh_visit_all(connection=conn,
+                                                          initial_circuit=pandora_circ,
+                                                          nprocs=nprocs,
+                                                          bernoulli_percentage=1000,
+                                                          repetitions=gate_count)
+                print('Pandora time: ', op_time)
             else:
-                tket_circ = cx_to_hhcxhh_transform_random(tket_circ)
+                start_time = time.time()
+                if TYPE == 'h':
+                    tket_circ_commands = optimize_circuit(circuit=tket_circ)
+                else:
+                    tket_circ = cx_to_hhcxhh_transform_random(tket_circ)
 
-            op_time = time.time() - start_time
-            print('TKET time:', op_time)
+                op_time = time.time() - start_time
+                print('TKET time:', op_time)
 
-        with open(f'{BENCH}_{TYPE}_rma_{NPROCS}.csv', 'a') as f:
-            writer = csv.writer(f)
-            writer.writerow((gate_count, op_time, BENCH, NPROCS))
+            with open(f'{BENCH}_{TYPE}_rma_{NPROCS}.csv', 'a') as f:
+                writer = csv.writer(f)
+                writer.writerow((gate_count, op_time, BENCH, NPROCS))
 
-    if BENCH.startswith('pandora'):
-        conn.close()
+        if BENCH.startswith('pandora'):
+            conn.close()
