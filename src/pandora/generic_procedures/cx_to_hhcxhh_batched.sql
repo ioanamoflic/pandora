@@ -30,13 +30,6 @@ begin
     while run_nr > 0 loop
         for gate in
             select * from linked_circuit lc tablesample system_rows(sys_range)
---             (select * from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
---     	                    where it.type in (15, 18)
---                             and visited = false
---     	                    order by id
---     	                    for update skip locked
---     	                    --limit 1
---     	                    )
         loop
             if gate.type in (15, 18) and gate.visited = false then
                 select * into cx from linked_circuit where id = gate.id for update skip locked;
