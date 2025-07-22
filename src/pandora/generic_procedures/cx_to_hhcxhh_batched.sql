@@ -27,11 +27,9 @@ declare
 begin
     while run_nr > 0 loop
         for cx in
-            (select * from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
+            (select * from (select * from linked_circuit lc tablesample system_rows(sys_range) for update skip locked) as it
     	                    where it.type in (15, 18)
-                            and visited = false
-    	                    for update skip locked
-    	                    )
+                            and visited = false)
         loop
             if cx.id is not null then
                 cx_prev_q1_id := div(cx.prev_q1, 10);
@@ -39,15 +37,16 @@ begin
                 cx_next_q1_id := div(cx.next_q1, 10);
                 cx_next_q2_id := div(cx.next_q2, 10);
 
-                perform 1 from linked_circuit
-                where id in (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id)
-                order by id
-                for update skip locked;
+--                 perform 1 from linked_circuit
+--                 where id in (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id)
+--                 order by id
+--                 for update skip locked;
 
-                select count(*) into distinct_count from (select distinct
-                                                              unnest(array[cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id])) as it;
+                select count(*) into distinct_count from
+                    (select distinct unnest(array[cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id])) as it;
                 select count(*) into distinct_existing from
-                     (select * from linked_circuit where id in (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id)) as it;
+                    (select * from linked_circuit where id in
+                        (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id)) as it;
 
                 if distinct_count = distinct_existing then
                     cx_id_ctrl := cx.id * 10;
