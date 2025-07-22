@@ -4,6 +4,8 @@ as
 $$
 declare
     cx record;
+    gate record;
+
     cx_prev_q1_id bigint;
 	cx_prev_q2_id bigint;
 	cx_next_q1_id bigint;
@@ -26,26 +28,33 @@ declare
     cx_id_tgt bigint;
 begin
     while run_nr > 0 loop
-        for cx in
-            (select * from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
-    	                    where it.type in (15, 18)
-                            and visited = false
-    	                    order by id
-    	                    for update skip locked
-    	                    --limit 1
-    	                    )
+        for gate in
+            select * from linked_circuit lc tablesample system_rows(sys_range)
+--             (select * from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
+--     	                    where it.type in (15, 18)
+--                             and visited = false
+--     	                    order by id
+--     	                    for update skip locked
+--     	                    --limit 1
+--     	                    )
         loop
-            if cx.id is not null then
+            if gate.type in (15, 18) and gate.visited = false then
+                cx := gate;
+
                 cx_prev_q1_id := div(cx.prev_q1, 10);
                 cx_prev_q2_id := div(cx.prev_q2, 10);
                 cx_next_q1_id := div(cx.next_q1, 10);
                 cx_next_q2_id := div(cx.next_q2, 10);
 
+                perform 1 from linked_circuit where id in
+                                                    (cx.id, cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id)
+                                              for update skip locked;
+
                 select count(*) into distinct_count from
                     (select distinct unnest(array[cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id])) as it;
                 select count(*) into distinct_existing from
                     (select * from linked_circuit where id in
-                        (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id) for update skip locked) as it;
+                        (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id)) as it;
 
                 if distinct_count = distinct_existing then
                     cx_id_ctrl := cx.id * 10;
