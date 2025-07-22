@@ -67,7 +67,6 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
 
         # worker procedures
         'generic_procedures/stopper.sql',
-        'generic_procedures/for_loop.sql',
         'generic_procedures/generate_edge_list.sql',
 
         # benchmarking only procedures
