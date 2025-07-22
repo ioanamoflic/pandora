@@ -40,7 +40,7 @@ begin
                 cx_next_q2_id := div(cx.next_q2, 10);
 
                 perform 1 from linked_circuit
-                where id in (cx.id, cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id)
+                where id in (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id)
                 order by id
                 for update;
 
