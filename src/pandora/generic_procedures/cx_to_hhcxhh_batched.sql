@@ -30,7 +30,7 @@ begin
             (select * from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
     	                    where it.type in (15, 18)
                             and visited = false
-    	                    for update skip locked)
+    	                    for update skip locked limit 1)
         loop
             if cx.id is not null then
                 cx_prev_q1_id := div(cx.prev_q1, 10);
