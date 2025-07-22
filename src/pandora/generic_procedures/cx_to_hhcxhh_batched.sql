@@ -78,9 +78,9 @@ begin
                     execute 'update linked_circuit set ' || modulus_right_cx_q2 || ' = $1 where id = $2' using right_q2_id, cx_next_q2_id;
                     run_nr = run_nr - 1;
                 end if;
-                commit;
             end if;
         end loop;
+        commit;
     end loop;
 end;$$;
 
