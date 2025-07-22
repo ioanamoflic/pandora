@@ -31,7 +31,9 @@ begin
     	                    where it.type in (15, 18)
                             and visited = false
     	                    order by id
-    	                    for update skip locked limit 1)
+    	                    for update skip locked
+    	                    --limit 1
+    	                    )
         loop
             if cx.id is not null then
                 cx_prev_q1_id := div(cx.prev_q1, 10);
