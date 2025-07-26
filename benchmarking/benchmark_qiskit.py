@@ -113,7 +113,7 @@ def run_benchmark(input_dag: DAGCircuit,
 """
 
 if __name__ == "__main__":
-    for nq in range(10000, 100001, 10000):
+    for nq in range(100000, 1000001, 100000):
         print('Number of qubits:', nq)
         _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
 

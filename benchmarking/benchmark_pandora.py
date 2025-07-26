@@ -140,7 +140,7 @@ if __name__ == "__main__":
     FILEPATH = sys.argv[1]
     conn = get_connection(config_file_path=FILEPATH)
 
-    for nq in range(10000, 100001, 10000):
+    for nq in range(100000, 1000001, 100000):
         print('Number of qubits:', nq)
         _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
 
