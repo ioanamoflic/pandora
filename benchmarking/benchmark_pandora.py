@@ -137,7 +137,8 @@ def test_cx_to_hhcxhh_cached_ids(connection,
 
 
 if __name__ == "__main__":
-    conn = get_connection()
+    FILEPATH = sys.argv[1]
+    conn = get_connection(config_file_path=FILEPATH)
 
     for nq in range(10000, 100001, 10000):
         print('Number of qubits:', nq)
