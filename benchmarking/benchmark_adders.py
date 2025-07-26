@@ -55,7 +55,7 @@ def get_adder(n_bits: int):
     qubits = [cirq.NamedQubit(f'q{i}') for i in range(3 * n_bits)]
 
     # Adders from https://github.com/njross/optimizer/tree/master/QFT_and_Adders
-    with open(f"adders/Adder{n_bits}.txt", "r") as f:
+    with open(f"benchmarking/adders/Adder{n_bits}.txt", "r") as f:
         for line in f:
             line = line.strip()
             if line.startswith("QGate[\"not\"]"):
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     """
 
     # cancelling CX gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(CX, CX), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_two_qubit_gates(gate_types=(CX, CX), gate_param=1, dedicated_nproc=1)
     """
         Fusing gates
     """

@@ -22,12 +22,10 @@ declare
 	left_q2_id bigint;
 	right_q1_id bigint;
 	right_q2_id bigint;
-	start_time timestamptz;
     distinct_count int;
     distinct_existing int;
     stop boolean;
 begin
-    start_time := clock_timestamp();
     while run_nr > 0 loop
         select st.stop into stop from stop_condition as st limit 1;
 	    if stop=True then
@@ -81,6 +79,5 @@ begin
             commit;
         end if;
     end loop;
-    raise notice 'Time spent for all hhcxhh -> cx =%', clock_timestamp() - start_time;
 end;$$;
 

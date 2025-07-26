@@ -24,11 +24,8 @@ declare
     right_q2_id bigint;
     cx_id_ctrl bigint;
     cx_id_tgt bigint;
-	start_time timestamptz;
     stop boolean;
 begin
-    start_time := clock_timestamp();
-
     while run_nr > 0 loop
         select st.stop into stop from stop_condition as st limit 1;
 	    if stop=True then
@@ -76,6 +73,5 @@ begin
             commit;
         end if;
     end loop;
-    raise notice 'Time spent for all cx -> hhcxhh =%', clock_timestamp() - start_time;
 end;$$;
 

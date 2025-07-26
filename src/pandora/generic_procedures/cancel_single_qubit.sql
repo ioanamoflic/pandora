@@ -12,7 +12,6 @@ declare
     second record;
     distinct_count int;
     distinct_existing int;
-    start_time timestamptz = clock_timestamp();
     stop boolean;
 begin
 	while run_nr > 0 loop
@@ -71,5 +70,4 @@ begin
     	commit;
         end if;
 	end loop;
-	raise notice 'Time spent cancelling all single qubit pairs=%', clock_timestamp() - start_time;
 end;$$;
