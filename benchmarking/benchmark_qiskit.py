@@ -1,15 +1,11 @@
 import csv
-import sys
 import time
 import random
 
-import qiskit
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import CXGate
-
+from qiskit.converters import circuit_to_dag
 from qiskit.dagcircuit import DAGCircuit
-from qiskit.quantum_info import random_clifford
-import qiskit.qasm3
 
 from benchmark_tket import generate_random_CX_circuit
 
@@ -23,12 +19,12 @@ def get_replacement():
     replacement.h(0)
     replacement.h(1)
 
-    dag = qiskit.converters.circuit_to_dag(replacement)
+    dag = circuit_to_dag(replacement)
 
     return dag
 
-def get_random_seq_gates_from_circuit(op_nodes, percentage):
 
+def get_random_seq_gates_from_circuit(op_nodes, percentage):
     """
         Assume that the search criteria is randomly true in sample_size of the circuit
         Get the nodes in sequential order
@@ -38,10 +34,9 @@ def get_random_seq_gates_from_circuit(op_nodes, percentage):
 
     for node_ind in sample_ind:
         node = op_nodes[node_ind]
-
-        # if cnot and not visited
         if isinstance(node.op, CXGate):
             yield node
+
 
 def get_random_gate_from_dag_visit_once(op_nodes, visited, sample_size=100, gate_type=None):
     while True:
@@ -56,6 +51,7 @@ def get_random_gate_from_dag_visit_once(op_nodes, visited, sample_size=100, gate
             if visited[node] is False and isinstance(node.op, gate_type):
                 visited[node] = True
                 return node
+
 
 def run_benchmark_seq(input_dag: DAGCircuit, sample_percentage=0.1, nr_passes=1):
     print(".")
@@ -80,6 +76,7 @@ def run_benchmark_seq(input_dag: DAGCircuit, sample_percentage=0.1, nr_passes=1)
         rewrite_times.append(t2 - t1)
 
     return search_times, rewrite_times
+
 
 def run_benchmark(input_dag: DAGCircuit,
                   sample_percentage=0.1,
@@ -116,38 +113,19 @@ def run_benchmark(input_dag: DAGCircuit,
 """
 
 if __name__ == "__main__":
+    for nq in range(10000, 100001, 10000):
+        print('Number of qubits:', nq)
+        _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
 
-    RATIO = 1
+        qc_dag = circuit_to_dag(qc)
 
-    for N_QUB in range(10000, 100001, 10000):
-
-        print(f'Benchmark for ... N_QUB = {N_QUB} and RATIO = {RATIO}')
-
-        times = []
-
-        # qc = qiskit.qasm3.load(f"qiskit_{N_QUB}.qasm")
-
-        # qc = random_clifford(num_qubits=N_QUB, seed=0).to_circuit()
-        qc = generate_random_CX_circuit(n_templates=N_QUB, n_qubits=50)[1]
-
-        # with open(f"qiskit_{N_QUB}.qasm", "w") as f:
-        #     qiskit.qasm3.dump(qc, f)
-
-        qc_dag = qiskit.converters.circuit_to_dag(qc)
-        nr_cnots = qc.count_ops()['cx']
-
-        # searching makes things harder
         total_times = run_benchmark_seq(qc_dag, sample_percentage=0.001, nr_passes=100)
 
-        # Merge the times
         total_search = sum(total_times[0])
         total_rewrite = sum(total_times[1])
 
         print('Time to optimize S+R=T:', total_search, total_rewrite, total_search + total_rewrite, flush=True)
 
-        times.append((N_QUB, RATIO, total_search, total_rewrite))
-
-    with open('qiskit_cx_flip.csv', 'a') as f:
-        writer = csv.writer(f)
-        for row in times:
-            writer.writerow(row)
+        with open('qiskit_template_search.csv', 'a') as f:
+            writer = csv.writer(f)
+            writer.writerow((nq, total_search, total_rewrite))
