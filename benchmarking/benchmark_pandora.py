@@ -42,8 +42,8 @@ def test_cx_to_hhcxhh_bernoulli(connection,
 
 def test_cx_to_hhcxhh_visit(connection,
                             initial_circuit: qiskit.QuantumCircuit,
-                            ratio: int,
-                            sys_percentage=10):
+                            sys_percentage=10,
+                            nr_passes=1):
 
     cursor = connection.cursor()
 
@@ -71,7 +71,8 @@ def test_cx_to_hhcxhh_visit(connection,
 
     print('I started optimizing...')
     st_time = time.time()
-    cursor.execute(f"call linked_cx_to_hhcxhh_visit({sys_percentage}, {cx_count // ratio})")
+    # cursor.execute(f"call linked_cx_to_hhcxhh_visit({sys_percentage}, {cx_count // ratio})")
+    cursor.execute(f"call linked_cx_to_hhcxhh_seq({sys_percentage}, {nr_passes})")
 
     return time.time() - st_time
 
@@ -112,21 +113,26 @@ def test_cx_to_hhcxhh_cached_ids(connection,
 if __name__ == "__main__":
     conn = get_connection()
 
-    n_qub = [10, 100, 1000]
-    ratios = [8, 4, 2, 1]
+    # n_qub = [10, 100, 1000]
+    # ratios = [8, 4, 2, 1]
+
+    n_qub = [1000]
+    ratios = [1]
 
     times = []
 
-    for nq in n_qub:
+    for nq in range(10000, 100001, 10000):
         for ratio in ratios:
             print('Number of qubits:', nq)
-            print('Ratio:', ratio)
+            # print('Ratio:', ratio)
 
-            qc = random_clifford(num_qubits=nq, seed=0).to_circuit()
+            from benchmark_tket import generate_random_CX_circuit
+            qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)[1]
 
-            tot_time = test_cx_to_hhcxhh_visit(connection=conn,
-                                               initial_circuit=qc,
-                                               ratio=ratio)
+            # qc = random_clifford(num_qubits=nq, seed=0).to_circuit()
+            # qc = qiskit.qasm3.load(f"qiskit_{nq}.qasm")
+
+            tot_time = test_cx_to_hhcxhh_visit(connection=conn, initial_circuit=qc, sys_percentage=0.1, nr_passes=100)
             times.append((nq, ratio, tot_time))
             print('time to optimize:', tot_time)
 
