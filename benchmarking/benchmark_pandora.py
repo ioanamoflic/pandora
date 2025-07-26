@@ -1,3 +1,5 @@
+import sys
+
 import qiskit
 
 from pandora.connection_util import *
@@ -74,10 +76,9 @@ def test_cx_to_hhcxhh_visit_all(connection,
 
 def test_cx_to_hhcxhh_visit(connection,
                             initial_circuit: qiskit.QuantumCircuit,
+                            nprocs,
                             sys_percentage,
                             nr_passes=1):
-
-    cursor = connection.cursor()
 
     drop_and_replace_tables(connection=connection,
                             clean=True)
@@ -96,9 +97,16 @@ def test_cx_to_hhcxhh_visit(connection,
                       table_name='linked_circuit',
                       large_buffer_value=10000000)
 
+    thread_procedures = [
+        (nprocs - 1, f"call linked_cx_to_hhcxhh_seq({sys_percentage}, {nr_passes})"),
+        (1,
+         f"call linked_cx_to_hhcxhh_seq({sys_percentage}, {nr_passes - (nprocs - 1) * (nr_passes // nprocs)})"),
+    ]
+
     print('I started optimizing...')
     st_time = time.time()
-    cursor.execute(f"call linked_cx_to_hhcxhh_seq({sys_percentage}, {nr_passes})")
+
+    db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
 
     return time.time() - st_time
 
@@ -138,19 +146,22 @@ def test_cx_to_hhcxhh_cached_ids(connection,
 
 if __name__ == "__main__":
     FILEPATH = sys.argv[1]
+    NPROCS = int(sys.argv[2])
+
     conn = get_connection(config_file_path=FILEPATH)
 
-    for nq in range(10000, 100001, 10000):
+    for nq in range(100000, 1000001, 100000):
         print('Number of qubits:', nq)
         _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
 
         tot_time = test_cx_to_hhcxhh_visit(connection=conn,
                                            initial_circuit=qc,
-                                           sys_percentage=0.1,
+                                           nprocs=NPROCS,
+                                           sys_percentage=0.1 / NPROCS,
                                            nr_passes=100)
         print('Time to optimize:', tot_time)
 
-        with open('pandora_template_search.csv', 'w') as f:
+        with open('pandora_template_search.csv', 'a') as f:
             writer = csv.writer(f)
             writer.writerow((nq, tot_time))
 

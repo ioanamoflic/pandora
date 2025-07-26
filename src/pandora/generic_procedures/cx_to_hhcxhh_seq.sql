@@ -28,7 +28,7 @@ declare
 begin
     while run_nr > 0 loop
         for gate in
-        select * from linked_circuit lc tablesample bernoulli(sys_range) where type in (15, 18)
+            select * from linked_circuit lc tablesample bernoulli(sys_range) where type in (15, 18)
         loop
             select * into cx from linked_circuit where id = gate.id for update skip locked;
 
