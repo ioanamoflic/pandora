@@ -50,15 +50,11 @@ def optimize_circuit(circuit):
 
 
 def get_random_seq_gates_from_circuit(circ: Circuit, percentage):
-    nodes = []
     for i, node in enumerate(circ.get_commands()):
         if random.uniform(0, 1) > percentage / 100:
             continue
 
-        nodes.append(str(i))
-
-    return nodes
-
+        yield str(i)
 
 def compute_best_possible_time(nr_nodes, nr_qubits):
     t = time.time()
@@ -87,7 +83,7 @@ def cx_to_hhcxhh_transform_seq(circ: Circuit, nodes) -> Circuit:
     for node_name in nodes:
         x = circ.substitute_named(template, node_name)
 
-    print('TKET_time:', time.time() - rw_time)
+    # print('TKET_time:', time.time() - rw_time)
     #
     # gate_list = list(circ.get_commands())
     # print("resulted in ", len(gate_list))
@@ -228,15 +224,16 @@ if __name__ == "__main__":
             else:
                 # tket_circ = cx_to_hhcxhh_transform_random(tket_circ, 100)
                 nr_rewrite_passes = 100
-                percent_rewrite_per_pass = 1
+                percent_rewrite_per_pass = 0.1
                 for i in range(nr_rewrite_passes):
-                    nodes = get_random_seq_gates_from_circuit(tket_circ, 1)
-                    gate_count = gate_count + 5 * len(nodes)
-                    compute_best_possible_time(gate_count, 50)
-                    cx_to_hhcxhh_transform_seq(tket_circ, nodes)
-
+                    # this is a simulation of a very optimistic optimization time
+                    # nodes = list(get_random_seq_gates_from_circuit(tket_circ, 1))
+                    # gate_count = gate_count + 5 * len(nodes)
+                    # compute_best_possible_time(gate_count, 50)
+                    cx_to_hhcxhh_transform_seq(tket_circ, get_random_seq_gates_from_circuit(tket_circ, percent_rewrite_per_pass))
 
             op_time = time.time() - start_time
+            print('TKET_time: ', op_time)
 
         with open(f'{BENCH}_{TYPE}_rma_{NPROCS}.csv', 'a') as f:
             writer = csv.writer(f)
