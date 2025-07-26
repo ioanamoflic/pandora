@@ -150,7 +150,7 @@ if __name__ == "__main__":
                                            nr_passes=100)
         print('Time to optimize:', tot_time)
 
-        with open('pandora_template_search.csv', 'w') as f:
+        with open('pandora_template_search.csv', 'a') as f:
             writer = csv.writer(f)
             writer.writerow((nq, tot_time))
 
