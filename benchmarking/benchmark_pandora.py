@@ -98,9 +98,9 @@ def test_cx_to_hhcxhh_visit(connection,
                       large_buffer_value=10000000)
 
     thread_procedures = [
-        (nprocs - 1, f"call cancel_two_qubit_equiv({sys_percentage}, {nr_passes})"),
+        (nprocs - 1, f"call linked_cx_to_hhcxhh_seq({sys_percentage}, {nr_passes})"),
         (1,
-         f"call cancel_two_qubit_equiv({sys_percentage}, {nr_passes - (nprocs - 1) * (nr_passes // nprocs)})"),
+         f"call linked_cx_to_hhcxhh_seq({sys_percentage}, {nr_passes - (nprocs - 1) * (nr_passes // nprocs)})"),
     ]
 
     print('I started optimizing...')
@@ -157,7 +157,7 @@ if __name__ == "__main__":
         tot_time = test_cx_to_hhcxhh_visit(connection=conn,
                                            initial_circuit=qc,
                                            nprocs=NPROCS,
-                                           sys_percentage=0.1 / NPROCS,
+                                           sys_percentage=1 / NPROCS,
                                            nr_passes=100)
         print('Time to optimize:', tot_time)
 
