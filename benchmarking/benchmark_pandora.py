@@ -157,7 +157,7 @@ if __name__ == "__main__":
         tot_time = test_cx_to_hhcxhh_visit(connection=conn,
                                            initial_circuit=qc,
                                            nprocs=NPROCS,
-                                           sys_percentage=1 / NPROCS,
+                                           sys_percentage=0.1 / NPROCS,
                                            nr_passes=100)
         print('Time to optimize:', tot_time)
 
