@@ -24,17 +24,19 @@ def get_replacement():
     return dag
 
 
-def get_random_seq_gates_from_circuit(op_nodes, percentage):
+def get_random_seq_gates_from_circuit(op_nodes, percentage, visited):
     """
         Assume that the search criteria is randomly true in sample_size of the circuit
         Get the nodes in sequential order
     """
     sample_size = int(len(op_nodes) * (percentage / 100))
     sample_ind = random.sample(range(len(op_nodes)), k=sample_size)
+    sample_ind.sort()
 
     for node_ind in sample_ind:
         node = op_nodes[node_ind]
-        if isinstance(node.op, CXGate):
+        if node in visited.keys() and visited[node] is False and isinstance(node.op, CXGate):
+            visited[node] = True
             yield node
 
 
@@ -94,14 +96,18 @@ def get_random_seq_gates_from_circuit(op_nodes, percentage):
 """
 
 if __name__ == "__main__":
-    for nq in range(100000, 1000001, 100000):
-        print('Number of qubits:', nq)
+    nr_passes = 100
+    sample_percentage = 0.1
+
+    for nq in range(10000, 100001, 10000):
+        print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
+
         _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
 
         qc_dag = circuit_to_dag(qc)
-
-        nr_passes = 100
-        sample_percentage = 0.1
+        op_nodes = qc_dag.op_nodes()
+        op_nodes_length = len(op_nodes)
+        visit_dict = dict(zip(op_nodes, [False] * len(op_nodes)))
 
         search_times = []
         rewrite_times = []
@@ -114,7 +120,7 @@ if __name__ == "__main__":
 
             # random.shuffle(nodes)
             replacement = get_replacement()
-            for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage):
+            for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage, visit_dict):
                 qc_dag.substitute_node_with_dag(node, replacement)
 
             t2 = time.time()

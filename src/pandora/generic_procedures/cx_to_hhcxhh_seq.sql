@@ -28,9 +28,9 @@ declare
 begin
     while run_nr > 0 loop
         for gate in
-            select * from linked_circuit lc tablesample bernoulli(sys_range) where type in (15, 18)
+            select * from linked_circuit lc tablesample bernoulli(sys_range) where type in (15, 18) and visited = false
         loop
-            select * into cx from linked_circuit where id = gate.id for update skip locked;
+            select * into cx from linked_circuit where id = gate.id and gate.visited = false for update skip locked;
 
             if cx.id is null then
                 continue;
@@ -75,10 +75,12 @@ begin
                 execute 'update linked_circuit set ' || modulus_left_cx_q2 || ' = $1 where id = $2' using left_q2_id, cx_prev_q2_id;
                 execute 'update linked_circuit set ' || modulus_right_cx_q1 || ' = $1 where id = $2' using right_q1_id, cx_next_q1_id;
                 execute 'update linked_circuit set ' || modulus_right_cx_q2 || ' = $1 where id = $2' using right_q2_id, cx_next_q2_id;
+
                 commit;
             end if;
         end loop;
 
+        --commit;
         run_nr = run_nr - 1;
 
     end loop;

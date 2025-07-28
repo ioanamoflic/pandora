@@ -74,11 +74,11 @@ def test_cx_to_hhcxhh_visit_all(connection,
     return time.time() - start_pandora
 
 
-def test_cx_to_hhcxhh_visit(connection,
-                            initial_circuit: qiskit.QuantumCircuit,
-                            nprocs,
-                            sys_percentage,
-                            nr_passes=1):
+def test_cx_to_hhcxhh(connection,
+                      initial_circuit: qiskit.QuantumCircuit,
+                      nprocs,
+                      sys_percentage,
+                      nr_passes=1):
 
     drop_and_replace_tables(connection=connection,
                             clean=True)
@@ -97,16 +97,19 @@ def test_cx_to_hhcxhh_visit(connection,
                       table_name='linked_circuit',
                       large_buffer_value=10000000)
 
-    thread_procedures = [
-        (nprocs - 1, f"call linked_cx_to_hhcxhh_seq({sys_percentage}, {nr_passes})"),
-        (1,
-         f"call linked_cx_to_hhcxhh_seq({sys_percentage}, {nr_passes - (nprocs - 1) * (nr_passes // nprocs)})"),
-    ]
 
-    print('I started optimizing...')
+
+    print('I started rewriting...')
     st_time = time.time()
 
-    db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
+    if nprocs == 1:
+        cursor = connection.cursor()
+        cursor.execute(f"call linked_cx_to_hhcxhh_seq({sys_percentage}, {nr_passes})")
+    else:
+        thread_procedures = [
+            (nprocs, f"call linked_cx_to_hhcxhh_seq({sys_percentage}, {nr_passes})"),
+        ]
+        db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
 
     return time.time() - st_time
 
@@ -137,9 +140,9 @@ def test_cx_to_hhcxhh_cached_ids(connection,
 
     st_time = time.time()
 
-    print('I started optimizing...')
+    print('I started rewriting...')
     cursor.execute(f"call linked_cx_to_hhcxhh_cached()")
-    print('I finished optimizing...')
+    print('I finished rewriting...')
 
     return time.time() - st_time
 
@@ -150,16 +153,20 @@ if __name__ == "__main__":
 
     conn = get_connection(config_file_path=FILEPATH)
 
-    for nq in range(100000, 1000001, 100000):
-        print('Number of qubits:', nq)
+    nr_passes = 100
+    sample_percentage = 0.1
+
+    for nq in range(10000, 100001, 10000):
+        print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
+
         _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
 
-        tot_time = test_cx_to_hhcxhh_visit(connection=conn,
-                                           initial_circuit=qc,
-                                           nprocs=NPROCS,
-                                           sys_percentage=0.1 / NPROCS,
-                                           nr_passes=100)
-        print('Time to optimize:', tot_time)
+        tot_time = test_cx_to_hhcxhh(connection=conn,
+                                     initial_circuit=qc,
+                                     nprocs=NPROCS,
+                                     sys_percentage=sample_percentage / NPROCS,
+                                     nr_passes=nr_passes)
+        print('Time to rewrite:', tot_time)
 
         with open('pandora_template_search.csv', 'a') as f:
             writer = csv.writer(f)
