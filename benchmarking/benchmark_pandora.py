@@ -5,7 +5,7 @@ import qiskit
 from pandora.connection_util import *
 from pandora.qiskit_to_pandora_util import convert_qiskit_to_pandora
 
-from benchmark_tket import generate_random_CX_circuit
+from benchmark_tket import generate_random_CX_circuit, generate_random_HHCXHH_circuit
 
 
 def test_cx_to_hhcxhh_bernoulli(connection,
@@ -79,7 +79,6 @@ def test_cx_to_hhcxhh(connection,
                       nprocs,
                       sys_percentage,
                       nr_passes=1):
-
     drop_and_replace_tables(connection=connection,
                             clean=True)
     refresh_all_stored_procedures(connection=connection)
@@ -96,8 +95,6 @@ def test_cx_to_hhcxhh(connection,
     reset_database_id(connection=connection,
                       table_name='linked_circuit',
                       large_buffer_value=10000000)
-
-
 
     print('I started rewriting...')
     st_time = time.time()
@@ -187,6 +184,7 @@ def test_cx_to_hhcxhh_cached_ids(connection,
 if __name__ == "__main__":
     FILEPATH = sys.argv[1]
     NPROCS = int(sys.argv[2])
+    DIR = int(sys.argv[3])
 
     conn = get_connection(config_file_path=FILEPATH)
 
@@ -196,22 +194,28 @@ if __name__ == "__main__":
     for nq in range(100000, 1000001, 100000):
         print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
 
-        _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
+        if DIR == 0:
+            _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
+        else:
+            _, qc = generate_random_HHCXHH_circuit(n_templates=nq, n_qubits=50)
 
-        # tot_time = test_hhcxhh_to_cx(connection=conn,
-        #                              initial_circuit=qc,
-        #                              nprocs=NPROCS,
-        #                              sys_percentage=sample_percentage / NPROCS,
-        #                              nr_passes=nr_passes)
-        tot_time = test_cx_to_hhcxhh(connection=conn,
-                                     initial_circuit=qc,
-                                     nprocs=NPROCS,
-                                     sys_percentage=sample_percentage / NPROCS,
-                                     nr_passes=nr_passes)
+        if DIR == 0:
+            tot_time = test_cx_to_hhcxhh(connection=conn,
+                                         initial_circuit=qc,
+                                         nprocs=NPROCS,
+                                         sys_percentage=sample_percentage / NPROCS,
+                                         nr_passes=nr_passes)
+        else:
+            tot_time = test_hhcxhh_to_cx(connection=conn,
+                                         initial_circuit=qc,
+                                         nprocs=NPROCS,
+                                         sys_percentage=sample_percentage / NPROCS,
+                                         nr_passes=nr_passes)
+
         print('Time to rewrite:', tot_time)
 
         with open('pandora_template_search.csv', 'a') as f:
             writer = csv.writer(f)
-            writer.writerow((nq, tot_time))
+            writer.writerow((nq, tot_time, DIR))
 
     conn.close()

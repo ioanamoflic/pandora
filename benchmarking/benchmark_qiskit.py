@@ -1,4 +1,5 @@
 import csv
+import sys
 import time
 import random
 
@@ -116,14 +117,18 @@ def is_hhcxhh_template(cx_node, circuit_dag):
 """
 
 if __name__ == "__main__":
+    DIR = int(sys.argv[1])
+
     nr_passes = 100
     sample_percentage = 0.1
 
     for nq in range(100000, 1000001, 100000):
         print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
 
-        _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
-        # _, qc = generate_random_HHCXHH_circuit(n_templates=nq, n_qubits=50)
+        if DIR == 0:
+            _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
+        else:
+            _, qc = generate_random_HHCXHH_circuit(n_templates=nq, n_qubits=50)
 
         qc_dag = circuit_to_dag(qc)
         op_nodes = qc_dag.op_nodes()
@@ -140,19 +145,22 @@ if __name__ == "__main__":
             t1 = time.time()
 
             # random.shuffle(nodes)
-            replacement = get_replacement()
-            # replacement_2 = get_replacement_2()
-            for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage, visit_dict):
-                # (h1, h2, h3, h4) = is_hhcxhh_template(node, qc_dag)
-                # if h1:
-                #     qc_dag.remove_op_node(h1)
-                #     qc_dag.remove_op_node(h2)
-                #     qc_dag.remove_op_node(h3)
-                #     qc_dag.remove_op_node(h4)
-                #
-                #     qc_dag.substitute_node_with_dag(node, replacement_2)
 
-                qc_dag.substitute_node_with_dag(node, replacement)
+            if DIR == 0:
+                replacement = get_replacement()
+                for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage, visit_dict):
+                    qc_dag.substitute_node_with_dag(node, replacement)
+            else:
+                replacement_2 = get_replacement_2()
+                for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage, visit_dict):
+                    (h1, h2, h3, h4) = is_hhcxhh_template(node, qc_dag)
+                    if h1:
+                        qc_dag.remove_op_node(h1)
+                        qc_dag.remove_op_node(h2)
+                        qc_dag.remove_op_node(h3)
+                        qc_dag.remove_op_node(h4)
+
+                        qc_dag.substitute_node_with_dag(node, replacement_2)
 
             t2 = time.time()
 
@@ -166,4 +174,4 @@ if __name__ == "__main__":
 
         with open('qiskit_template_search.csv', 'a') as f:
             writer = csv.writer(f)
-            writer.writerow((nq, total_search, total_rewrite))
+            writer.writerow((nq, total_search, total_rewrite, DIR))
