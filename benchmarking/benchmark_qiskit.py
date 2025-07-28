@@ -3,9 +3,8 @@ import time
 import random
 
 from qiskit import QuantumCircuit
-from qiskit.circuit.library import CXGate
+from qiskit.circuit.library import CXGate, HGate
 from qiskit.converters import circuit_to_dag
-from qiskit.dagcircuit import DAGCircuit
 
 from benchmark_tket import generate_random_CX_circuit
 
@@ -18,6 +17,16 @@ def get_replacement():
     replacement.cx(1, 0)
     replacement.h(0)
     replacement.h(1)
+
+    dag = circuit_to_dag(replacement)
+
+    return dag
+
+
+def get_replacement_2():
+    replacement = QuantumCircuit(2)
+
+    replacement.cx(1, 0)
 
     dag = circuit_to_dag(replacement)
 
@@ -38,6 +47,17 @@ def get_random_seq_gates_from_circuit(op_nodes, percentage, visited):
         if node in visited.keys() and visited[node] is False and isinstance(node.op, CXGate):
             visited[node] = True
             yield node
+
+
+def is_hhcxhh_template(cx_node, circuit_dag):
+    pred = list(circuit_dag.predecessors(cx_node))
+    succ = list(circuit_dag.successors(cx_node))
+
+    if isinstance(pred[0].op, HGate) and isinstance(pred[1].op, HGate) \
+            and isinstance(succ[0].op, HGate) and isinstance(succ[1].op, HGate):
+        return pred[0], pred[1], succ[0], succ[1]
+
+    return None, None, None, None
 
 
 # def get_random_gate_from_dag_visit_once(op_nodes, visited, sample_size=100, gate_type=None):
@@ -119,9 +139,16 @@ if __name__ == "__main__":
             t1 = time.time()
 
             # random.shuffle(nodes)
-            replacement = get_replacement()
+            replacement = get_replacement_2()
             for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage, visit_dict):
-                qc_dag.substitute_node_with_dag(node, replacement)
+                (h1, h2, h3, h4) = is_hhcxhh_template(node, qc_dag)
+                if h1:
+                    qc_dag.remove_op_node(h1)
+                    qc_dag.remove_op_node(h2)
+                    qc_dag.remove_op_node(h3)
+                    qc_dag.remove_op_node(h4)
+
+                    qc_dag.substitute_node_with_dag(node, replacement)
 
             t2 = time.time()
 

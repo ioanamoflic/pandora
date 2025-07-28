@@ -114,6 +114,43 @@ def test_cx_to_hhcxhh(connection,
     return time.time() - st_time
 
 
+def test_hhcxhh_to_cx(connection,
+                      initial_circuit: qiskit.QuantumCircuit,
+                      nprocs,
+                      sys_percentage,
+                      nr_passes=1):
+    drop_and_replace_tables(connection=connection,
+                            clean=True)
+    refresh_all_stored_procedures(connection=connection)
+
+    db_tuples, _ = convert_qiskit_to_pandora(qiskit_circuit=initial_circuit,
+                                             add_margins=True,
+                                             label='q')
+
+    insert_in_batches(pandora_gates=db_tuples,
+                      connection=connection,
+                      table_name='linked_circuit',
+                      reset_id=False)
+
+    reset_database_id(connection=connection,
+                      table_name='linked_circuit',
+                      large_buffer_value=10000000)
+
+    print('I started rewriting...')
+    st_time = time.time()
+
+    if nprocs == 1:
+        cursor = connection.cursor()
+        cursor.execute(f"call linked_hhcxhh_to_cx_seq({sys_percentage}, {nr_passes})")
+    else:
+        thread_procedures = [
+            (nprocs, f"call linked_hhcxhh_to_cx_seq({sys_percentage}, {nr_passes})"),
+        ]
+        db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
+
+    return time.time() - st_time
+
+
 def test_cx_to_hhcxhh_cached_ids(connection,
                                  initial_circuit: qiskit.QuantumCircuit):
     cursor = connection.cursor()
@@ -161,11 +198,16 @@ if __name__ == "__main__":
 
         _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
 
-        tot_time = test_cx_to_hhcxhh(connection=conn,
+        tot_time = test_hhcxhh_to_cx(connection=conn,
                                      initial_circuit=qc,
                                      nprocs=NPROCS,
                                      sys_percentage=sample_percentage / NPROCS,
                                      nr_passes=nr_passes)
+        # tot_time = test_cx_to_hhcxhh(connection=conn,
+        #                              initial_circuit=qc,
+        #                              nprocs=NPROCS,
+        #                              sys_percentage=sample_percentage / NPROCS,
+        #                              nr_passes=nr_passes)
         print('Time to rewrite:', tot_time)
 
         with open('pandora_template_search.csv', 'a') as f:

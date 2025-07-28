@@ -15,7 +15,8 @@ create table IF NOT EXISTS public.linked_circuit
     label   char,
     cl_ctrl boolean,
     meas_key smallint
-) WITH (FILLFACTOR = 50);
+);
+--     WITH (FILLFACTOR = 50);
 
 create table IF NOT EXISTS public.optimization_results
 (

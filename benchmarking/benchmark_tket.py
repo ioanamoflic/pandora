@@ -17,7 +17,12 @@ def generate_random_CX_circuit(n_templates, n_qubits):
             q1, q2 = random.choices(range(0, n_qubits), k=2)
 
         circ_tket.CX(q1, q2, opgroup=str(t))
+
+        circ_qiskit.h(q1)
+        circ_qiskit.h(q2)
         circ_qiskit.cx(q1, q2)
+        circ_qiskit.h(q1)
+        circ_qiskit.h(q2)
 
     return circ_tket, circ_qiskit
 
