@@ -7,7 +7,7 @@ from qiskit import QuantumCircuit
 from qiskit.circuit.library import CXGate, HGate
 from qiskit.converters import circuit_to_dag
 
-from benchmark_tket import generate_random_CX_circuit, generate_random_HHCXHH_circuit, get_replacement, \
+from benchmark_tket import generate_random_CX_circuit, get_replacement, \
     generate_random_HHCXHH_circuit_occasionally_flipped
 
 
@@ -65,7 +65,6 @@ if __name__ == "__main__":
         if DIR == 0:
             _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
         else:
-            # _, qc = generate_random_HHCXHH_circuit(n_templates=nq, n_qubits=50)
             qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq, n_qubits=50, proba=0.9)
 
         qc_dag = circuit_to_dag(qc)
