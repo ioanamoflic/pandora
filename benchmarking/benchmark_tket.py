@@ -17,6 +17,25 @@ def generate_random_CX_circuit(n_templates, n_qubits):
             q1, q2 = random.choices(range(0, n_qubits), k=2)
 
         circ_tket.CX(q1, q2, opgroup=str(t))
+        circ_qiskit.cx(q1, q2)
+
+    return circ_tket, circ_qiskit
+
+
+def generate_random_HHCXHH_circuit(n_templates, n_qubits):
+    circ_tket = Circuit(n_qubits)
+    circ_qiskit = qiskit.QuantumCircuit(n_qubits, n_qubits)
+
+    for t in range(n_templates):
+        q1, q2 = random.choices(range(0, n_qubits), k=2)
+        while q1 == q2:
+            q1, q2 = random.choices(range(0, n_qubits), k=2)
+
+        circ_tket.H(q1)
+        circ_tket.H(q2)
+        circ_tket.CX(q1, q2, opgroup=str(t))
+        circ_tket.H(q1)
+        circ_tket.H(q2)
 
         circ_qiskit.h(q1)
         circ_qiskit.h(q2)

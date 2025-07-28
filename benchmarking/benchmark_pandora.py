@@ -193,21 +193,21 @@ if __name__ == "__main__":
     nr_passes = 100
     sample_percentage = 0.1
 
-    for nq in range(10000, 100001, 10000):
+    for nq in range(100000, 1000001, 100000):
         print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
 
         _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
 
-        tot_time = test_hhcxhh_to_cx(connection=conn,
-                                     initial_circuit=qc,
-                                     nprocs=NPROCS,
-                                     sys_percentage=sample_percentage / NPROCS,
-                                     nr_passes=nr_passes)
-        # tot_time = test_cx_to_hhcxhh(connection=conn,
+        # tot_time = test_hhcxhh_to_cx(connection=conn,
         #                              initial_circuit=qc,
         #                              nprocs=NPROCS,
         #                              sys_percentage=sample_percentage / NPROCS,
         #                              nr_passes=nr_passes)
+        tot_time = test_cx_to_hhcxhh(connection=conn,
+                                     initial_circuit=qc,
+                                     nprocs=NPROCS,
+                                     sys_percentage=sample_percentage / NPROCS,
+                                     nr_passes=nr_passes)
         print('Time to rewrite:', tot_time)
 
         with open('pandora_template_search.csv', 'a') as f:

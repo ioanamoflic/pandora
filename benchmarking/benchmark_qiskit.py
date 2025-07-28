@@ -6,7 +6,7 @@ from qiskit import QuantumCircuit
 from qiskit.circuit.library import CXGate, HGate
 from qiskit.converters import circuit_to_dag
 
-from benchmark_tket import generate_random_CX_circuit
+from benchmark_tket import generate_random_CX_circuit, generate_random_HHCXHH_circuit
 
 
 def get_replacement():
@@ -119,10 +119,11 @@ if __name__ == "__main__":
     nr_passes = 100
     sample_percentage = 0.1
 
-    for nq in range(10000, 100001, 10000):
+    for nq in range(100000, 1000001, 100000):
         print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
 
         _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
+        # _, qc = generate_random_HHCXHH_circuit(n_templates=nq, n_qubits=50)
 
         qc_dag = circuit_to_dag(qc)
         op_nodes = qc_dag.op_nodes()
@@ -139,16 +140,19 @@ if __name__ == "__main__":
             t1 = time.time()
 
             # random.shuffle(nodes)
-            replacement = get_replacement_2()
+            replacement = get_replacement()
+            # replacement_2 = get_replacement_2()
             for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage, visit_dict):
-                (h1, h2, h3, h4) = is_hhcxhh_template(node, qc_dag)
-                if h1:
-                    qc_dag.remove_op_node(h1)
-                    qc_dag.remove_op_node(h2)
-                    qc_dag.remove_op_node(h3)
-                    qc_dag.remove_op_node(h4)
+                # (h1, h2, h3, h4) = is_hhcxhh_template(node, qc_dag)
+                # if h1:
+                #     qc_dag.remove_op_node(h1)
+                #     qc_dag.remove_op_node(h2)
+                #     qc_dag.remove_op_node(h3)
+                #     qc_dag.remove_op_node(h4)
+                #
+                #     qc_dag.substitute_node_with_dag(node, replacement_2)
 
-                    qc_dag.substitute_node_with_dag(node, replacement)
+                qc_dag.substitute_node_with_dag(node, replacement)
 
             t2 = time.time()
 
