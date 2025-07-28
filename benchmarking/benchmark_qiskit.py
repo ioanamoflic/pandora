@@ -7,21 +7,8 @@ from qiskit import QuantumCircuit
 from qiskit.circuit.library import CXGate, HGate
 from qiskit.converters import circuit_to_dag
 
-from benchmark_tket import generate_random_CX_circuit, generate_random_HHCXHH_circuit
-
-
-def get_replacement():
-    replacement = QuantumCircuit(2)
-
-    replacement.h(0)
-    replacement.h(1)
-    replacement.cx(1, 0)
-    replacement.h(0)
-    replacement.h(1)
-
-    dag = circuit_to_dag(replacement)
-
-    return dag
+from benchmark_tket import generate_random_CX_circuit, generate_random_HHCXHH_circuit, get_replacement, \
+    generate_random_HHCXHH_circuit_occasionally_flipped
 
 
 def get_replacement_2():
@@ -50,16 +37,17 @@ def get_random_seq_gates_from_circuit(op_nodes, percentage, visited):
             yield node
 
 
-def is_hhcxhh_template(cx_node, circuit_dag):
-    pred = list(circuit_dag.predecessors(cx_node))
-    succ = list(circuit_dag.successors(cx_node))
+def is_hhcxhh_template(possibly_cx_node, circuit_dag):
+    # if isinstance(possibly_cx_node, CXGate):
+    pred = list(circuit_dag.predecessors(possibly_cx_node))
+    succ = list(circuit_dag.successors(possibly_cx_node))
 
-    if isinstance(cx_node, CXGate) \
-            and isinstance(pred[0].op, HGate) and isinstance(pred[1].op, HGate) \
+    if isinstance(pred[0].op, HGate) and isinstance(pred[1].op, HGate) \
             and isinstance(succ[0].op, HGate) and isinstance(succ[1].op, HGate):
         return pred[0], pred[1], succ[0], succ[1]
 
     return None
+
 
 """
   Benchmarking Qiskit
@@ -68,7 +56,7 @@ def is_hhcxhh_template(cx_node, circuit_dag):
 if __name__ == "__main__":
     DIR = int(sys.argv[1])
 
-    nr_passes = 100
+    nr_passes = 1
     sample_percentage = 0.1
 
     for nq in range(100000, 1000001, 100000):
@@ -77,7 +65,8 @@ if __name__ == "__main__":
         if DIR == 0:
             _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
         else:
-            _, qc = generate_random_HHCXHH_circuit(n_templates=nq, n_qubits=50)
+            # _, qc = generate_random_HHCXHH_circuit(n_templates=nq, n_qubits=50)
+            qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq, n_qubits=50, proba=0.9)
 
         qc_dag = circuit_to_dag(qc)
         op_nodes = qc_dag.op_nodes()
@@ -101,16 +90,18 @@ if __name__ == "__main__":
                     qc_dag.substitute_node_with_dag(node, replacement)
             else:
                 replacement_2 = get_replacement_2()
-                for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage, visit_dict):
-                    ret = is_hhcxhh_template(node, qc_dag)
-                    if ret:
-                        (h1, h2, h3, h4) = ret
-                        qc_dag.remove_op_node(h1)
-                        qc_dag.remove_op_node(h2)
-                        qc_dag.remove_op_node(h3)
-                        qc_dag.remove_op_node(h4)
+                # for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage, visit_dict):
+                for node in op_nodes:
+                    if isinstance(node, CXGate):
+                        ret = is_hhcxhh_template(node, qc_dag)
+                        if ret:
+                            (h1, h2, h3, h4) = ret
+                            qc_dag.remove_op_node(h1)
+                            qc_dag.remove_op_node(h2)
+                            qc_dag.remove_op_node(h3)
+                            qc_dag.remove_op_node(h4)
 
-                        qc_dag.substitute_node_with_dag(node, replacement_2)
+                            qc_dag.substitute_node_with_dag(node, replacement_2)
 
             t2 = time.time()
 
@@ -122,6 +113,6 @@ if __name__ == "__main__":
 
         print('Time to optimize S+R=T:', total_search, total_rewrite, total_search + total_rewrite, flush=True)
 
-        with open('qiskit_template_search.csv', 'a') as f:
+        with open('qiskit_template_search_random_flip.csv', 'a') as f:
             writer = csv.writer(f)
             writer.writerow((nq, total_search, total_rewrite, DIR))

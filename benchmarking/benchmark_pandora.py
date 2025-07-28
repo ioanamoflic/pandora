@@ -5,7 +5,8 @@ import qiskit
 from pandora.connection_util import *
 from pandora.qiskit_to_pandora_util import convert_qiskit_to_pandora
 
-from benchmark_tket import generate_random_CX_circuit, generate_random_HHCXHH_circuit
+from benchmark_tket import generate_random_CX_circuit, generate_random_HHCXHH_circuit, \
+    generate_random_HHCXHH_circuit_occasionally_flipped
 
 
 def test_cx_to_hhcxhh_bernoulli(connection,
@@ -188,7 +189,7 @@ if __name__ == "__main__":
 
     conn = get_connection(config_file_path=FILEPATH)
 
-    nr_passes = 100
+    nr_passes = 1
     sample_percentage = 0.1
 
     for nq in range(100000, 1000001, 100000):
@@ -197,7 +198,8 @@ if __name__ == "__main__":
         if DIR == 0:
             _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
         else:
-            _, qc = generate_random_HHCXHH_circuit(n_templates=nq, n_qubits=50)
+            # _, qc = generate_random_HHCXHH_circuit(n_templates=nq, n_qubits=50)
+            qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq, n_qubits=50, proba=0.9)
 
         if DIR == 0:
             tot_time = test_cx_to_hhcxhh(connection=conn,
@@ -214,7 +216,7 @@ if __name__ == "__main__":
 
         print('Time to rewrite:', tot_time)
 
-        with open('pandora_template_search.csv', 'a') as f:
+        with open('pandora_template_search_random_flip.csv', 'a') as f:
             writer = csv.writer(f)
             writer.writerow((nq, tot_time, DIR))
 

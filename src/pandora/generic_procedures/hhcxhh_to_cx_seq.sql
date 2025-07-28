@@ -27,10 +27,11 @@ declare
     distinct_existing int;
 begin
     while run_nr > 0 loop
-        for gate in
-            select * from linked_circuit lc tablesample bernoulli(sys_range) where type in (15, 18) and visited = false
+        for cx in
+--             select * from linked_circuit lc tablesample bernoulli(sys_range) where type in (15, 18) and visited = false
+            select * from linked_circuit where type in (15, 18)
         loop
-            select * into cx from linked_circuit where id = gate.id for update skip locked;
+--             select * into cx from linked_circuit where id = gate.id for update skip locked;
 
             if cx.id is not null then
                 -- left gates on qubits 1,2
@@ -80,7 +81,7 @@ begin
             end if;
         end loop;
 
-          run_nr = run_nr - 1;
+        run_nr = run_nr - 1;
 
     end loop;
 end;$$;

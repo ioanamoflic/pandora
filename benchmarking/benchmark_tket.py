@@ -5,6 +5,8 @@ import csv
 import qiskit
 from pytket import Circuit
 from pytket._tket.passes import RemoveRedundancies
+from qiskit import QuantumCircuit
+from qiskit.converters import circuit_to_dag, dag_to_circuit
 
 
 def generate_random_CX_circuit(n_templates, n_qubits):
@@ -44,6 +46,35 @@ def generate_random_HHCXHH_circuit(n_templates, n_qubits):
         circ_qiskit.h(q2)
 
     return circ_tket, circ_qiskit
+
+
+def get_replacement():
+    replacement = QuantumCircuit(2)
+
+    replacement.h(0)
+    replacement.h(1)
+    replacement.cx(1, 0)
+    replacement.h(0)
+    replacement.h(1)
+
+    dag = circuit_to_dag(replacement)
+
+    return dag
+
+
+def generate_random_HHCXHH_circuit_occasionally_flipped(n_templates, n_qubits, proba=0.1):
+    _, qc = generate_random_CX_circuit(n_templates=n_templates, n_qubits=n_qubits)
+
+    dag = circuit_to_dag(qc)
+
+    op_nodes = dag.op_nodes()
+
+    replacement = get_replacement()
+    for node in op_nodes:
+        if random.uniform(0, 1) < proba:
+            dag.substitute_node_with_dag(node, replacement)
+
+    return dag_to_circuit(dag)
 
 
 def generate_random_HH_circuit(n_templates, n_qubits):
