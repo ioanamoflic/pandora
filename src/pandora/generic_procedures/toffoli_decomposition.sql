@@ -49,7 +49,7 @@ begin
 		found := false;
 
     	select * into toffoli from linked_circuit as it
-    	                      where it.type = 21 for update skip locked limit 1;
+    	                      where it.type = 23 for update skip locked limit 1;
 
     	if toffoli.id is not null then
     	    tof_prev_q1_id := div(toffoli.prev_q1, 10);
