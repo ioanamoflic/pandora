@@ -190,15 +190,17 @@ if __name__ == "__main__":
     conn = get_connection(config_file_path=FILEPATH)
 
     nr_passes = 1
-    sample_percentage = 0.1
+    sample_percentage = 0.015
 
-    for nq in range(100000, 1000001, 100000):
+    for nq in range(10000, 100001, 10000):
         print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
 
         if DIR == 0:
             _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
         else:
-            qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq, n_qubits=50, proba=0.9)
+            qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
+                                                                     n_qubits=50,
+                                                                     proba=sample_percentage)
 
         if DIR == 0:
             tot_time = test_cx_to_hhcxhh(connection=conn,

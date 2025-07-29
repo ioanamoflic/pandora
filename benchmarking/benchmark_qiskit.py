@@ -6,6 +6,7 @@ import random
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import CXGate, HGate
 from qiskit.converters import circuit_to_dag
+from qiskit.dagcircuit import DAGInNode, DAGOpNode
 
 from benchmark_tket import generate_random_CX_circuit, get_replacement, \
     generate_random_HHCXHH_circuit_occasionally_flipped
@@ -38,13 +39,17 @@ def get_random_seq_gates_from_circuit(op_nodes, percentage, visited):
 
 
 def is_hhcxhh_template(possibly_cx_node, circuit_dag):
-    # if isinstance(possibly_cx_node, CXGate):
     pred = list(circuit_dag.predecessors(possibly_cx_node))
     succ = list(circuit_dag.successors(possibly_cx_node))
 
-    if isinstance(pred[0].op, HGate) and isinstance(pred[1].op, HGate) \
-            and isinstance(succ[0].op, HGate) and isinstance(succ[1].op, HGate):
-        return pred[0], pred[1], succ[0], succ[1]
+    if len(pred) < 2 or len(succ) < 2:
+        return None
+
+    if isinstance(pred[0], DAGOpNode) and isinstance(pred[1], DAGOpNode) \
+            and isinstance(succ[0], DAGOpNode) and isinstance(succ[1], DAGOpNode):
+        if isinstance(pred[0].op, HGate) and isinstance(pred[1].op, HGate) \
+                and isinstance(succ[0].op, HGate) and isinstance(succ[1].op, HGate):
+            return pred[0], pred[1], succ[0], succ[1]
 
     return None
 
@@ -57,15 +62,17 @@ if __name__ == "__main__":
     DIR = int(sys.argv[1])
 
     nr_passes = 1
-    sample_percentage = 0.1
+    sample_percentage = 0.015
 
-    for nq in range(100000, 1000001, 100000):
+    for nq in range(10000, 100001, 10000):
         print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
 
         if DIR == 0:
             _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
         else:
-            qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq, n_qubits=50, proba=0.9)
+            qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
+                                                                     n_qubits=50,
+                                                                     proba=sample_percentage)
 
         qc_dag = circuit_to_dag(qc)
         op_nodes = qc_dag.op_nodes()
@@ -91,7 +98,7 @@ if __name__ == "__main__":
                 replacement_2 = get_replacement_2()
                 # for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage, visit_dict):
                 for node in op_nodes:
-                    if isinstance(node, CXGate):
+                    if isinstance(node, DAGOpNode) and isinstance(node.op, CXGate):
                         ret = is_hhcxhh_template(node, qc_dag)
                         if ret:
                             (h1, h2, h3, h4) = ret
