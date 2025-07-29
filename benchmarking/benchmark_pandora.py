@@ -117,8 +117,8 @@ def test_hhcxhh_to_cx(connection,
                       nprocs,
                       sys_percentage,
                       nr_passes=1):
-    drop_and_replace_tables(connection=connection,
-                            clean=True)
+
+    drop_and_replace_tables(connection=connection, clean=True)
     refresh_all_stored_procedures(connection=connection)
 
     db_tuples, _ = convert_qiskit_to_pandora(qiskit_circuit=initial_circuit,
@@ -190,7 +190,7 @@ if __name__ == "__main__":
     conn = get_connection(config_file_path=FILEPATH)
 
     nr_passes = 1
-    sample_percentage = 0.015
+    sample_percentage = 100
 
     for nq in range(10000, 100001, 10000):
         print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
@@ -200,7 +200,7 @@ if __name__ == "__main__":
         else:
             qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
                                                                      n_qubits=50,
-                                                                     proba=sample_percentage)
+                                                                     proba=sample_percentage / 100)
 
         if DIR == 0:
             tot_time = test_cx_to_hhcxhh(connection=conn,
@@ -219,6 +219,6 @@ if __name__ == "__main__":
 
         with open('pandora_template_search_random_flip.csv', 'a') as f:
             writer = csv.writer(f)
-            writer.writerow((nq, tot_time, DIR))
+            writer.writerow((nq, tot_time, sample_percentage))
 
     conn.close()

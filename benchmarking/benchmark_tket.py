@@ -24,7 +24,7 @@ def generate_random_CX_circuit(n_templates, n_qubits):
     return circ_tket, circ_qiskit
 
 
-def get_replacement():
+def get_replacement_hhcxhh():
     replacement = QuantumCircuit(2)
 
     replacement.h(0)
@@ -45,7 +45,7 @@ def generate_random_HHCXHH_circuit_occasionally_flipped(n_templates, n_qubits, p
 
     op_nodes = dag.op_nodes()
 
-    replacement = get_replacement()
+    replacement = get_replacement_hhcxhh()
     for node in op_nodes:
         if random.uniform(0, 1) < proba:
             dag.substitute_node_with_dag(node, replacement)

@@ -76,6 +76,34 @@ def qiskit_operation_to_pandora_gate(instr: CircuitInstruction,
     )
 
 
+"""
+    LinkID has the following format *IPTT where:
+    - unlimited number of digits for the gateid I
+    - one digit for the port P. For example, a CNOT gate has 2 ports, a Toffoli has 3 ports etc.
+    - two digits for the gate type T. For example, a Toffoli is 23, a CNOT is 15/18 etc.
+    
+    Considering the LinkID X, in order to:
+    - get the gateid: X / 1000 will return the *I digits
+    - get the port number: (X / 100) % 10 will return the P digit
+    - get the type: X % 100 will return the T digits
+"""
+
+def get_link_id(gate_id, gate_port, gate_type):
+    return gate_id * 1000 + gate_port * 100 + gate_type
+
+
+def get_gate_id(link_id):
+    return link_id // 1000
+
+
+def get_gate_port(link_id):
+    return (link_id // 100) % 10
+
+
+def get_gate_type(link_id):
+    return link_id % 100
+
+
 def convert_qiskit_to_pandora(qiskit_circuit: QuantumCircuit,
                               label="",
                               add_margins=True):
@@ -93,8 +121,8 @@ def convert_qiskit_to_pandora(qiskit_circuit: QuantumCircuit,
             A list of tuples where each tuple describes a circuit operation.
     """
     pandora_gates = {}
-    latest_conc_on_qubit = {}
-    last_id = 0
+    latest_link_id_on_qubit = {}
+    last_gate_id = 0
 
     # Add In/Out margin gates
     if add_margins:
@@ -115,36 +143,57 @@ def convert_qiskit_to_pandora(qiskit_circuit: QuantumCircuit,
         instr, qargs, cargs = circuit_instruction
 
         if instr.label == "In":
-            latest_conc_on_qubit[qargs[0]] = last_id * 10
-            pandora_gates[last_id] = PandoraGate(
-                gate_id=last_id,
+            # store link_id
+            # latest_link_id_on_qubit[qargs[0]] = last_gate_id * 10
+            latest_link_id_on_qubit[qargs[0]] = get_link_id(last_gate_id, 0, PandoraGateTranslator.In.value)
+
+            # gate_code in PandoraGate is gate_type in LinkID
+            pandora_gates[last_gate_id] = PandoraGate(
+                gate_id=last_gate_id,
                 gate_code=PandoraGateTranslator.In.value,
                 label=label
             )
-            last_id += 1
+            last_gate_id += 1
             continue
 
         # ignore barriers
         if instr.name == 'barrier':
             continue
 
-        current_gate = qiskit_operation_to_pandora_gate(circuit_instruction, meas_key_dict={})
-        current_gate.id = last_id
+        current_gate: PandoraGate = qiskit_operation_to_pandora_gate(circuit_instruction, meas_key_dict={})
+        current_gate.id = last_gate_id
         current_gate.label = label
 
-        prev_concs = [latest_conc_on_qubit[q] for q in qargs]
-        while len(prev_concs) < MAX_QUBITS_PER_GATE:
-            prev_concs.append(None)
+        """
+            Build the previous links
+        """
+        prev_link_ids = [latest_link_id_on_qubit[q] for q in qargs]
+        # Padding to the maximum number of ports per gate supported in Pandora.
+        # For example, a CNOT might have only two ports, but Pandora needs three
+        while len(prev_link_ids) < MAX_QUBITS_PER_GATE:
+            prev_link_ids.append(None)
+        current_gate.prev_q1, current_gate.prev_q2, current_gate.prev_q3 = prev_link_ids[:3]
 
-        current_gate.prev_q1, current_gate.prev_q2, current_gate.prev_q3 = prev_concs[:3]
-
+        """
+            Build the next links and store the current link_ids
+        """
         for q_idx, q in enumerate(qargs):
-            previous_id, previous_order_qubit = divmod(latest_conc_on_qubit[q], 10)
-            conc_id = last_id * 10 + q_idx
-            setattr(pandora_gates[previous_id], f'next_q{previous_order_qubit + 1}', conc_id)
-            latest_conc_on_qubit[q] = conc_id
+            # compute previous gate_id and previous port_number
+            # previous_gate_id, previous_port_number = divmod(latest_link_id_on_qubit[q], 10)
+            previous_gate_id = get_gate_id(latest_link_id_on_qubit[q])
+            previous_port_number = get_gate_port(latest_link_id_on_qubit[q])
 
-        pandora_gates[last_id] = current_gate
-        last_id += 1
+            # compute new link_id
+            # n_link_id = last_gate_id * 10 + q_idx
+            n_link_id = get_link_id(last_gate_id, q_idx, current_gate.type)
 
-    return pandora_gates.values(), last_id
+            # store link_id
+            latest_link_id_on_qubit[q] = n_link_id
+
+            # make connection to next
+            setattr(pandora_gates[previous_gate_id], f'next_q{previous_port_number + 1}', n_link_id)
+
+        pandora_gates[last_gate_id] = current_gate
+        last_gate_id += 1
+
+    return pandora_gates.values(), last_gate_id

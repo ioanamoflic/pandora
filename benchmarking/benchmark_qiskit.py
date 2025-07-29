@@ -8,11 +8,11 @@ from qiskit.circuit.library import CXGate, HGate
 from qiskit.converters import circuit_to_dag
 from qiskit.dagcircuit import DAGInNode, DAGOpNode
 
-from benchmark_tket import generate_random_CX_circuit, get_replacement, \
+from benchmark_tket import generate_random_CX_circuit, get_replacement_hhcxhh, \
     generate_random_HHCXHH_circuit_occasionally_flipped
 
 
-def get_replacement_2():
+def get_replacement_cx():
     replacement = QuantumCircuit(2)
 
     replacement.cx(1, 0)
@@ -39,19 +39,29 @@ def get_random_seq_gates_from_circuit(op_nodes, percentage, visited):
 
 
 def is_hhcxhh_template(possibly_cx_node, circuit_dag):
-    pred = list(circuit_dag.predecessors(possibly_cx_node))
-    succ = list(circuit_dag.successors(possibly_cx_node))
+    if isinstance(possibly_cx_node, DAGOpNode) and isinstance(possibly_cx_node.op, CXGate):
+        pred = list(circuit_dag.predecessors(possibly_cx_node))
+        succ = list(circuit_dag.successors(possibly_cx_node))
 
-    if len(pred) < 2 or len(succ) < 2:
-        return None
+        if len(pred) < 2 or len(succ) < 2:
+            return None
 
-    if isinstance(pred[0], DAGOpNode) and isinstance(pred[1], DAGOpNode) \
-            and isinstance(succ[0], DAGOpNode) and isinstance(succ[1], DAGOpNode):
-        if isinstance(pred[0].op, HGate) and isinstance(pred[1].op, HGate) \
+        if isinstance(pred[0], DAGOpNode) and isinstance(pred[1], DAGOpNode) \
+                and isinstance(succ[0], DAGOpNode) and isinstance(succ[1], DAGOpNode)\
+                and isinstance(pred[0].op, HGate) and isinstance(pred[1].op, HGate)\
                 and isinstance(succ[0].op, HGate) and isinstance(succ[1].op, HGate):
             return pred[0], pred[1], succ[0], succ[1]
 
     return None
+
+def rewrite_hhcxhh(qc_dag, predecessors, replacement):
+    (h1, h2, h3, h4) = predecessors
+    qc_dag.remove_op_node(h1)
+    qc_dag.remove_op_node(h2)
+    qc_dag.remove_op_node(h3)
+    qc_dag.remove_op_node(h4)
+
+    qc_dag.substitute_node_with_dag(node, replacement)
 
 
 """
@@ -62,7 +72,9 @@ if __name__ == "__main__":
     DIR = int(sys.argv[1])
 
     nr_passes = 1
-    sample_percentage = 0.015
+
+    # in the range 0...100
+    sample_percentage = 100
 
     for nq in range(10000, 100001, 10000):
         print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
@@ -72,12 +84,11 @@ if __name__ == "__main__":
         else:
             qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
                                                                      n_qubits=50,
-                                                                     proba=sample_percentage)
+                                                                     proba=sample_percentage / 100)
 
         qc_dag = circuit_to_dag(qc)
         op_nodes = qc_dag.op_nodes()
         op_nodes_length = len(op_nodes)
-        visit_dict = dict(zip(op_nodes, [False] * len(op_nodes)))
 
         search_times = []
         rewrite_times = []
@@ -86,28 +97,20 @@ if __name__ == "__main__":
 
             t0 = time.time()
             # nodes = get_random_seq_gates_from_circuit(input_dag.op_nodes(), sample_percentage)
+            # random.shuffle(nodes)
             t1 = time.time()
 
-            # random.shuffle(nodes)
-
             if DIR == 0:
-                replacement = get_replacement()
+                visit_dict = dict(zip(op_nodes, [False] * len(op_nodes)))
+                replacement = get_replacement_hhcxhh()
                 for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage, visit_dict):
                     qc_dag.substitute_node_with_dag(node, replacement)
             else:
-                replacement_2 = get_replacement_2()
-                # for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage, visit_dict):
+                replacement_2 = get_replacement_cx()
                 for node in op_nodes:
-                    if isinstance(node, DAGOpNode) and isinstance(node.op, CXGate):
-                        ret = is_hhcxhh_template(node, qc_dag)
-                        if ret:
-                            (h1, h2, h3, h4) = ret
-                            qc_dag.remove_op_node(h1)
-                            qc_dag.remove_op_node(h2)
-                            qc_dag.remove_op_node(h3)
-                            qc_dag.remove_op_node(h4)
-
-                            qc_dag.substitute_node_with_dag(node, replacement_2)
+                    ret = is_hhcxhh_template(node, qc_dag)
+                    if ret:
+                        rewrite_hhcxhh(qc_dag, ret, replacement_2)
 
             t2 = time.time()
 
@@ -121,4 +124,4 @@ if __name__ == "__main__":
 
         with open('qiskit_template_search_random_flip.csv', 'a') as f:
             writer = csv.writer(f)
-            writer.writerow((nq, total_search, total_rewrite, DIR))
+            writer.writerow((nq, total_search, total_rewrite, sample_percentage))
