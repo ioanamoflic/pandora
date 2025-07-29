@@ -9,3 +9,4 @@ venv
 /venv_new/
 /pyLIQTR/.idea/
 .idea/*
+default_config.json
