@@ -23,10 +23,9 @@ declare
 	right_q1_id bigint;
 	right_q2_id bigint;
 begin
-
     while run_nr > 0 loop
         for gate in
-            select * from linked_circuit tablesample system_rows(sys_range) where type in (15, 18)
+            select * from linked_circuit tablesample bernoulli(sys_range) where type in (15, 18)
             and prev_q1 % 100 = 8 and prev_q2 % 100 = 8
             and next_q1 % 100 = 8 and next_q2 % 100 = 8
         loop
