@@ -74,9 +74,9 @@ if __name__ == "__main__":
     nr_passes = 1
 
     # in the range 0...100
-    sample_percentage = 100
+    sample_percentage = 1
 
-    for nq in range(10000, 100001, 10000):
+    for nq in range(100000, 1000001, 100000):
         print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
 
         if DIR == 0:
