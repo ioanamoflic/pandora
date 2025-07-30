@@ -94,6 +94,12 @@ create table if not exists public.max_missed_rounds
     missed int default 0
 );
 
+create table if not exists public.rewrite_count
+(
+    proc_id int primary key,
+    count int default 0
+);
+
 create table if not exists public.edge_list
 (
     source bigint,

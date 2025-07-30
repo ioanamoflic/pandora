@@ -1,4 +1,4 @@
-create or replace procedure linked_hhcxhh_to_cx_parallel(sys_range real, run_nr int)
+create or replace procedure linked_hhcxhh_to_cx_parallel(my_proc_id int, sys_range real, total_rewrite_count int, pass_count int)
     language plpgsql
 as
 $$
@@ -6,6 +6,7 @@ declare
     gate record;
     distinct_count int;
     distinct_existing int;
+    current_count int;
 
     cx record;
     cx_prev_q1_id bigint;
@@ -23,7 +24,16 @@ declare
 	right_q1_id bigint;
 	right_q2_id bigint;
 begin
-    while run_nr > 0 loop
+    insert into rewrite_count values (my_proc_id, 0);
+
+    while true loop
+
+        select sum(it.count) into current_count from rewrite_count as it;
+
+        if current_count >= total_rewrite_count then
+            exit;
+        end if;
+
         for gate in
             select * from linked_circuit tablesample bernoulli(sys_range) where type in (15, 18)
             and prev_q1 % 100 = 8 and prev_q2 % 100 = 8
@@ -32,7 +42,6 @@ begin
             select * into cx from linked_circuit where id = gate.id for update skip locked;
 
             if cx.id is not null then
-
                 -- left gates on qubits 1,2
                 cx_prev_q1_id := div(cx.prev_q1, 1000);
                 cx_prev_q2_id := div(cx.prev_q2, 1000);
@@ -91,17 +100,21 @@ begin
                                     = (not cx.switch, left_q2.prev_q1, left_q1.prev_q1, right_q2.next_q1, right_q1.next_q1, true) where id = cx.id;
 
                         delete from linked_circuit where id in (left_q1.id, left_q2.id, right_q1.id, right_q2.id);
+
+                        update rewrite_count set count = count + 1 where proc_id = my_proc_id;
+
                     end if;
                 end if;
 
+                -- release locks
                 commit;
+
             end if;
         end loop;
 
-        run_nr = run_nr - 1;
+--         pass_count = pass_count - 1;
 
     end loop;
---     commit;
 end;$$;
 
 

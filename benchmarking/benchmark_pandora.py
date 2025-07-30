@@ -43,17 +43,21 @@ if __name__ == "__main__":
     nr_passes = 1
     sample_percentage = 5
 
-    proc_calls = [f"call linked_hhcxhh_to_cx_parallel({sample_percentage / NPROCS}, {nr_passes})"] * NPROCS
-
     pool = None
     if NPROCS > 1:
         pool = create_pool(n_workers=NPROCS, config_file_path=FILEPATH)
 
     for nq in range(10000, 100001, 10000):
-        print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
-        qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
-                                                                 n_qubits=50,
-                                                                 proba=sample_percentage / 100)
+        rewrites, qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
+                                                                           n_qubits=50,
+                                                                           proba=sample_percentage / 100)
+
+        print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} proba with {rewrites} rewrites')
+
+        proc_calls = []
+        for proc_id in range(NPROCS):
+            proc_calls.append(
+                f"call linked_hhcxhh_to_cx_parallel({proc_id}, {sample_percentage / NPROCS}, {rewrites}, {nr_passes})")
 
         reset_pandora(connection=conn, quantum_circuit=qc)
 

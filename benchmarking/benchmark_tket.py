@@ -45,12 +45,15 @@ def generate_random_HHCXHH_circuit_occasionally_flipped(n_templates, n_qubits, p
 
     op_nodes = dag.op_nodes()
 
+    rewrites = 0
+
     replacement = get_replacement_hhcxhh()
     for node in op_nodes:
         if random.uniform(0, 1) < proba:
             dag.substitute_node_with_dag(node, replacement)
+            rewrites += 1
 
-    return dag_to_circuit(dag)
+    return rewrites, dag_to_circuit(dag)
 
 
 def generate_random_HH_circuit(n_templates, n_qubits):
