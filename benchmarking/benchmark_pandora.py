@@ -1,3 +1,5 @@
+from multiprocessing import Pool
+
 from pandora.connection_util import *
 from pandora.connection_pool_util import map_procedure_call, init_worker
 from pandora.qiskit_to_pandora_util import convert_qiskit_to_pandora
