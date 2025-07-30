@@ -76,6 +76,7 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
         'generic_procedures/cx_to_hhcxhh_batched.sql',
         'generic_procedures/cx_to_hhcxhh_seq.sql',
         'generic_procedures/hhcxhh_to_cx_seq.sql',
+        'generic_procedures/hhcxhh_to_cx_parallel.sql',
         'generic_procedures/_generate_optimisation_stats.sql',
 
         # ls style procedures

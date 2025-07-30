@@ -142,7 +142,7 @@ def test_hhcxhh_to_cx(connection,
         cursor.execute(f"call linked_hhcxhh_to_cx_seq({sys_percentage}, {nr_passes})")
     else:
         thread_procedures = [
-            (nprocs, f"call linked_hhcxhh_to_cx_seq({sys_percentage}, {nr_passes})"),
+            (nprocs, f"call linked_hhcxhh_to_cx_parallel({sys_percentage}, {nr_passes})"),
         ]
         db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
 
@@ -190,7 +190,7 @@ if __name__ == "__main__":
     conn = get_connection(config_file_path=FILEPATH)
 
     nr_passes = 1
-    sample_percentage = 100
+    sample_percentage = 1
 
     for nq in range(10000, 100001, 10000):
         print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
