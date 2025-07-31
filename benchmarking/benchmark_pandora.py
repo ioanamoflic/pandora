@@ -41,10 +41,10 @@ if __name__ == "__main__":
     conn = get_connection(config_file_path=FILEPATH)
 
     nr_passes = 1
-    sample_percentage = 5
+    sample_percentage = 0.1
 
     pool = None
-    if NPROCS > 1:
+    if NPROCS > 0:
         pool = create_pool(n_workers=NPROCS, config_file_path=FILEPATH)
 
     for nq in range(10000, 100001, 10000):
@@ -57,12 +57,14 @@ if __name__ == "__main__":
         proc_calls = []
         for proc_id in range(NPROCS):
             proc_calls.append(
-                f"call linked_hhcxhh_to_cx_parallel({proc_id}, {sample_percentage / NPROCS}, {rewrites}, {nr_passes})")
+                f"call linked_hhcxhh_to_cx_parallel({proc_id}, {NPROCS}, {rewrites}, {nr_passes})")
+                # f"call linked_hhcxhh_to_cx_bernoulli({10}, {rewrites})")
 
         reset_pandora(connection=conn, quantum_circuit=qc)
 
+        print("Rewrite...", end=None)
         start_time = time.time()
-        if NPROCS > 1:
+        if NPROCS > 0:
             pool.map(map_procedure_call, proc_calls)
         else:
             cursor = conn.cursor()
@@ -76,6 +78,6 @@ if __name__ == "__main__":
             writer = csv.writer(f)
             writer.writerow((nq, tot_time, sample_percentage, NPROCS))
 
-    if NPROCS > 1:
+    if NPROCS > 0:
         close_pool(pool)
     conn.close()

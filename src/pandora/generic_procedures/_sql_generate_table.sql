@@ -11,7 +11,8 @@ create table IF NOT EXISTS public.linked_circuit
     next_q1 bigint,
     next_q2 bigint,
     next_q3 bigint,
-    visited boolean,
+--     visited boolean,
+    visited int default -1 ,
     label   char,
     cl_ctrl boolean,
     meas_key smallint
