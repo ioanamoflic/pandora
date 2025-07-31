@@ -32,24 +32,16 @@ begin
 
         while total_rewrite_count < max_rewrite_count loop
 
-            for gate in
+            for cx in
                 select * from linked_circuit --tablesample bernoulli(10)--bernoulli(100 / sys_range)
                          where
                              id % sys_range = my_proc_id and
                              type in (15, 18)
                            and prev_q1 % 100 = 8 and prev_q2 % 100 = 8
                            and next_q1 % 100 = 8 and next_q2 % 100 = 8
-                         order by random()
+--                          order by random()
 --                         for update skip locked
             loop
-
-                select * into cx from linked_circuit where id = gate.id for update skip locked;
-
-                if cx.id is null then
-                    commit;
-                    continue;
-                end if;
-
                 -- left gates on qubits 1,2
                 -- Compute the Hadamard IDs
                 cx_prev_q1_id := div(cx.prev_q1, 1000);
@@ -57,11 +49,11 @@ begin
                 cx_next_q1_id := div(cx.next_q1, 1000);
                 cx_next_q2_id := div(cx.next_q2, 1000);
 
-                -- Lock the Hadamards
-                select * into left_q1 from linked_circuit where id=cx_prev_q1_id for update skip locked;
-                select * into left_q2 from linked_circuit where id=cx_prev_q2_id for update skip locked;
-                select * into right_q1 from linked_circuit where id=cx_next_q1_id for update skip locked;
-                select * into right_q2 from linked_circuit where id=cx_next_q2_id for update skip locked;
+                -- Select the Hadamards
+                select * into left_q1 from linked_circuit where id=cx_prev_q1_id; --for update skip locked;
+                select * into left_q2 from linked_circuit where id=cx_prev_q2_id; --for update skip locked;
+                select * into right_q1 from linked_circuit where id=cx_next_q1_id; --for update skip locked;
+                select * into right_q2 from linked_circuit where id=cx_next_q2_id; --for update skip locked;
 
                 -- Compute the IDs of the Hadamard neighbours
                 left_q1_id := div(left_q1.prev_q1, 1000);
@@ -76,15 +68,18 @@ begin
                 select count(*) into distinct_existing from
                                                                (select * from linked_circuit where id in (left_q1_id, left_q2_id, right_q1_id, right_q2_id) for update skip locked) as it;
 
-
                 -- Check that the number of locked neighbours is equal to the number of neighbours
                 if distinct_count != distinct_existing then
-                    commit;
+--                     commit;
                     continue;
                 end if;
 
---                and left_q1.type = 8 and left_q2.type = 8
---                and right_q1.type = 8 and right_q2.type = 8 then
+                -- Lock the Hadamards and CX
+                select count(*) into distinct_count from (select * from linked_circuit where id in (left_q1.id, left_q2.id, right_q1.id, right_q2.id, cx.id) for update skip locked) as it;
+                if distinct_count != 5 then
+--                     commit;
+                    continue;
+                end if;
 
                 -- compute new link_ids for neighbouring gates
                 cx_id_ctrl := (cx.id * 10 + 0) * 100 + cx.type;
@@ -122,10 +117,10 @@ begin
 
                 delete from linked_circuit where id in (left_q1.id, left_q2.id, right_q1.id, right_q2.id);
 
---                 commit; -- release the cx?
+                commit; -- release the cx?
             end loop; -- end gate loop
 
-            commit;
+--             commit;
             select count(*) into total_rewrite_count from linked_circuit where visited != -1;
         end loop; -- end rewrite count loop
 
