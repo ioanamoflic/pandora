@@ -104,7 +104,7 @@ def test_toffoli_cnot_transformation(connection):
 
     # Call the Toffoli decomposition/transformation procedure
     cursor = connection.cursor()
-    cursor.execute("CALL linked_toffoli_cnot_transform();")
+    cursor.execute("CALL rewrite_toffoli_pattern_a();")
     connection.commit()
 
      # Set a timeout for extraction (e.g., 5 seconds)
