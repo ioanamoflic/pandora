@@ -1,4 +1,4 @@
-create or replace procedure cancel_two_qubit_equiv(type_1 int, type_2 int, parameter float, sys_range int, run_nr int)
+create or replace procedure cancel_two_qubit_equiv(type_1 int, type_2 int, parameter float, sys_range real, run_nr int)
     language plpgsql
 as
 $$
@@ -21,19 +21,8 @@ declare
     compare record;
     rounds_missed smallint := 0;
     is_missed_round boolean;
---     max_missed int;
 begin
---     insert into max_missed_rounds values (0);
 	while run_nr > 0 loop
-
---         if rounds_missed >= 5000 then
---             exit;
---         end if;
-
---         select max(mm.missed) into max_missed from max_missed_rounds as mm;
---         if rounds_missed > max_missed then
---             insert into max_missed_rounds values (rounds_missed);
---         end if;
 
 	    select st.stop into stop from stop_condition as st limit 1;
 	    if stop=True then
@@ -41,16 +30,23 @@ begin
         end if;
 
 	    is_missed_round := true;
+
         for first in
-            (select * from (select * from linked_circuit lc tablesample system_rows(sys_range)) as it
-    	                    where it.type=type_1
-                            and it.next_q1 / 10 = it.next_q2 / 10 -- two gates sharing the same wires
-                            and it.param = parameter for update skip locked)
+            -- we sample from the table to make multithreading work by not having threads waiting on each other
+            select * from linked_circuit as it tablesample system_rows(sys_range)
+                     where it.type=type_1
+                         and it.next_q1 / 10 = it.next_q2 / 10 -- two gates sharing the same wires
+                         and it.param = parameter
+                     for update skip locked
         loop
             if first.id is not null then
                 first_id_plus_one := first.id * 10 + 1;
                 first_id_plus_zero := first.id * 10;
-                select * into second from linked_circuit where prev_q1 = first_id_plus_zero and prev_q2 = first_id_plus_one and switch = first.switch for update skip locked;
+                select * into second from linked_circuit
+                                     where prev_q1 = first_id_plus_zero
+                                         and prev_q2 = first_id_plus_one
+                                         and switch = first.switch
+                                     for update skip locked;
 
                 compare := second;
                 if compare.id is null or compare.type != type_2 or compare.param != parameter then
@@ -58,7 +54,11 @@ begin
                     -- first becomes second
                     second := first;
                     -- select a different first from the database - LOOK BACKWARD
-                    select * into first from linked_circuit where next_q1 = first_id_plus_zero and next_q2 = first_id_plus_one and switch = first.switch for update skip locked;
+                    select * into first from linked_circuit
+                                        where next_q1 = first_id_plus_zero
+                                            and next_q2 = first_id_plus_one
+                                            and switch = first.switch
+                                        for update skip locked;
 
                     compare := first;
                 end if;

@@ -107,11 +107,11 @@ if __name__ == "__main__":
         print(f"Running config file {FILENAME}")
 
     # set timeout for MQT
-    timeout = 600
+    timeout = 1200
 
     times = []
 
-    for q in range(20, 21, 2):
+    for q in range(32, 33, 2):
         total = 0
         nr_runs = 10
 
@@ -151,7 +151,10 @@ if __name__ == "__main__":
                         qiskit.qasm3.dump(circ2, f)
 
                 st_time_mqt = time.time()
-                result = verify(circ1, circ2, timeout=timeout)
+                result = verify(circ1, circ2,
+                                timeout=timeout,
+                                run_alternating_checker=False,
+                                run_simulation_checker=False)
                 check_time = time.time() - st_time_mqt
                 mqt_check_time = result.check_time
                 equiv = result.equivalence

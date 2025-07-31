@@ -55,7 +55,7 @@ def get_adder(n_bits: int):
     qubits = [cirq.NamedQubit(f'q{i}') for i in range(3 * n_bits)]
 
     # Adders from https://github.com/njross/optimizer/tree/master/QFT_and_Adders
-    with open(f"adders/Adder{n_bits}.txt", "r") as f:
+    with open(f"benchmarking/adders/Adder{n_bits}.txt", "r") as f:
         for line in f:
             line = line.strip()
             if line.startswith("QGate[\"not\"]"):
@@ -70,6 +70,7 @@ def get_adder(n_bits: int):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
+        print("Exiting...")
         sys.exit(0)
     else:
         N_BITS = int(sys.argv[1])
@@ -78,9 +79,9 @@ if __name__ == "__main__":
 
     pandora_optimizer = PandoraOptimizer(utilize_bernoulli=True,
                                          bernoulli_percentage=10,
-                                         timeout=500,
-                                         logger_id=8,
-                                         nproc=4)
+                                         timeout=600,
+                                         logger_id=N_BITS,
+                                         nproc=4)  # dedicated_nproc will override this value
 
     pandora_optimizer.build_circuit(circuit=adder_circuit)
 
@@ -100,20 +101,20 @@ if __name__ == "__main__":
     # cancelling Hadamards
     pandora_optimizer.cancel_single_qubit_gates(gate_types=(H, H), gate_params=(1, 1), dedicated_nproc=4)
     # cancelling Z gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z, Z), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z, Z), gate_params=(1, 1), dedicated_nproc=2)
     # cancelling T+T† gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z_rot, Z_rot), gate_params=(0.25, -0.25), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z_rot, Z_rot), gate_params=(0.25, -0.25), dedicated_nproc=2)
     # cancelling S+S† gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z_rot, Z_rot), gate_params=(0.5, -0.5), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z_rot, Z_rot), gate_params=(0.5, -0.5), dedicated_nproc=2)
     # cancelling X gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(X, X), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(gate_types=(X, X), gate_params=(1, 1), dedicated_nproc=2)
 
     """
         Two-qubit gate cancellations
     """
 
     # cancelling CX gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(CX, CX), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_two_qubit_gates(gate_types=(CX, CX), gate_param=1, dedicated_nproc=1)
     """
         Fusing gates
     """
@@ -162,3 +163,8 @@ if __name__ == "__main__":
         Start
     """
     pandora_optimizer.start()
+
+    """
+        For plotting
+    """
+    pandora_optimizer.generate_csv(logger_id=N_BITS)

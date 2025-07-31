@@ -30,8 +30,6 @@ declare
     t_row mem_cx%rowtype;
 
 begin
-    start_time := clock_timestamp();
-
     for t_row in t_curs loop
         select * into cx from linked_circuit where id = t_row.id;
 

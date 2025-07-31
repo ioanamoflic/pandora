@@ -5,8 +5,10 @@ from qualtran.bloqs.arithmetic.addition import Add
 from qualtran.bloqs.data_loading import QROM
 from qualtran import QUInt
 
-from pandora.pandora_util import pandora_to_circuit
 from pandora.qualtran_to_pandora_util import get_cirq_circuit_for_bloq, assert_circuit_is_pandora_ingestible
+
+class TimeoutException(Exception):
+    pass
 
 
 def get_adder_as_cirq_circuit(n_bits) -> cirq.Circuit:
@@ -27,7 +29,100 @@ def get_qrom_as_cirq_circuit(data) -> cirq.Circuit:
     qrom_circuit = get_cirq_circuit_for_bloq(bloq)
     return qrom_circuit
 
+def handler(signum, frame):
+    raise TimeoutException("Extraction took too long (possible infinite loop).")
 
+def test_toffoli_cnot_transformation(connection):
+    """
+    Test the transformation of Toffoli followed by CNOT to CNOT followed by Toffoli.
+    """
+    cursor = connection.cursor()
+
+    # Reset the database
+    cursor.execute("TRUNCATE TABLE linked_circuit;")
+    connection.commit()
+
+    drop_and_replace_tables(connection=connection, clean=True)
+    refresh_all_stored_procedures(connection=connection)
+    reset_database_id(connection, table_name='linked_circuit', large_buffer_value=100000)
+
+    # Use LineQubit and .on() for consistency
+    q = [cirq.LineQubit(i) for i in range(5)]
+    initial_circuit = cirq.Circuit([
+        cirq.TOFFOLI.on(q[1], q[2], q[3]),  # Toffoli
+        cirq.CNOT.on(q[3], q[2])            # CNOT
+    ])
+
+    # Expected circuit (A2) using the same qubits
+    expected_circuit = cirq.Circuit([
+        cirq.CNOT.on(q[3], q[2]),
+        cirq.TOFFOLI.on(q[1], q[2], q[3]),
+        cirq.TOFFOLI.on(q[1], q[2], q[4]),
+        cirq.CNOT.on(q[3], q[4]),
+        cirq.CNOT.on(q[3], q[0]),
+        cirq.CNOT.on(q[2], q[0]),
+        cirq.TOFFOLI.on(q[2], q[1], q[0]),
+        cirq.TOFFOLI.on(q[1], q[4], q[3]),
+        cirq.TOFFOLI.on(q[0], q[1], q[2]),
+        cirq.CNOT.on(q[2], q[4]),
+        cirq.TOFFOLI.on(q[0], q[1], q[4]),
+        cirq.CNOT.on(q[0], q[4]),
+        cirq.CNOT.on(q[2], q[0]),
+        cirq.CNOT.on(q[3], q[0])
+    ])
+
+    print("Initial circuit (A1):")
+    print(initial_circuit)
+    print("Expected circuit (A2):")
+    print(expected_circuit)
+
+    # Convert to Pandora format
+    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
+                                       last_id=0,
+                                       add_margins=True,
+                                       label='toffoli_cnot_test')
+
+    insert_in_batches(pandora_gates=pandora_gates,
+                      connection=connection,
+                      table_name='linked_circuit')
+
+    # Set a timeout for extraction (e.g., 5 seconds)
+    import signal
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(2)
+    try:
+        extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label='toffoli_cnot_test',
+                                             remove_io_gates=True,
+                                             table_name='linked_circuit',is_test=False)
+        print("Extracted circuit:")
+        print(extracted_circuit)
+    except TimeoutException as e:
+        print(e)
+    finally:
+        signal.alarm(0)  # Disable the alarm
+
+    # Call the Toffoli decomposition/transformation procedure
+    cursor = connection.cursor()
+    cursor.execute("CALL linked_toffoli_cnot_transform();")
+    connection.commit()
+
+     # Set a timeout for extraction (e.g., 5 seconds)
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(2)
+    try:
+        extracted_circuit_after = extract_cirq_circuit(connection=connection,
+                                                       circuit_label='toffoli_cnot_test',
+                                                       remove_io_gates=True,
+                                                       table_name='linked_circuit', is_test=False)
+        print("Extracted circuit AFTER transformation:")
+        print(extracted_circuit_after)
+    except TimeoutException as e:
+        print(e)
+    finally:
+        signal.alarm(0)  # Disable the alarm
+    
+    
 def test_random_reconstruction(n_circuits=100):
     templates = ['add_two_hadamards', 'add_two_cnots', 'add_base_change', 'add_t_t_dag', 'add_t_cx', 'add_cx_t']
     for i in range(n_circuits):
@@ -44,7 +139,7 @@ def test_random_reconstruction(n_circuits=100):
         print(f'Time for cirq_to_db: {time.time() - start_time}')
 
         start_time = time.time()
-        reconstructed_circuit = pandora_to_circuit(pandora_gates=db_tuples)
+        reconstructed_circuit = pandora_to_cirq(pandora_gates=db_tuples)
         print(f'Time for db_to_cirq: {time.time() - start_time}')
 
         qubit_map = dict(
@@ -175,8 +270,9 @@ def test_qualtran_qrom_reconstruction(connection):
 
 
 if __name__ == "__main__":
-    conn = get_connection()
-    test_random_reconstruction(n_circuits=10)
-    test_qualtran_adder_reconstruction(connection=conn)
-    test_qualtran_qrom_reconstruction(connection=conn)
+    conn = get_connection(config_file_path=sys.argv[1])
+    #test_random_reconstruction(n_circuits=10)
+    #test_qualtran_adder_reconstruction(connection=conn)
+    #test_qualtran_qrom_reconstruction(connection=conn)
+    test_toffoli_cnot_transformation(connection=conn)
     conn.close()
