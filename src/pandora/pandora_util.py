@@ -135,6 +135,15 @@ def pandora_to_circuit(pandora_gates: list[PandoraGate],
     Takes a list of Pandora gates (unwrapped) and returns the corresponding cirq Circuit or qiskit QuantumCircuit.
     """
     pandora_gate_id_map = wrap_pandora_gates(pandora_gates=pandora_gates)
+
+    for gate in pandora_gates:
+        print(
+            f"id={gate.id:2d} | "
+            f"prev_q1={str(gate.prev_q1):>4} | prev_q2={str(gate.prev_q2):>4} | prev_q3={str(gate.prev_q3):>4} | "
+            f"type={gate.type:>4} | "
+            f"next_q1={str(gate.next_q1):>4} | next_q2={str(gate.next_q2):>4} | next_q3={str(gate.next_q3):>4}"
+    )
+
     sorted_gates = sort_pandora_wrapped_by_moment(pandora_gate_id_map, original_qubits_test, is_test)
     sorted_ids = [wrapped.pandora_gate.id for wrapped in sorted_gates]
 

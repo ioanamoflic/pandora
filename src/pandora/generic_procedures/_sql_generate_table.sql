@@ -12,7 +12,7 @@ create table IF NOT EXISTS public.linked_circuit
     next_q2 bigint,
     next_q3 bigint,
     visited boolean,
-    label   char,
+    label   varchar(32),
     cl_ctrl boolean,
     meas_key smallint
 ) WITH (FILLFACTOR = 50);
@@ -63,7 +63,7 @@ create table IF NOT EXISTS public.linked_circuit_test
     next_q2 bigint,
     next_q3 bigint,
     visited boolean,
-    label   char,
+    label   varchar(32),
     cl_ctrl boolean,
     meas_key smallint,
     qubit_name varchar(50)
