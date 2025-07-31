@@ -1,3 +1,4 @@
+import random
 from multiprocessing import Pool
 
 from pandora.connection_util import *
@@ -41,11 +42,13 @@ if __name__ == "__main__":
     conn = get_connection(config_file_path=FILEPATH)
 
     nr_passes = 1
-    sample_percentage = 1
+    sample_percentage = 10
 
     pool = None
     if NPROCS > 0:
         pool = create_pool(n_workers=NPROCS, config_file_path=FILEPATH)
+        # Warmup
+        pool.map(print, ".")
 
     for nq in range(10000, 100001, 10000):
         rewrites, qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
@@ -57,7 +60,7 @@ if __name__ == "__main__":
         proc_calls = []
         for proc_id in range(NPROCS):
             proc_calls.append(
-                f"call linked_hhcxhh_to_cx_parallel({proc_id}, {NPROCS}, {rewrites}, {nr_passes})")
+                f"call linked_hhcxhh_to_cx_parallel({proc_id}, {NPROCS}, {rewrites}, {nr_passes}, null)")
                 # f"call linked_hhcxhh_to_cx_bernoulli({10}, {rewrites})")
 
         reset_pandora(connection=conn, quantum_circuit=qc)

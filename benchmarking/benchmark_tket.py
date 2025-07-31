@@ -27,11 +27,15 @@ def generate_random_CX_circuit(n_templates, n_qubits):
 def get_replacement_hhcxhh():
     replacement = QuantumCircuit(2)
 
+    replacement.s(0)
+    replacement.s(1)
     replacement.h(0)
     replacement.h(1)
     replacement.cx(1, 0)
     replacement.h(0)
     replacement.h(1)
+    replacement.s(0)
+    replacement.s(1)
 
     dag = circuit_to_dag(replacement)
 

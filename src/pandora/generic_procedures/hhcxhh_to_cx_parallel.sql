@@ -1,4 +1,4 @@
-create or replace procedure linked_hhcxhh_to_cx_parallel(my_proc_id int, sys_range int, max_rewrite_count int, pass_count int)
+create or replace procedure linked_hhcxhh_to_cx_parallel(my_proc_id int, sys_range int, max_rewrite_count int, pass_count int, OUT elapsed_time INTERVAL)
     language plpgsql
 as
 $$
@@ -24,7 +24,13 @@ declare
 	left_q2_id bigint;
 	right_q1_id bigint;
 	right_q2_id bigint;
+
+	start_time timestamp;
+	end_time timestamp;
 begin
+
+    -- Capture start time
+    start_time := CLOCK_TIMESTAMP();
 
     while pass_count > 0 loop
 
@@ -32,16 +38,21 @@ begin
 
         while total_rewrite_count < max_rewrite_count loop
 
+            raise notice 'rw %', my_proc_id;
+
             for cx in
                 select * from linked_circuit --tablesample bernoulli(10)--bernoulli(100 / sys_range)
                          where
                              id % sys_range = my_proc_id and
-                             type in (15, 18)
+                             type = 18
                            and prev_q1 % 100 = 8 and prev_q2 % 100 = 8
                            and next_q1 % 100 = 8 and next_q2 % 100 = 8
 --                          order by random()
 --                         for update skip locked
             loop
+
+--                 raise notice '%', cx.id;
+
                 -- left gates on qubits 1,2
                 -- Compute the Hadamard IDs
                 cx_prev_q1_id := div(cx.prev_q1, 1000);
@@ -134,6 +145,11 @@ begin
     if visited_count != max_rewrite_count then
         raise exception 'Needed % != Visited %', max_rewrite_count, visited_count;
     end if;
+
+    -- Capture end time
+    end_time := CLOCK_TIMESTAMP();
+    -- Calculate and return elapsed time
+    elapsed_time := end_time - start_time;
 
 end;$$;
 
