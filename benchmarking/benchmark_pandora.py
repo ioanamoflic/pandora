@@ -1,4 +1,3 @@
-import random
 from multiprocessing import Pool
 
 from pandora.connection_util import *
@@ -61,7 +60,6 @@ if __name__ == "__main__":
         for proc_id in range(NPROCS):
             proc_calls.append(
                 f"call linked_hhcxhh_to_cx_parallel({proc_id}, {NPROCS}, {rewrites}, {nr_passes}, null)")
-                # f"call linked_hhcxhh_to_cx_bernoulli({10}, {rewrites})")
 
         reset_pandora(connection=conn, quantum_circuit=qc)
 
