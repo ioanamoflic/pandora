@@ -49,7 +49,7 @@ if __name__ == "__main__":
         # Warmup
         pool.map(print, ".")
 
-    for nq in range(10000, 100001, 10000):
+    for nq in range(100000, 1000001, 100000):
         rewrites, qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
                                                                            n_qubits=50,
                                                                            proba=sample_percentage / 100)
