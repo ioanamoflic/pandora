@@ -21,7 +21,8 @@ create table IF NOT EXISTS public.linked_circuit
 CREATE INDEX ON linked_circuit (type);
 -- CREATE INDEX idx_linked_circuit_id_mod_2 ON linked_circuit (id) WHERE id % 2 = 1;
 
-CREATE INDEX idx_linked_circuit_prev1_mod_100 ON linked_circuit (prev_q1) WHERE prev_q1 % 100 = 8;
+CREATE INDEX idx_linked_circuit_prev1_mod_100 ON linked_circuit (next_q1, next_q2) WHERE div(next_q1, 1000) = div(next_q2, 1000);
+-- CREATE INDEX idx_linked_circuit_prev2_mod_100 ON linked_circuit (prev_q1) WHERE prev_q1 % 100 = 8;
 -- CREATE INDEX idx_linked_circuit_prev2_mod_100 ON linked_circuit (prev_q2) WHERE prev_q2 % 100 = 8;
 -- CREATE INDEX idx_linked_circuit_next1_mod_100 ON linked_circuit (next_q1) WHERE next_q1 % 100 = 8;
 -- CREATE INDEX idx_linked_circuit_next2_mod_100 ON linked_circuit (next_q2) WHERE next_q2 % 100 = 8;

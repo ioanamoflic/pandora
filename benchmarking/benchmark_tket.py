@@ -105,17 +105,15 @@ def cx_to_hhcxhh_transform_seq(circ: Circuit, nodes) -> Circuit:
 
 
 if __name__ == "__main__":
+    nr_passes = 1
+    sample_percentage = 1
+
     for nq in range(10000, 100001, 10000):
         tket_circ, _ = generate_random_CX_circuit(n_templates=nq,
                                                   n_qubits=50)
-
         start_time = time.time()
-
-        nr_rewrite_passes = 100
-        percent_rewrite_per_pass = 0.1
-        for i in range(nr_rewrite_passes):
-            cx_to_hhcxhh_transform_seq(tket_circ,
-                                       get_random_seq_gates_from_circuit(tket_circ, percent_rewrite_per_pass))
+        for i in range(nr_passes):
+            cx_to_hhcxhh_transform_seq(tket_circ, get_random_seq_gates_from_circuit(tket_circ, sample_percentage))
 
         op_time = time.time() - start_time
         print('TKET_time: ', op_time)

@@ -1,15 +1,34 @@
-import csv
+from multiprocessing import Pool
 
 import qiskit.qasm3
 from mqt.qcec import verify
 
 from qiskit import QuantumCircuit
 
+from pandora.connection_pool_util import init_worker, map_procedure_call
 from pandora.connection_util import *
 
 import random
 
 from pandora.qiskit_to_pandora_util import convert_qiskit_to_pandora
+
+
+def reset_pandora(connection, quantum_circuit):
+    drop_and_replace_tables(connection=connection, clean=True)
+    refresh_all_stored_procedures(connection=connection)
+
+    db_tuples, _ = convert_qiskit_to_pandora(qiskit_circuit=quantum_circuit,
+                                             add_margins=True,
+                                             label='q')
+
+    insert_in_batches(pandora_gates=db_tuples,
+                      connection=connection,
+                      table_name='linked_circuit',
+                      reset_id=False)
+
+    reset_database_id(connection=connection,
+                      table_name='linked_circuit',
+                      large_buffer_value=10000000)
 
 
 def generate_random_cnot_circuit(num_qubits=2, num_gates=8):
@@ -46,54 +65,61 @@ def remove_random_gate(circuit: QuantumCircuit) -> QuantumCircuit:
 
 
 def pandora_verify(connection,
+                   process_pool,
+                   nprocs,
                    circ1: QuantumCircuit,
                    circ2: QuantumCircuit):
     concatenated = circ1.compose(circ2.inverse())
     nr_cnots = concatenated.count_ops()['cx'] // 2
     print(nr_cnots)
 
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    db_tuples, _ = convert_qiskit_to_pandora(qiskit_circuit=concatenated,
-                                             add_margins=True,
-                                             label='q')
-    insert_in_batches(pandora_gates=db_tuples,
-                      connection=connection,
-                      table_name='linked_circuit',
-                      reset_id=False)
+    reset_pandora(connection=conn, quantum_circuit=concatenated)
 
     CX = PandoraGateTranslator.CXPowGate.value
+    # nr_rewrites = nr_cnots
+    nr_rewrites = 7500
 
-    nr_rewrites = nr_cnots
-    nr_procs = 24
-    window = 1000
-    thread_procedures = [
-        (nr_procs - 1, f"call cancel_two_qubit_equiv({CX}, {CX}, 0, {window}, {nr_rewrites // nr_procs})"),
-        (1,
-         f"call cancel_two_qubit_equiv({CX}, {CX}, 0, {window}, {nr_rewrites - (nr_procs - 1) * (nr_rewrites // nr_procs)})"),
-    ]
+    proc_calls = []
+    for proc_id in range(nprocs):
+        proc_calls.append(
+            f"call cancel_two_qubit_equiv({CX}, {CX}, {proc_id}, {nprocs}, {nr_rewrites}, null)")
 
-    db_multi_threaded(thread_proc=thread_procedures, config_file_path=sys.argv[1])
+    process_pool.map(map_procedure_call, proc_calls)
 
-    circuit = extract_cirq_circuit(connection=connection,
-                                   table_name='linked_circuit',
-                                   circuit_label=None,
-                                   is_test=False,
-                                   remove_io_gates=True)
+    # for now ignore this! have to deal with the links separately
+    gate_count = extract_cirq_circuit(connection=connection,
+                                      table_name='linked_circuit',
+                                      circuit_label=None,
+                                      is_test=False,
+                                      remove_io_gates=True,
+                                      just_count=True)
     is_equivalent = False
-    if len(circuit) == 0:
+    if gate_count == 2 * concatenated.num_qubits:
         is_equivalent = True
 
     return is_equivalent
 
 
+def create_pool(n_workers, config_file_path):
+    return Pool(processes=n_workers, initializer=init_worker, initargs=(config_file_path,))
+
+
+def close_pool(proc_pool):
+    proc_pool.close()
+    proc_pool.join()
+
+
 if __name__ == "__main__":
     # watch "psql -p 5432 postgres -c \"select count(*) from linked_circuit;\""
 
+    # set timeout for MQT
+    timeout = 1200
+    NPROCS = 24
     FILENAME = None
     EQUIV = 0
     BENCH = None
     conn = None
+    pool = None
 
     if len(sys.argv) != 4:
         sys.exit(0)
@@ -106,12 +132,14 @@ if __name__ == "__main__":
         conn = get_connection(config_file_path=FILENAME)
         print(f"Running config file {FILENAME}")
 
-    # set timeout for MQT
-    timeout = 1200
-
     times = []
 
-    for q in range(32, 33, 2):
+    if BENCH == 'pandora':
+        pool = create_pool(n_workers=NPROCS, config_file_path=FILENAME)
+        # Warmup
+        pool.map(print, ".")
+
+    for q in range(20, 21, 2):
         total = 0
         nr_runs = 10
 
@@ -133,7 +161,9 @@ if __name__ == "__main__":
                 start_time_pandora = time.time()
                 equiv = pandora_verify(connection=conn,
                                        circ1=circ1,
-                                       circ2=circ2)
+                                       circ2=circ2,
+                                       process_pool=pool,
+                                       nprocs=NPROCS)
                 check_time = time.time() - start_time_pandora
                 print('Pandora time: ', check_time)
                 print('Equiv: ', equiv)
@@ -172,4 +202,5 @@ if __name__ == "__main__":
             writer.writerow(row)
 
     if BENCH == 'pandora':
+        close_pool(pool)
         conn.close()

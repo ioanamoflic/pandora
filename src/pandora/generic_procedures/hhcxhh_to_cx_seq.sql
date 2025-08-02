@@ -83,7 +83,7 @@ begin
 
                     -- make sure to update the links for the cx
                     update linked_circuit set (switch, prev_q1, prev_q2, next_q1, next_q2, visited)
-                                = (not cx.switch, left_q2.prev_q1, left_q1.prev_q1, right_q2.next_q1, right_q1.next_q1, true) where id = cx.id;
+                                = (not cx.switch, left_q2.prev_q1, left_q1.prev_q1, right_q2.next_q1, right_q1.next_q1, 0) where id = cx.id;
 
                     delete from linked_circuit where id in (left_q1.id, left_q2.id, right_q1.id, right_q2.id);
 

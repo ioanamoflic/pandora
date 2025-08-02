@@ -355,7 +355,8 @@ def extract_cirq_circuit(connection,
                          table_name: str = None,
                          remove_io_gates: bool = False,
                          original_qubits_test: dict[str, int] = None,
-                         is_test=True) -> cirq.Circuit:
+                         is_test=True,
+                         just_count=True) -> cirq.Circuit | int:
     """
     Extracts a circuit with a given label from the database and returns the corresponding cirq circuit.
     Params:
@@ -379,6 +380,8 @@ def extract_cirq_circuit(connection,
     tuples: list[tuple] = cursor.fetchall()
 
     print(f"Count left in the database: {len(tuples)}")
+    if just_count:
+        return len(tuples)
 
     pandora_gates: list[PandoraGate] = [PandoraGate(*tup) for tup in tuples]
     final_circ: cirq.Circuit = pandora_to_circuit(pandora_gates=pandora_gates,

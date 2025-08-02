@@ -47,12 +47,13 @@ def is_hhcxhh_template(possibly_cx_node, circuit_dag):
             return None
 
         if isinstance(pred[0], DAGOpNode) and isinstance(pred[1], DAGOpNode) \
-                and isinstance(succ[0], DAGOpNode) and isinstance(succ[1], DAGOpNode)\
-                and isinstance(pred[0].op, HGate) and isinstance(pred[1].op, HGate)\
+                and isinstance(succ[0], DAGOpNode) and isinstance(succ[1], DAGOpNode) \
+                and isinstance(pred[0].op, HGate) and isinstance(pred[1].op, HGate) \
                 and isinstance(succ[0].op, HGate) and isinstance(succ[1].op, HGate):
             return pred[0], pred[1], succ[0], succ[1]
 
     return None
+
 
 def rewrite_hhcxhh(qc_dag, predecessors, replacement):
     (h1, h2, h3, h4) = predecessors
@@ -72,19 +73,17 @@ if __name__ == "__main__":
     DIR = int(sys.argv[1])
 
     nr_passes = 1
-
-    # in the range 0...100
     sample_percentage = 1
 
-    for nq in range(100000, 1000001, 100000):
+    for nq in range(10000, 100001, 10000):
         print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
 
         if DIR == 0:
             _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
         else:
-            qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
-                                                                     n_qubits=50,
-                                                                     proba=sample_percentage / 100)
+            _, qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
+                                                                        n_qubits=50,
+                                                                        proba=sample_percentage / 100)
 
         qc_dag = circuit_to_dag(qc)
         op_nodes = qc_dag.op_nodes()
