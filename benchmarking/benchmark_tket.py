@@ -106,7 +106,7 @@ def cx_to_hhcxhh_transform_seq(circ: Circuit, nodes) -> Circuit:
 
 if __name__ == "__main__":
     nr_passes = 1
-    sample_percentage = 1
+    sample_percentage = 0.1
 
     for nq in range(10000, 100001, 10000):
         tket_circ, _ = generate_random_CX_circuit(n_templates=nq,
@@ -120,4 +120,4 @@ if __name__ == "__main__":
 
         with open(f'TKET_template_search.csv', 'a') as f:
             writer = csv.writer(f)
-            writer.writerow((nq, op_time))
+            writer.writerow((nq, op_time, sample_percentage))
