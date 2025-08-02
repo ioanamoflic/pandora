@@ -77,6 +77,7 @@ begin
 
                     -- Check that the number of locked neighbours is equal to the number of neighbours
                     if distinct_count != distinct_existing then
+                        commit; -- release lock
                         continue;
                     end if;
 
@@ -111,10 +112,11 @@ begin
                 -- finish this pass if we didn't find any cancellation
                 --
                 exit;
+                commit; -- release lock
             end if;
 
-
         end loop; -- end gate loop
+
         commit; -- release lock
 
 --         select count(*) into remaining_cnot_count from linked_circuit where type > 2;
