@@ -41,7 +41,7 @@ if __name__ == "__main__":
     conn = get_connection(config_file_path=FILEPATH)
 
     nr_passes = 1
-    sample_percentage = 0.1
+    sample_percentage = 10
 
     pool = None
     if NPROCS > 0:

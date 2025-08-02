@@ -106,7 +106,7 @@ def cx_to_hhcxhh_transform_seq(circ: Circuit, nodes) -> Circuit:
 
 if __name__ == "__main__":
     nr_passes = 1
-    sample_percentage = 0.1
+    sample_percentage = 10
 
     for nq in range(10000, 100001, 10000):
         tket_circ, _ = generate_random_CX_circuit(n_templates=nq,
