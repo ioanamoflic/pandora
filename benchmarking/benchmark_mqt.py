@@ -77,7 +77,7 @@ def pandora_verify(connection,
 
     CX = PandoraGateTranslator.CXPowGate.value
     # nr_rewrites = nr_cnots
-    nr_rewrites = 7500
+    nr_rewrites = 2 * nr_cnots
 
     proc_calls = []
     for proc_id in range(nprocs):
