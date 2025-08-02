@@ -196,7 +196,7 @@ if __name__ == "__main__":
 
         print("----- ", total / nr_runs)
 
-    with open(f'{BENCH}_{EQUIV}_verification.csv', 'w') as f:
+    with open(f'{BENCH}_{EQUIV}_verification.csv', 'a') as f:
         writer = csv.writer(f)
         for row in times:
             writer.writerow(row)
