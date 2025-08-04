@@ -1,4 +1,4 @@
-create or replace procedure cancel_two_qubit_equiv(type_1 int, type_2 int, my_proc_id int, proc_count int, pass_count int, OUT elapsed_time INTERVAL)
+create or replace procedure cancel_two_qubit_equiv(type_1 int, type_2 int, my_proc_id int, proc_count int, qubit_count int, timeout int)
     language plpgsql
 as
 $$
@@ -8,7 +8,7 @@ declare
 
     first record;
     second record;
-    compare record;
+--     compare record;
     gate record;
 
     first_id_plus_one bigint;
@@ -18,25 +18,35 @@ declare
     second_next_q1_id bigint;
 	second_next_q2_id bigint;
 
-    remaining_cnot_count bigint;
+    found_match boolean;
+    mismatch_count int;
 
-    start_time timestamp;
-	end_time timestamp;
+    remaining_gate_count bigint;
+    start_time timestamp with time zone;
 
 begin
-    start_time := CLOCK_TIMESTAMP();
+    start_time := clock_timestamp();
+    mismatch_count := 0;
 
-	while pass_count > 0 loop
+    select count(id) into remaining_gate_count from linked_circuit;
+
+	while remaining_gate_count > 2 * qubit_count loop
+
+        found_match := false;
+
+        if mismatch_count >= 10000 then
+            exit;
+        end if;
 
         for gate in
             -- we sample from the table to make multithreading work by not having threads waiting on each other
             select * from linked_circuit
                      where
-                     id % proc_count = my_proc_id and
-                     type=type_1
+                     id % proc_count = my_proc_id
+                     and type=type_1
                      and div(next_q1, 1000) = div(next_q2, 1000) -- two gates sharing the same wires
         loop
-            select * into first from linked_circuit where id = gate.id for update skip locked;
+            select * into first from linked_circuit where id = gate.id; -- for update skip locked;
 
             if first.id is not null then
                 first_id_plus_one := (first.id * 10 + 1) * 100 + first.type;
@@ -44,36 +54,36 @@ begin
 
                 select * into second from linked_circuit
                                      where prev_q1 = first_id_plus_zero
-                                         and prev_q2 = first_id_plus_one
-                                         and switch = first.switch
-                                     for update skip locked;
+                                     and prev_q2 = first_id_plus_one
+                                     and switch = first.switch;
+--                 compare := second;
 
-                compare := second;
+--                 if compare.id is null or compare.type != type_2 then
+--                     -- LOOK BACKWARD (second, first)
+--                     -- first becomes second
+--                     second := first;
+--                     -- select a different first from the database - LOOK BACKWARD
+--                     select * into first from linked_circuit
+--                                         where next_q1 = first_id_plus_zero
+--                                             and next_q2 = first_id_plus_one
+--                                             and switch = first.switch;
+--                                         -- for update skip locked;
+--
+--                     compare := first;
+--                 end if;
 
-                if compare.id is null or compare.type != type_2 then
-                    -- LOOK BACKWARD (second, first)
-                    -- first becomes second
-                    second := first;
-                    -- select a different first from the database - LOOK BACKWARD
-                    select * into first from linked_circuit
-                                        where next_q1 = first_id_plus_zero
-                                            and next_q2 = first_id_plus_one
-                                            and switch = first.switch
-                                        for update skip locked;
+--                 if compare.id is not null and compare.type=type_2 then
 
-                    compare := first;
-                end if;
-
-                if compare.id is not null and compare.type=type_2 then
+                if second.id is not null and second.type=type_2 then
                     -- LOOK FORWARD (first, second)
                     first_prev_q1_id := div(first.prev_q1, 1000);
                     first_prev_q2_id := div(first.prev_q2, 1000);
                     second_next_q1_id := div(second.next_q1, 1000);
                     second_next_q2_id := div(second.next_q2, 1000);
 
-                    select count(*) into distinct_count from (select distinct unnest(array[first_prev_q1_id, first_prev_q2_id, second_next_q1_id, second_next_q2_id])) as it;
+                    select count(*) into distinct_count from (select distinct unnest(array[first_prev_q1_id, first_prev_q2_id, first.id, second.id, second_next_q1_id, second_next_q2_id])) as it;
                     select count(*) into distinct_existing from
-                    (select * from linked_circuit where id in (first_prev_q1_id, first_prev_q2_id, second_next_q1_id, second_next_q2_id) for update skip locked) as it;
+                    (select * from linked_circuit where id in (first_prev_q1_id, first_prev_q2_id, first.id, second.id, second_next_q1_id, second_next_q2_id) for update skip locked) as it;
 
                     -- Check that the number of locked neighbours is equal to the number of neighbours
                     if distinct_count != distinct_existing then
@@ -106,33 +116,27 @@ begin
                     end if;
 
                     delete from linked_circuit lc where lc.id in (first.id, second.id);
-                end if;
-            else
-                --
-                -- finish this pass if we didn't find any cancellation
-                --
-                exit;
-                commit; -- release lock
-            end if;
+
+                    commit; -- release locks after applying template
+
+                    found_match = True;
+
+                end if; -- end second gate is match
+
+            end if; -- end first gate is match
 
         end loop; -- end gate loop
 
-        commit; -- release lock
+        if found_match is False then
+            mismatch_count := mismatch_count + 1;
+        end if;
 
---         select count(*) into remaining_cnot_count from linked_circuit where type > 2;
---         if remaining_cnot_count = 0 then
---             pass_count = 0;
---         else
---             pass_count := pass_count - 1;
---         end if;
+	    select count(id) into remaining_gate_count from linked_circuit;
 
-	    pass_count := pass_count - 1;
+        if extract(epoch from (clock_timestamp() - start_time)) > timeout then
+            exit;
+        end if;
 
 	end loop; --end pass loop
-
-    -- Capture end time
-    end_time := CLOCK_TIMESTAMP();
-    -- Calculate and return elapsed time
-    elapsed_time := end_time - start_time;
 
 end;$$;

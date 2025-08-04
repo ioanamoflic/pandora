@@ -13,8 +13,4 @@ def map_procedure_call(proc_call):
     global connection
     cursor = connection.cursor()
     cursor.execute(proc_call)
-
-    tuples: list[tuple] = cursor.fetchall()
-    print(tuples)
-
     cursor.close()

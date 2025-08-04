@@ -68,7 +68,8 @@ def pandora_verify(connection,
                    process_pool,
                    nprocs,
                    circ1: QuantumCircuit,
-                   circ2: QuantumCircuit):
+                   circ2: QuantumCircuit,
+                   timeout_sec):
     concatenated = circ1.compose(circ2.inverse())
     nr_cnots = concatenated.count_ops()['cx'] // 2
     print(nr_cnots)
@@ -76,13 +77,11 @@ def pandora_verify(connection,
     reset_pandora(connection=conn, quantum_circuit=concatenated)
 
     CX = PandoraGateTranslator.CXPowGate.value
-    # nr_rewrites = nr_cnots
-    nr_rewrites = 4 * nr_cnots
 
     proc_calls = []
     for proc_id in range(nprocs):
         proc_calls.append(
-            f"call cancel_two_qubit_equiv({CX}, {CX}, {proc_id}, {nprocs}, {nr_rewrites}, null)")
+            f"call cancel_two_qubit_equiv({CX}, {CX}, {proc_id}, {nprocs}, {concatenated.num_qubits}, {timeout_sec})")
 
     process_pool.map(map_procedure_call, proc_calls)
 
@@ -113,7 +112,7 @@ if __name__ == "__main__":
     # watch "psql -p 5432 postgres -c \"select count(*) from linked_circuit;\""
 
     # set timeout for MQT
-    timeout = 1200
+    timeout = 100
     NPROCS = 24
     FILENAME = None
     EQUIV = 0
@@ -163,7 +162,8 @@ if __name__ == "__main__":
                                        circ1=circ1,
                                        circ2=circ2,
                                        process_pool=pool,
-                                       nprocs=NPROCS)
+                                       nprocs=NPROCS,
+                                       timeout_sec=timeout)
                 check_time = time.time() - start_time_pandora
                 print('Pandora time: ', check_time)
                 print('Equiv: ', equiv)
