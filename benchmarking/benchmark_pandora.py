@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     n_rounds = 100
     nr_passes = 1
-    sample_percentage = 10
+    sample_percentage = 0.1
 
     pool = None
     if NPROCS > 0:
@@ -79,7 +79,7 @@ if __name__ == "__main__":
             print('Time to rewrite:', tot_time)
             sum_times += tot_time
 
-        with open('pandora_template_search_random_flip.csv', 'a') as f:
+        with open(f'pandora_template_search_random_flip_{sample_percentage}.csv', 'a') as f:
             writer = csv.writer(f)
             writer.writerow((nq, sum_times / n_rounds, sample_percentage, NPROCS))
 
