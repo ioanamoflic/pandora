@@ -141,7 +141,7 @@ if __name__ == "__main__":
         # Warmup
         pool.map(print, ".")
 
-    for q in range(32, 33, 2):
+    for q in range(30, 31, 2):
         total = 0
         nr_runs = 10
 
