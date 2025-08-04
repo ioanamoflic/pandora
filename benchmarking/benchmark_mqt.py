@@ -183,8 +183,8 @@ if __name__ == "__main__":
                 st_time_mqt = time.time()
                 result = verify(circ1, circ2,
                                 timeout=timeout,
-                                run_alternating_checker=False,
-                                run_simulation_checker=False)
+                                run_simulation_checker=False,
+                                run_zx_checker=False)
                 check_time = time.time() - st_time_mqt
                 mqt_check_time = result.check_time
                 equiv = result.equivalence
