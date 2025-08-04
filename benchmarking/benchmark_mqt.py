@@ -142,7 +142,7 @@ if __name__ == "__main__":
         total = 0
         nr_runs = 10
 
-        for i in range(nr_runs):
+        for i in range(5, nr_runs):
             if EQUIV == 0:
                 print(q, i, "correct")
             else:
