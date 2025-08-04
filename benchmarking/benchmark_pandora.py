@@ -40,6 +40,7 @@ if __name__ == "__main__":
 
     conn = get_connection(config_file_path=FILEPATH)
 
+    n_rounds = 100
     nr_passes = 1
     sample_percentage = 10
 
@@ -50,34 +51,37 @@ if __name__ == "__main__":
         pool.map(print, ".")
 
     for nq in range(10000, 100001, 10000):
-        rewrites, qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
-                                                                           n_qubits=50,
-                                                                           proba=sample_percentage / 100)
+        sum_times = 0
+        for i in range(n_rounds):
+            rewrites, qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
+                                                                               n_qubits=50,
+                                                                               proba=sample_percentage / 100)
 
-        print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} proba with {rewrites} rewrites')
+            print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} proba with {rewrites} rewrites')
 
-        proc_calls = []
-        for proc_id in range(NPROCS):
-            proc_calls.append(
-                f"call linked_hhcxhh_to_cx_parallel({proc_id}, {NPROCS}, {rewrites}, {nr_passes}, null)")
+            proc_calls = []
+            for proc_id in range(NPROCS):
+                proc_calls.append(
+                    f"call linked_hhcxhh_to_cx_parallel({proc_id}, {NPROCS}, {rewrites}, {nr_passes}, null)")
 
-        reset_pandora(connection=conn, quantum_circuit=qc)
+            reset_pandora(connection=conn, quantum_circuit=qc)
 
-        print("Rewrite...", end=None)
-        start_time = time.time()
-        if NPROCS > 0:
-            pool.map(map_procedure_call, proc_calls)
-        else:
-            cursor = conn.cursor()
-            cursor.execute(f"call linked_hhcxhh_to_cx_seq({sample_percentage}, {nr_passes})")
-            cursor.close()
+            print("Rewrite...", end=None)
+            start_time = time.time()
+            if NPROCS > 0:
+                pool.map(map_procedure_call, proc_calls)
+            else:
+                cursor = conn.cursor()
+                cursor.execute(f"call linked_hhcxhh_to_cx_seq({sample_percentage}, {nr_passes})")
+                cursor.close()
 
-        tot_time = time.time() - start_time
-        print('Time to rewrite:', tot_time)
+            tot_time = time.time() - start_time
+            print('Time to rewrite:', tot_time)
+            sum_times += tot_time
 
         with open('pandora_template_search_random_flip.csv', 'a') as f:
             writer = csv.writer(f)
-            writer.writerow((nq, tot_time, sample_percentage, NPROCS))
+            writer.writerow((nq, sum_times / n_rounds, sample_percentage, NPROCS))
 
     if NPROCS > 0:
         close_pool(pool)
