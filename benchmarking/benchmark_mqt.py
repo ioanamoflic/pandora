@@ -1,3 +1,4 @@
+import sys
 from multiprocessing import Pool
 
 import qiskit.qasm3
@@ -116,16 +117,18 @@ if __name__ == "__main__":
     NPROCS = 24
     FILENAME = None
     EQUIV = 0
+    CNT = None
     BENCH = None
     conn = None
     pool = None
 
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 5:
         sys.exit(0)
-    elif len(sys.argv) == 4:
+    elif len(sys.argv) == 5:
         FILENAME = sys.argv[1]
         EQUIV = int(sys.argv[2])
         BENCH = sys.argv[3]
+        CNT = sys.argv[4]
 
     if BENCH == 'pandora':
         conn = get_connection(config_file_path=FILENAME)
@@ -142,7 +145,7 @@ if __name__ == "__main__":
         total = 0
         nr_runs = 10
 
-        for i in range(5, nr_runs):
+        for i in range(nr_runs):
             if EQUIV == 0:
                 print(q, i, "correct")
             else:
@@ -196,7 +199,7 @@ if __name__ == "__main__":
 
         print("----- ", total / nr_runs)
 
-    with open(f'{BENCH}_{EQUIV}_verification.csv', 'a') as f:
+    with open(f'{BENCH}_{EQUIV}_verification_{CNT}.csv', 'a') as f:
         writer = csv.writer(f)
         for row in times:
             writer.writerow(row)
