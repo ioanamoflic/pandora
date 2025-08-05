@@ -114,7 +114,7 @@ if __name__ == "__main__":
 
     # set timeout for MQT
     timeout = 1000
-    NPROCS = 24
+    NPROCS = 12
     FILENAME = None
     EQUIV = 0
     CNT = None
