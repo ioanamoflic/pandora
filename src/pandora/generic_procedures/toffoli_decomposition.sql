@@ -134,5 +134,3 @@ begin
 	end loop;
 end;$$;
 
--- alter procedure linked_toffoli_decomp() owner to postgres;
-
