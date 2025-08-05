@@ -112,7 +112,7 @@ def close_pool(proc_pool):
 if __name__ == "__main__":
     # watch "psql -p 5432 postgres -c \"select count(*) from linked_circuit;\""
 
-    # set timeout for MQT
+    # set timeout for MQT/Pandora
     timeout = 1000
     NPROCS = 12
     FILENAME = None
@@ -141,7 +141,7 @@ if __name__ == "__main__":
         # Warmup
         pool.map(print, ".")
 
-    for q in range(32, 33, 2):
+    for q in range(20, 21, 2):
         total = 0
         nr_runs = 10
 
