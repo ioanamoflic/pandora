@@ -141,7 +141,7 @@ if __name__ == "__main__":
         # Warmup
         pool.map(print, ".")
 
-    for q in range(20, 21, 2):
+    for q in range(32, 33, 2):
         total = 0
         nr_runs = 10
 
@@ -187,7 +187,7 @@ if __name__ == "__main__":
                 result = verify(circ1, circ2,
                                 timeout=timeout,
                                 run_simulation_checker=False,
-                                run_zx_checker=False)
+                                run_zx_checker=True)
                 check_time = time.time() - st_time_mqt
                 mqt_check_time = result.check_time
                 equiv = result.equivalence
