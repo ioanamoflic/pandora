@@ -114,7 +114,7 @@ if __name__ == "__main__":
 
     # set timeout for MQT/Pandora
     timeout = 1000
-    NPROCS = 12
+    NPROCS = 24
     FILENAME = None
     EQUIV = 0
     CNT = None
