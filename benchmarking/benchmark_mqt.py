@@ -154,11 +154,16 @@ if __name__ == "__main__":
             mqt_check_time = 0
 
             if BENCH == 'pandora':
-                circ1 = qiskit.qasm3.load(f"circ1_{q}_{i}_{EQUIV}_{CNT}.qasm")
+                circ1 = generate_random_cnot_circuit(q, q ** 3)
+                with open(f"circ1_{q}_{i}_{EQUIV}_{CNT}.qasm", "w") as f:
+                    qiskit.qasm3.dump(circ1, f)
+
                 if EQUIV == 0:
                     circ2 = circ1.copy()
                 else:
-                    circ2 = qiskit.qasm3.load(f"circ2_{q}_{i}_{EQUIV}_{CNT}.qasm")
+                    circ2 = remove_random_gate(circ1)
+                    with open(f"circ2_{q}_{i}_{EQUIV}_{CNT}.qasm", "w") as f:
+                        qiskit.qasm3.dump(circ2, f)
 
                 start_time_pandora = time.time()
                 equiv = pandora_verify(connection=conn,
@@ -172,16 +177,11 @@ if __name__ == "__main__":
                 print('Equiv: ', equiv)
 
             else:
-                circ1 = generate_random_cnot_circuit(q, q ** 3)
-                with open(f"circ1_{q}_{i}_{EQUIV}_{CNT}.qasm", "w") as f:
-                    qiskit.qasm3.dump(circ1, f)
-
+                circ1 = qiskit.qasm3.load(f"circ1_{q}_{i}_{EQUIV}_{CNT}.qasm")
                 if EQUIV == 0:
                     circ2 = circ1.copy()
                 else:
-                    circ2 = remove_random_gate(circ1)
-                    with open(f"circ2_{q}_{i}_{EQUIV}_{CNT}.qasm", "w") as f:
-                        qiskit.qasm3.dump(circ2, f)
+                    circ2 = qiskit.qasm3.load(f"circ2_{q}_{i}_{EQUIV}_{CNT}.qasm")
 
                 st_time_mqt = time.time()
                 result = verify(circ1, circ2,
