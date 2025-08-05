@@ -113,7 +113,7 @@ if __name__ == "__main__":
     # watch "psql -p 5432 postgres -c \"select count(*) from linked_circuit;\""
 
     # set timeout for MQT
-    timeout = 100
+    timeout = 1000
     NPROCS = 24
     FILENAME = None
     EQUIV = 0
