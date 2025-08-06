@@ -3,7 +3,6 @@ create or replace procedure cancel_single_qubit(type_1 int, type_2 int, param_1 
 as
 $$
 declare
-    first_next_id bigint;
     first_prev_id bigint;
     second_next_id bigint;
 
@@ -12,6 +11,8 @@ declare
     second record;
     distinct_count int;
     distinct_existing int;
+
+    pattern_count int;
 
 	start_time timestamp;
 
@@ -30,51 +31,50 @@ begin
         loop
             select * into first from linked_circuit where id = gate.id;
 
-            if first.id is not null then
-                first_next_id :=  div(first.next_q1, 1000);
-                select * into second from linked_circuit where id = first_next_id;
+            select count(*) into pattern_count from (select * from linked_circuit
+                                                     where id in (first.id, div(first.next_q1, 1000))
+                                                     for update skip locked
+                                                     ) as it;
+            if pattern_count != 2 then
+                commit;
+                continue;
+            end if;
 
-                if second.id is not null and second.param=param_2 then
-                     first_prev_id := div(first.prev_q1, 1000);
-                     second_next_id := div(second.next_q1, 1000);
+            select * into second from linked_circuit where id = div(first.next_q1, 1000);
 
-                    select count(*) into distinct_count from (select distinct unnest(array[first_prev_id, second_next_id])) as it;
-                    select count(*) into distinct_existing from (select * from linked_circuit
-                                                                          where id in (first_prev_id, second_next_id)
-                                                                          for update skip locked) as it;
-                    -- Lock the two neighbours
-                    if distinct_count != distinct_existing then
-                        commit;
-                        continue;
-                    end if;
+            if first.id is null or second.id is null or second.param!=param_2 then
+                commit;
+                continue;
+            end if;
 
-                    -- Lock the two gates
-                    select count(*) into distinct_count from (select * from linked_circuit where id in (first.id, second.id)
-                                                                                           for update skip locked) as it;
-                    if distinct_count != 2 then
-                        commit;
-                        continue;
-                    end if;
+            first_prev_id := div(first.prev_q1, 1000);
+            second_next_id := div(second.next_q1, 1000);
 
-                    if mod(div(first.prev_q1, 100), 10) = 0 then
-                        update linked_circuit set next_q1 = second.next_q1 where id = first_prev_id;
-                    else
-                        update linked_circuit set next_q2 = second.next_q1 where id = first_prev_id;
-                    end if;
+            select count(*) into distinct_count from (select distinct unnest(array[first_prev_id, second_next_id])) as it;
+            select count(*) into distinct_existing from (select * from linked_circuit
+                                                                  where id in (first_prev_id, second_next_id)
+                                                                  for update skip locked
+                                                                  ) as it;
+            if distinct_count != distinct_existing then
+                commit;
+                continue;
+            end if;
 
-                    if mod(div(second.next_q1, 100), 10) = 0 then
-                        update linked_circuit set prev_q1 = first.prev_q1 where id = second_next_id;
-                    else
-                        update linked_circuit set prev_q2 = first.prev_q1 where id = second_next_id;
-                    end if;
+            if mod(div(first.prev_q1, 100), 10) = 0 then
+                update linked_circuit set next_q1 = second.next_q1 where id = first_prev_id;
+            else
+                update linked_circuit set next_q2 = second.next_q1 where id = first_prev_id;
+            end if;
 
-                    delete from linked_circuit where id in (first.id, second.id);
+            if mod(div(second.next_q1, 100), 10) = 0 then
+                update linked_circuit set prev_q1 = first.prev_q1 where id = second_next_id;
+            else
+                update linked_circuit set prev_q2 = first.prev_q1 where id = second_next_id;
+            end if;
 
-                    commit; -- release the locks
+            delete from linked_circuit where id in (first.id, second.id);
 
-                end if;
-
-            end if; -- end first gate is pattern
+            commit; -- release the locks
 
         end loop; -- end gate loop
 

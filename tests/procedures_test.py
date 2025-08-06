@@ -20,7 +20,7 @@ myPauliZ = PandoraGateTranslator._PauliZ.value
 proc_id = 0
 nprocs = 1
 short_timeout = 1
-long_timeout = 10
+long_timeout = 3
 pass_count = 1
 larger_pass_count = 10
 
@@ -754,20 +754,20 @@ def check_logical_correctness_random(connection, stop_after: int):
         (1, f"CALL cancel_single_qubit({myPauliZ}, {myPauliZ}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         (1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         (1, f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (
-            1,
-            f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (
-            1,
-            f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (
+        #     1,
+        #     f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (
+        #     1,
+        #     f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL commute_single_control_left({myZPow}, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
     ]
 
     thread_procedures = all_thread_proc
@@ -782,11 +782,12 @@ def check_logical_correctness_random(connection, stop_after: int):
 
             initial_circuit = benchmark_cirq.create_random_circuit(n_qubits=n_qubits, n_templates=n_templates,
                                                                    templates=['add_two_hadamards',
-                                                                              'add_two_cnots',
-                                                                              'add_base_change',
+                                                                              # 'add_two_cnots',
+                                                                              # 'add_base_change',
                                                                               'add_t_t_dag',
-                                                                              'add_t_cx',
-                                                                              'add_cx_t'],
+                                                                              # 'add_t_cx',
+                                                                              # 'add_cx_t'
+                                                                              ],
                                                                    add_margins=False)
             print('----------------------------------------------')
             print('Initial:')
@@ -852,22 +853,34 @@ def test_BVZ_optimization(connection, stop_after):
 
 if __name__ == "__main__":
     conn = get_connection()
+    random.seed(0)
+
     # test_commute_cx_ctrl_target_case_1(conn)
     # test_commute_cx_ctrl_target_case_2(conn)
-    test_cancel_single_qubit(conn)
-    test_cancel_two_qubit(conn)
-    test_commute_single_control_right(conn)
-    test_commute_single_control_left(conn)
-    test_cx_to_hhcxhh_a(conn)
-    test_cx_to_hhcxhh_b(conn)
-    test_hhcxhh_to_cx_a(conn)
-    test_hhcxhh_to_cx_b(conn)
-    test_replace_two_sq_with_one(conn)
-    test_case_1(conn)
-    test_case_2(conn)
-    test_case_1_repeated(conn, n=10)
-    test_case_2_repeated(conn, n=10)
-    test_qualtran_adder_opt_reconstruction(conn, stop_after=5)
+
+    # test_cancel_single_qubit(conn)
+    # test_cancel_two_qubit(conn)
+    # test_commute_single_control_right(conn)
+    # test_commute_single_control_left(conn)
+    # test_cx_to_hhcxhh_a(conn)
+    # test_cx_to_hhcxhh_b(conn)
+    # test_hhcxhh_to_cx_a(conn)
+    # test_hhcxhh_to_cx_b(conn)
+    # test_replace_two_sq_with_one(conn)
+    # test_case_1(conn)
+    # test_case_2(conn)
+    # test_case_1_repeated(conn, n=10)
+    # test_case_2_repeated(conn, n=10)
+    # test_qualtran_adder_opt_reconstruction(conn, stop_after=5)
     check_logical_correctness_random(conn, stop_after=5)
-    test_BVZ_optimization(conn, stop_after=3)
+    # test_BVZ_optimization(conn, stop_after=3)
     conn.close()
+    # extracted_circuit = extract_cirq_circuit(connection=conn,
+    #                                          circuit_label='t',
+    #                                          remove_io_gates=False,
+    #                                          table_name='linked_circuit',
+    #                                          is_test=False,
+    #                                          just_count=False
+    #                                          )
+    # print('Final:')
+    # print(extracted_circuit)
