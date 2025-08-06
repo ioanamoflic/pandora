@@ -9,6 +9,8 @@ declare
 
     first record;
     second record;
+    gate record;
+
     distinct_count bigint;
     distinct_existing bigint;
     new_next bigint;
@@ -20,16 +22,18 @@ begin
 
 	 while pass_count > 0 loop
 
-        for first in
+        for gate in
             select * from linked_circuit
             where id % nprocs = my_proc_id
             and type=type_1
             and mod(next_q1, 100) = type_2
             and param=param1
         loop
-            if first.id is null then
+            if gate.id is null then
                 continue;
             end if;
+
+            select * into first from linked_circuit where id = gate.id;
 
             first_next_id :=  div(first.next_q1, 1000);
 			select * into second from linked_circuit where id = first_next_id;

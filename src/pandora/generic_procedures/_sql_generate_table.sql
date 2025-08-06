@@ -6,7 +6,7 @@ create table IF NOT EXISTS public.linked_circuit
     prev_q3 bigint,
     type    smallint,
     param   real,
-    global_shift real,
+    global_shift real default 0,
     switch  boolean,
     next_q1 bigint,
     next_q2 bigint,

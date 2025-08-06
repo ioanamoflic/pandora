@@ -60,8 +60,6 @@ begin
             cx_next_q1_id := div(cx.next_q1, 1000);
             cx_next_q2_id := div(cx.next_q2, 1000);
 
-            -- raise notice 'cx %f has 4 margins: % % % %', cx.id, cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id;
-
             select count(*) into distinct_count from
                 (select distinct unnest(array[cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id])) as it;
             select count(*) into distinct_existing from
@@ -84,7 +82,6 @@ begin
             cx_id_ctrl := (cx.id * 10 + 0) * 100 + cx.type;
             cx_id_tgt  := (cx.id * 10 + 1) * 100 + cx.type;
 
-            -- TODO: shorten insert statetement
             insert into linked_circuit(prev_q1, type, param, next_q1, visited, label) values (cx.prev_q1, gate_type, 1, cx_id_tgt, my_proc_id, cx.label)
                                                           returning id into left_h_q1_id;
             insert into linked_circuit(prev_q1, type, param, next_q1, visited, label) values (cx.prev_q2, gate_type, 1, cx_id_ctrl, my_proc_id, cx.label)
@@ -93,15 +90,12 @@ begin
                                                           returning id into right_h_q1_id;
             insert into linked_circuit(prev_q1, type, param, next_q1, visited, label) values (cx_id_ctrl, gate_type, 1, cx.next_q2,my_proc_id, cx.label)
                                                           returning id into right_h_q2_id;
-            -- raise notice 'cx %f is inserting 4 H: % % % %', cx.id, left_h_q1_id, left_h_q2_id, right_h_q1_id, right_h_q2_id;
-
 
             -- These are the links that the margins and CNOT should use
             left_q1_link := left_h_q1_id * 1000 + port_nr * 100 + gate_type;
             left_q2_link := left_h_q2_id * 1000 + port_nr * 100 + gate_type;
             right_q1_link := right_h_q1_id * 1000 + port_nr * 100 + gate_type;
             right_q2_link := right_h_q2_id * 1000 + port_nr * 100 + gate_type;
-            -- raise notice '     the corresponding links for the 4 H: % % % %', left_q1_link, left_q2_link, right_q1_link, right_q2_link;
 
             -- Update the CNOT: flip the switch value and set visited
             update linked_circuit set (prev_q1, prev_q2, next_q1, next_q2, switch, visited) = (left_q2_link, left_q1_link, right_q2_link, right_q1_link, not cx.switch, my_proc_id) where id = cx.id;

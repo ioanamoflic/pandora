@@ -5,6 +5,7 @@ $$
 declare
     two_qubit_gate record;
     sg record;
+    gate record;
 
     distinct_count int;
     distinct_existing int;
@@ -25,13 +26,15 @@ begin
 
 	while pass_count > 0 loop
 
-        for two_qubit_gate in
+        for gate in
             select * from linked_circuit
                      where
                      id % nprocs = my_proc_id
                      and type in (15, 16, 17, 18)
                      and mod(prev_q1, 100) = single_type
         loop
+            select * into two_qubit_gate from linked_circuit where id = gate.id;
+
             if two_qubit_gate.id is not null then
                 cx_next_q1 = two_qubit_gate.next_q1;
                 cx_prev_q1 = two_qubit_gate.prev_q1;

@@ -149,7 +149,8 @@ def pandora_wrapped_to_cirq_circuit(wrapped_gates: list[PandoraGateWrapper],
             raise PandoraWrappedGateMissingLinks
         cirq_op = wrapped.to_cirq_operation()
         cirq_qubits = wrapped.get_gate_qubits_from_list(q)
-        circuit.append(cirq_op.on(*cirq_qubits).with_tags(str(wrapped.pandora_gate.id)))
+        circuit.append(cirq_op.on(*cirq_qubits))
+                       #.with_tags(str(wrapped.pandora_gate.id)))
 
     return circuit
 

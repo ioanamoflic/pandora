@@ -727,8 +727,7 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
             (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
             (1, f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
             (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {pass_count}, {stop_after})"),
-            # TODO this one fucks everything up!!
-            # (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {pass_count}, {stop_after})"),
+            (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {pass_count}, {stop_after})"),
         ]
         db_multi_threaded(thread_proc=thread_procedures)
         stop_all_lurking_procedures(connection)
@@ -768,16 +767,10 @@ def check_logical_correctness_random(connection, stop_after: int):
         (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         (1, f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        # (1, f"CALL linked_cx_to_hhcxhh_bernoulli({proc_id}, {nprocs}, {pass_count}, {stop_after})"),
+        (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
     ]
 
     thread_procedures = all_thread_proc
-
-    # for current_proc in all_thread_proc:
-        # thread_procedures.append(current_proc)
-        # print()
-        # print(f'current_proc = {thread_procedures}')
-        # print()
 
     for n_qubits in range(2, 5):
         for n_templates in range(5, 30, 5):
@@ -861,20 +854,20 @@ if __name__ == "__main__":
     conn = get_connection()
     # test_commute_cx_ctrl_target_case_1(conn)
     # test_commute_cx_ctrl_target_case_2(conn)
-    # test_cancel_single_qubit(conn)
-    # test_cancel_two_qubit(conn)
-    # test_commute_single_control_right(conn)
-    # test_commute_single_control_left(conn)
+    test_cancel_single_qubit(conn)
+    test_cancel_two_qubit(conn)
+    test_commute_single_control_right(conn)
+    test_commute_single_control_left(conn)
     test_cx_to_hhcxhh_a(conn)
     test_cx_to_hhcxhh_b(conn)
-    # test_hhcxhh_to_cx_a(conn)
-    # test_hhcxhh_to_cx_b(conn)
-    # test_replace_two_sq_with_one(conn)
-    # test_case_1(conn)
-    # test_case_2(conn)
-    # test_case_1_repeated(conn, n=10)
-    # test_case_2_repeated(conn, n=10)
-    # test_qualtran_adder_opt_reconstruction(conn, stop_after=5)
-    # check_logical_correctness_random(conn, stop_after=5)
-    # test_BVZ_optimization(conn, stop_after=3)
+    test_hhcxhh_to_cx_a(conn)
+    test_hhcxhh_to_cx_b(conn)
+    test_replace_two_sq_with_one(conn)
+    test_case_1(conn)
+    test_case_2(conn)
+    test_case_1_repeated(conn, n=10)
+    test_case_2_repeated(conn, n=10)
+    test_qualtran_adder_opt_reconstruction(conn, stop_after=5)
+    check_logical_correctness_random(conn, stop_after=5)
+    test_BVZ_optimization(conn, stop_after=3)
     conn.close()
