@@ -8,6 +8,8 @@ from qiskit.circuit import Measure, CircuitInstruction
 
 from typing import Dict
 
+from pandora.pandora_util import get_link_id, get_gate_id, get_gate_port
+
 
 def remove_io_gates(circuit):
     dag = circuit_to_dag(circuit)
@@ -74,34 +76,6 @@ def qiskit_operation_to_pandora_gate(instr: CircuitInstruction,
         is_classically_controlled=is_classically_controlled,
         measurement_key=measurement_key
     )
-
-
-"""
-    LinkID has the following format *IPTT where:
-    - unlimited number of digits for the gateid I
-    - one digit for the port P. For example, a CNOT gate has 2 ports, a Toffoli has 3 ports etc.
-    - two digits for the gate type T. For example, a Toffoli is 23, a CNOT is 15/18 etc.
-    
-    Considering the LinkID X, in order to:
-    - get the gateid: X / 1000 will return the *I digits
-    - get the port number: (X / 100) % 10 will return the P digit
-    - get the type: X % 100 will return the T digits
-"""
-
-def get_link_id(gate_id, gate_port, gate_type):
-    return gate_id * 1000 + gate_port * 100 + gate_type
-
-
-def get_gate_id(link_id):
-    return link_id // 1000
-
-
-def get_gate_port(link_id):
-    return (link_id // 100) % 10
-
-
-def get_gate_type(link_id):
-    return link_id % 100
 
 
 def convert_qiskit_to_pandora(qiskit_circuit: QuantumCircuit,

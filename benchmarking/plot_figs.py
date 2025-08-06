@@ -66,19 +66,95 @@ def fig1():
     plt.savefig("fig1.pdf", bbox_inches='tight', dpi=600)
 
 
+def fig1_V2():
+    df_seq = pd.read_csv('results/qiskit_pandora_tket_all.csv')
+    template_count = df_seq['n_templates']
+
+    pandora_times_1 = df_seq['pandora_1']
+    tket_times_1 = df_seq['tket_1']
+    qiskit_times_1 = df_seq['qiskit_1']
+
+    pandora_times_01 = df_seq['pandora_0.1']
+    tket_times_01 = df_seq['tket_0.1']
+    qiskit_times_01 = df_seq['qiskit_0.1']
+
+    pandora_times_10 = df_seq['pandora_10']
+    tket_times_10 = df_seq['tket_10']
+    qiskit_times_10 = df_seq['qiskit_10']
+
+    colors = {
+        "Pandora": {"1": "navy", "10": "navy", "01": "navy"},
+        "Qiskit": {"1": "lightpink", "10": "lightpink", "01": "lightpink"},
+        "TKET": {"1": "powderblue", "10": "powderblue", "01": "powderblue"},
+    }
+
+    linestyles = {
+        "Pandora": "solid",
+        "Qiskit": "dotted",
+        "TKET": "dashed"
+    }
+
+    fig = plt.figure(figsize=(4.7, 3.2), dpi=600)
+    gs = GridSpec(1, 1, height_ratios=[1], hspace=0.5)
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax1.grid(True, linestyle=':', color='gray', alpha=0.6)
+
+    # 0.1%
+    ax1.semilogy(template_count, pandora_times_01, marker='o', linestyle=linestyles['Pandora'],
+                 color=colors["Pandora"]["01"],
+                 label='Pandora 0.1%')
+    ax1.semilogy(template_count, tket_times_01, marker='o', linestyle=linestyles['TKET'], color=colors["TKET"]["01"],
+                 label='TKET 0.1%')
+    ax1.semilogy(template_count, qiskit_times_01, marker='o', linestyle=linestyles['Qiskit'],
+                 color=colors["Qiskit"]["01"],
+                 label='Qiskit 0.1%')
+
+    # 1%
+    ax1.semilogy(template_count, pandora_times_1, marker='D', linestyle=linestyles['Pandora'],
+                 color=colors["Pandora"]["1"],
+                 label='Pandora 1%')
+    ax1.semilogy(template_count, tket_times_1, marker='D', linestyle=linestyles['TKET'], color=colors["TKET"]["1"],
+                 label='TKET 1%')
+    ax1.semilogy(template_count, qiskit_times_1, marker='D', linestyle=linestyles['Qiskit'],
+                 color=colors["Qiskit"]["1"],
+                 label='Qiskit 1%')
+
+    # 10%
+    ax1.semilogy(template_count, pandora_times_10, marker='<', linestyle=linestyles['Pandora'],
+                 color=colors["Pandora"]["10"],
+                 label='Pandora 10%')
+    ax1.semilogy(template_count, tket_times_10, marker='<', linestyle=linestyles['TKET'], color=colors["TKET"]["10"],
+                 label='TKET 10%')
+    ax1.semilogy(template_count, qiskit_times_10, marker='<', linestyle=linestyles['Qiskit'],
+                 color=colors["Qiskit"]["10"],
+                 label='Qiskit 10%')
+
+    ax1.set_xlabel("Number of rewrites")
+    ax1.set_ylabel("Seconds")
+    ax1.legend()
+
+    plt.savefig("fig1v2.png", bbox_inches='tight', dpi=600)
+    plt.savefig("fig1v2.pdf", bbox_inches='tight', dpi=600)
+
+
 def fig2():
     df_fh = pd.read_csv(f'results/fh50_bench_final.csv')
-    df_adder = pd.read_csv(f'results/adder_improvement_3600.csv')
-    df_pandora = pd.read_csv(f'results/pandora_multi_final.csv')
+    df_adder = pd.read_csv(f'results/adder_improvement.csv')
+    df_pandora = pd.read_csv(f'results/pandora_multithreaded_speedups.csv')
 
-    threads_fh = df_fh['nprocs']
-    threads_pandora = df_pandora['nprocs']
+    threads_fh = df_fh['nprocs'][:5]
+    threads_pandora = df_pandora['nprocs'][:5]
 
-    speedup_fh = df_fh['speedup']
-    speedup_pandora = df_pandora['HYBRID speed']
+    speedup_fh = df_fh['speedup'][:5]
+    speedup_pandora = df_pandora['speedup'][:5]
 
     adders = df_adder['circuit']
     tcount_reduction = df_adder['improvement_3600']
+
+    print(threads_fh)
+    print(threads_pandora)
+    print(speedup_fh)
+    print(speedup_pandora)
 
     fig = plt.figure(figsize=(5, 5), dpi=600)
     gs = GridSpec(2, 2, hspace=0.5)
@@ -272,7 +348,8 @@ def fig5():
     ax2.bar(x + bar_width / 2, mqt_neq_total_20, width=bar_width, label='MQT 20q neq', color='lightsteelblue', zorder=2)
 
     ax2.plot(x, mqt_eq_check_20, marker='o', linestyle='--', color='coral', label='MQT 20q eq check', zorder=3)
-    ax2.plot(x, mqt_neq_check_20, marker='o', linestyle='--', color='mediumslateblue', label='MQT 20q neq check', zorder=3)
+    ax2.plot(x, mqt_neq_check_20, marker='o', linestyle='--', color='mediumslateblue', label='MQT 20q neq check',
+             zorder=3)
     ax2.plot(x, pandora_neq_total_20, marker='D', linestyle='-', color='red', label='Pandora 20q neq', zorder=3)
     ax2.plot(x, pandora_eq_total_20, marker='^', linestyle='-', color='maroon', label='Pandora 20q eq', zorder=3)
 
@@ -320,9 +397,10 @@ def fig_adders():
 
 
 if __name__ == "__main__":
-    fig1()
-    fig2()
-    fig3()
-    fig4()
-    fig5()
-    fig_adders()
+    # fig1()
+    # fig2()
+    # fig3()
+    # fig4()
+    # fig5()
+    # fig_adders()
+    fig1_V2()

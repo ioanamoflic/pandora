@@ -8,6 +8,7 @@ from pandora.gate_translator import In, Out, PandoraGateTranslator, \
     REQUIRES_ROTATION, REQUIRES_EXPONENT, PYLIQTR_ROTATION_TO_PANDORA
 
 from pandora.gates import PandoraGate, PandoraGateWrapper
+from pandora.pandora_util import get_link_id, get_gate_id, get_gate_port
 from pandora.qualtran_to_pandora_util import generator_get_pandora_compatible_batch_via_pyliqtr
 
 
@@ -140,7 +141,7 @@ def cirq_to_pandora(cirq_circuit: cirq.Circuit,
         for i, current_operation in enumerate(moment):
             # current gate is an initial gate with no prev values
             if isinstance(current_operation.gate, type(In())):
-                latest_conc_on_qubit[current_operation.qubits[0]] = last_id * 10
+                latest_conc_on_qubit[current_operation.qubits[0]] = get_link_id(last_id, 0, PandoraGateTranslator.In.value)
                 pandora_gates[last_id] = PandoraGate(gate_id=last_id,
                                                      gate_code=PandoraGateTranslator.In.value,
                                                      label=label)
@@ -162,11 +163,14 @@ def cirq_to_pandora(cirq_circuit: cirq.Circuit,
 
             # fill out missing 'next' links for the gates on the left
             for q_idx, q in enumerate(current_op_qubits):
-                previous_id, previous_order_qubit = latest_conc_on_qubit[q] // 10, latest_conc_on_qubit[q] % 10
+                previous_gate_id = get_gate_id(latest_conc_on_qubit[q])
+                previous_port_number = get_gate_port(latest_conc_on_qubit[q])
 
-                conc_id = last_id * 10 + q_idx
-                setattr(pandora_gates[previous_id], f'next_q{previous_order_qubit + 1}', conc_id)
-                latest_conc_on_qubit[q] = conc_id
+                # conc_id = last_id * 10 + q_idx
+                n_link_id = get_link_id(last_id, q_idx, current_pandora_gate.type)
+
+                setattr(pandora_gates[previous_gate_id], f'next_q{previous_port_number + 1}', n_link_id)
+                latest_conc_on_qubit[q] = n_link_id
 
             pandora_gates[last_id] = current_pandora_gate
             last_id += 1
