@@ -12,12 +12,13 @@ declare
 
     cx_next_q1 bigint;
     sg_next_id bigint;
-    cx_next_id bigint;
     cx_prev_id bigint;
     cx_prev_q1 bigint;
 
     new_next_for_sq bigint;
     new_prev_for_sq bigint;
+
+    pattern_count int;
 
     start_time timestamp with time zone;
 
@@ -27,7 +28,7 @@ begin
 	while pass_count > 0 loop
 
         for gate in
-            select * from linked_circuit
+            select * from linked_circuit --tablesample bernoulli(10)
                      where
                      id % nprocs = my_proc_id
                      and type in (15, 16, 17, 18)
@@ -35,59 +36,57 @@ begin
         loop
             select * into two_qubit_gate from linked_circuit where id = gate.id;
 
-            if two_qubit_gate.id is not null then
-                cx_next_q1 = two_qubit_gate.next_q1;
-                cx_prev_q1 = two_qubit_gate.prev_q1;
+            select count(*) into pattern_count from (select * from linked_circuit
+                                                     where id in (two_qubit_gate.id, div(two_qubit_gate.next_q1, 1000))
+                                                     for update skip locked
+                                                     ) as it;
+            if pattern_count != 2 then
+                commit;
+                continue;
+            end if;
 
-                cx_prev_id = div(two_qubit_gate.prev_q1, 1000);
-                cx_next_id := div(two_qubit_gate.next_q1, 1000);
+            select * into sg from linked_circuit where id = div(two_qubit_gate.next_q1, 1000);
 
-                select * into sg from linked_circuit where id = cx_next_id;
+            if two_qubit_gate.id is null or sg.id is null or sg.param != parameter or sg.type != single_type then
+                commit;
+                continue;
+            end if;
 
-                if sg.id is not null and sg.param=parameter then
-                    sg_next_id := div(sg.next_q1, 1000);
+            cx_prev_id = div(two_qubit_gate.prev_q1, 1000);
+            sg_next_id := div(sg.next_q1, 1000);
 
-                    select count(*) into distinct_count from (select distinct unnest(array[cx_prev_id, sg_next_id])) as it;
-                    select count(*) into distinct_existing from (select * from linked_circuit where id in (cx_prev_id, sg_next_id)
-                                                                                              for update skip locked) as it;
+            select count(*) into distinct_count from (select distinct unnest(array[cx_prev_id, sg_next_id])) as it;
+            select count(*) into distinct_existing from (select * from linked_circuit where id in (cx_prev_id, sg_next_id)
+                                                                                      for update skip locked) as it;
 
-                    if distinct_count != distinct_existing then
-                        commit;
-                        continue;
-                    end if;
+            if distinct_count != distinct_existing then
+                commit;
+                continue;
+            end if;
 
-                    -- Lock the CX
-                    select count(*) into distinct_count from (select * from linked_circuit where id in(two_qubit_gate.id, sg.id)
-                                                                                           for update skip locked) as it;
-                    if distinct_count != 2 then
-                        commit;
-                        continue;
-                    end if;
+            cx_next_q1 = two_qubit_gate.next_q1;
+            cx_prev_q1 = two_qubit_gate.prev_q1;
 
-                    new_next_for_sq := (two_qubit_gate.id * 10) * 100 + two_qubit_gate.type;
-                    new_prev_for_sq := (sg.id * 10) * 100 + sg.type;
+            new_next_for_sq := (two_qubit_gate.id * 10) * 100 + two_qubit_gate.type;
+            new_prev_for_sq := (sg.id * 10) * 100 + sg.type;
 
-                    if mod(div(two_qubit_gate.prev_q1, 100), 10) = 0 then
-                        update linked_circuit set next_q1 = new_prev_for_sq where id = cx_prev_id;
-                    else
-                        update linked_circuit set next_q2 = new_prev_for_sq where id = cx_prev_id;
-                    end if;
+            if mod(div(two_qubit_gate.prev_q1, 100), 10) = 0 then
+                update linked_circuit set next_q1 = new_prev_for_sq where id = cx_prev_id;
+            else
+                update linked_circuit set next_q2 = new_prev_for_sq where id = cx_prev_id;
+            end if;
 
-                    if mod(div(sg.next_q1, 100), 10) = 0 then
-                        update linked_circuit set prev_q1 = new_next_for_sq where id = sg_next_id;
-                    else
-                        update linked_circuit set prev_q2 = new_next_for_sq where id = sg_next_id;
-                    end if;
+            if mod(div(sg.next_q1, 100), 10) = 0 then
+                update linked_circuit set prev_q1 = new_next_for_sq where id = sg_next_id;
+            else
+                update linked_circuit set prev_q2 = new_next_for_sq where id = sg_next_id;
+            end if;
 
-                    update linked_circuit set (next_q1, prev_q1, visited) = (sg.next_q1, new_prev_for_sq, my_proc_id)
-                                          where id = two_qubit_gate.id;
-                    update linked_circuit set (next_q1, prev_q1) = (new_next_for_sq, cx_prev_q1) where id = sg.id;
+            update linked_circuit set (next_q1, prev_q1, visited) = (sg.next_q1, new_prev_for_sq, my_proc_id)
+                                  where id = two_qubit_gate.id;
+            update linked_circuit set (next_q1, prev_q1) = (new_next_for_sq, cx_prev_q1) where id = sg.id;
 
-                    commit; -- release locks
-
-                end if; -- end second gate match
-
-            end if; -- end first gate match
+            commit; -- release locks
 
         end loop; -- end gate loop
 
