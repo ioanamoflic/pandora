@@ -4,6 +4,7 @@ as
 $$
 declare
     cx record;
+    gate record;
 
     distinct_count int;
     distinct_existing int;
@@ -17,32 +18,49 @@ declare
 	right_h_q1_id bigint;
 	right_h_q2_id bigint;
 
-    left_q1_id bigint;
-    left_q2_id bigint;
-    right_q1_id bigint;
-    right_q2_id bigint;
+    -- used for computing the links
+    port_nr bigint;
+    gate_type bigint;
+
+    -- the links to the right and left
+    left_q1_link bigint;
+    left_q2_link bigint;
+    right_q1_link bigint;
+    right_q2_link bigint;
+
+
     cx_id_ctrl bigint;
     cx_id_tgt bigint;
 
     start_time timestamp;
 
 begin
+
+    -- might come as parameters to the stored procedure
+    port_nr := 0; -- single qubit gate has a single port with index 0
+    gate_type := 8; -- Hadamard
+
     start_time := CLOCK_TIMESTAMP();
 
     while pass_count > 0 loop
-        for cx in
-            select * from linked_circuit
+        for gate in
+            select id from linked_circuit
                      where id % nprocs = my_proc_id
                      and type in (15, 18)
         loop
-            if cx.id is null then
+            if gate.id is null then
                 continue;
             end if;
+
+            -- reselect from the database FRESH DATA :)
+            select * into cx from linked_circuit where id = gate.id;
 
             cx_prev_q1_id := div(cx.prev_q1, 1000);
             cx_prev_q2_id := div(cx.prev_q2, 1000);
             cx_next_q1_id := div(cx.next_q1, 1000);
             cx_next_q2_id := div(cx.next_q2, 1000);
+
+            -- raise notice 'cx %f has 4 margins: % % % %', cx.id, cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id;
 
             select count(*) into distinct_count from
                 (select distinct unnest(array[cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id])) as it;
@@ -66,44 +84,50 @@ begin
             cx_id_ctrl := (cx.id * 10 + 0) * 100 + cx.type;
             cx_id_tgt  := (cx.id * 10 + 1) * 100 + cx.type;
 
-            insert into linked_circuit values (default, cx.prev_q1, null, null, 8, 1, 0, false, cx_id_tgt, null, null, my_proc_id, cx.label, false, null)
+            -- TODO: shorten insert statetement
+            insert into linked_circuit(prev_q1, type, param, next_q1, visited, label) values (cx.prev_q1, gate_type, 1, cx_id_tgt, my_proc_id, cx.label)
                                                           returning id into left_h_q1_id;
-            insert into linked_circuit values (default, cx.prev_q2, null, null, 8, 1, 0, false, cx_id_ctrl, null, null, my_proc_id, cx.label, false, null)
+            insert into linked_circuit(prev_q1, type, param, next_q1, visited, label) values (cx.prev_q2, gate_type, 1, cx_id_ctrl, my_proc_id, cx.label)
                                                           returning id into left_h_q2_id;
-            left_q1_id := (left_h_q1_id * 10 + 0) * 100 + 8;
-            left_q2_id := (left_h_q2_id * 10 + 0) * 100 + 8;
-            insert into linked_circuit values (default, cx_id_tgt, null, null, 8, 1, 0, false, cx.next_q1, null, null, my_proc_id, cx.label, false, null)
+            insert into linked_circuit(prev_q1, type, param, next_q1, visited, label) values (cx_id_tgt, gate_type, 1, cx.next_q1, my_proc_id, cx.label)
                                                           returning id into right_h_q1_id;
-            insert into linked_circuit values (default, cx_id_ctrl, null, null, 8, 1, 0, false, cx.next_q2, null, null, my_proc_id, cx.label, false, null)
+            insert into linked_circuit(prev_q1, type, param, next_q1, visited, label) values (cx_id_ctrl, gate_type, 1, cx.next_q2,my_proc_id, cx.label)
                                                           returning id into right_h_q2_id;
-            right_q1_id := (right_h_q1_id * 10 + 0) * 100 + 8;
-            right_q2_id := (right_h_q2_id * 10 + 0) * 100 + 8;
+            -- raise notice 'cx %f is inserting 4 H: % % % %', cx.id, left_h_q1_id, left_h_q2_id, right_h_q1_id, right_h_q2_id;
 
-            -- flip the switch value and set visited
-            update linked_circuit set (prev_q1, prev_q2, next_q1, next_q2, switch, visited) = (left_q2_id, left_q1_id, right_q2_id, right_q1_id, not cx.switch, my_proc_id) where id = cx.id;
+
+            -- These are the links that the margins and CNOT should use
+            left_q1_link := left_h_q1_id * 1000 + port_nr * 100 + gate_type;
+            left_q2_link := left_h_q2_id * 1000 + port_nr * 100 + gate_type;
+            right_q1_link := right_h_q1_id * 1000 + port_nr * 100 + gate_type;
+            right_q2_link := right_h_q2_id * 1000 + port_nr * 100 + gate_type;
+            -- raise notice '     the corresponding links for the 4 H: % % % %', left_q1_link, left_q2_link, right_q1_link, right_q2_link;
+
+            -- Update the CNOT: flip the switch value and set visited
+            update linked_circuit set (prev_q1, prev_q2, next_q1, next_q2, switch, visited) = (left_q2_link, left_q1_link, right_q2_link, right_q1_link, not cx.switch, my_proc_id) where id = cx.id;
 
             if mod(div(cx.prev_q1, 100), 10) = 0 then
-                update linked_circuit set next_q1 = left_q1_id where id = cx_prev_q1_id;
+                update linked_circuit set next_q1 = left_q1_link where id = cx_prev_q1_id;
             else
-                update linked_circuit set next_q2 = left_q1_id where id = cx_prev_q1_id;
+                update linked_circuit set next_q2 = left_q1_link where id = cx_prev_q1_id;
             end if;
 
             if mod(div(cx.prev_q2, 100), 10) = 0 then
-                update linked_circuit set next_q1 = left_q2_id where id = cx_prev_q2_id;
+                update linked_circuit set next_q1 = left_q2_link where id = cx_prev_q2_id;
             else
-                update linked_circuit set next_q2 = left_q2_id where id = cx_prev_q2_id;
+                update linked_circuit set next_q2 = left_q2_link where id = cx_prev_q2_id;
             end if;
 
             if mod(div(cx.next_q1, 100), 10) = 0 then
-                update linked_circuit set prev_q1 = right_q1_id where id = cx_next_q1_id;
+                update linked_circuit set prev_q1 = right_q1_link where id = cx_next_q1_id;
             else
-                update linked_circuit set prev_q2 = right_q1_id where id = cx_next_q1_id;
+                update linked_circuit set prev_q2 = right_q1_link where id = cx_next_q1_id;
             end if;
 
             if mod(div(cx.next_q2, 100), 10) = 0 then
-                update linked_circuit set prev_q1 = right_q2_id where id = cx_next_q2_id;
+                update linked_circuit set prev_q1 = right_q2_link where id = cx_next_q2_id;
             else
-                update linked_circuit set prev_q2 = right_q2_id where id = cx_next_q2_id;
+                update linked_circuit set prev_q2 = right_q2_link where id = cx_next_q2_id;
             end if;
 
             commit; -- release locks
