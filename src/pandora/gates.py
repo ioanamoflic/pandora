@@ -139,18 +139,21 @@ class PandoraGateWrapper:
         Given a list of arbitrary cirq qubits, return the values of the qubits in that list which correspond to
         indices q1, q2, q3.
         """
+        nr_qubits = -1
         if self.pandora_gate.type in SINGLE_QUBIT_GATES:
-            if self.q[0] is None:
+            nr_qubits = 1
+        elif self.pandora_gate.type in TWO_QUBIT_GATES:
+            nr_qubits = 2
+        elif self.pandora_gate.type in THREE_QUBIT_GATES:
+            nr_qubits = 3
+
+        ret = []
+        for i in range(nr_qubits):
+            if self.q[i] is None:
                 raise PandoraGateWrappedMissingQubits
-            return [qubit_list[self.q[0]]]
-        if self.pandora_gate.type in TWO_QUBIT_GATES:
-            if self.q[0] is None or self.q[1] is None:
-                raise PandoraGateWrappedMissingQubits
-            return [qubit_list[self.q[0]], qubit_list[self.q[1]]]
-        if self.pandora_gate.type in THREE_QUBIT_GATES:
-            if self.q[0] is None or self.q[1] is None or self.q[2] is None:
-                raise PandoraGateWrappedMissingQubits
-            return [qubit_list[self.q[0]], qubit_list[self.q[1]], qubit_list[self.q[2]]]
+            ret.append(qubit_list[self.q[i]])
+
+        return ret
 
     def to_cirq_operation(self) -> cirq.GateOperation:
         """
