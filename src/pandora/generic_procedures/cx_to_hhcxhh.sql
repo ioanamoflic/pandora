@@ -35,8 +35,6 @@ declare
     start_time timestamp;
 
 begin
-
-    -- might come as parameters to the stored procedure
     port_nr := 0; -- single qubit gate has a single port with index 0
     gate_type := 8; -- Hadamard
 
@@ -44,21 +42,16 @@ begin
 
     while pass_count > 0 loop
         for gate in
-            select id from linked_circuit
+            select id from linked_circuit --tablesample bernoulli(10)
                      where id % nprocs = my_proc_id
                      and type in (15, 18)
         loop
-            if gate.id is null then
+            select * into cx from linked_circuit where id = gate.id for update skip locked;
+
+            if cx.id is null then
+                commit;
                 continue;
             end if;
-
-            -- reselect from the database FRESH DATA :)
-            select * into cx from linked_circuit where id = gate.id;
-
-            cx_prev_q1_id := div(cx.prev_q1, 1000);
-            cx_prev_q2_id := div(cx.prev_q2, 1000);
-            cx_next_q1_id := div(cx.next_q1, 1000);
-            cx_next_q2_id := div(cx.next_q2, 1000);
 
             select count(*) into distinct_count from
                 (select distinct unnest(array[cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id])) as it;
@@ -66,15 +59,14 @@ begin
                 (select * from linked_circuit where id in
                     (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id) for update skip locked) as it;
 
+
+            cx_prev_q1_id := div(cx.prev_q1, 1000);
+            cx_prev_q2_id := div(cx.prev_q2, 1000);
+            cx_next_q1_id := div(cx.next_q1, 1000);
+            cx_next_q2_id := div(cx.next_q2, 1000);
+
             -- Lock the 4 neighbours
             if distinct_count != distinct_existing then
-                commit;
-                continue;
-            end if;
-
-            -- Lock the CX
-            select count(*) into distinct_count from (select * from linked_circuit where id = cx.id for update skip locked) as it;
-            if distinct_count != 1 then
                 commit;
                 continue;
             end if;
