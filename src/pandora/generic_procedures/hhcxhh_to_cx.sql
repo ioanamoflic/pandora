@@ -7,6 +7,7 @@ declare
     distinct_existing int;
 
     cx record;
+    gate record;
     left_q1 record;
     left_q2 record;
     right_q1 record;
@@ -29,7 +30,7 @@ begin
     start_time := CLOCK_TIMESTAMP();
 
     while pass_count > 0 loop
-        for cx in
+        for gate in
             select * from linked_circuit
                      where
                          id % nprocs = my_proc_id and
@@ -37,6 +38,13 @@ begin
                        and prev_q1 % 100 = 8 and prev_q2 % 100 = 8
                        and next_q1 % 100 = 8 and next_q2 % 100 = 8
         loop
+
+            if gate.id is null then
+                continue;
+            end if;
+
+            select * into cx from linked_circuit where id = gate.id;
+
             -- Compute the Hadamard IDs
             cx_prev_q1_id := div(cx.prev_q1, 1000);
             cx_prev_q2_id := div(cx.prev_q2, 1000);
