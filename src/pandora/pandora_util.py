@@ -5,6 +5,34 @@ from pandora.exceptions import PandoraGateOrderingError, PandoraWrappedGateMissi
 from pandora.gate_translator import SINGLE_QUBIT_GATES, TWO_QUBIT_GATES, PandoraGateTranslator
 from pandora.gates import PandoraGateWrapper, PandoraGate
 
+"""
+    LinkID has the following format *IPTT where:
+    - unlimited number of digits for the gateid I
+    - one digit for the port P. For example, a CNOT gate has 2 ports, a Toffoli has 3 ports etc.
+    - two digits for the gate type T. For example, a Toffoli is 23, a CNOT is 15/18 etc.
+
+    Considering the LinkID X, in order to:
+    - get the gateid: X / 1000 will return the *I digits
+    - get the port number: (X / 100) % 10 will return the P digit
+    - get the type: X % 100 will return the T digits
+"""
+
+
+def get_link_id(gate_id, gate_port, gate_type):
+    return gate_id * 1000 + gate_port * 100 + gate_type
+
+
+def get_gate_id(link_id):
+    return link_id // 1000
+
+
+def get_gate_port(link_id):
+    return (link_id // 100) % 10
+
+
+def get_gate_type(link_id):
+    return link_id % 100
+
 
 def wrap_pandora_gates(pandora_gates: list[PandoraGate]) -> dict[int, PandoraGateWrapper]:
     """
@@ -121,7 +149,7 @@ def pandora_wrapped_to_cirq_circuit(wrapped_gates: list[PandoraGateWrapper],
             raise PandoraWrappedGateMissingLinks
         cirq_op = wrapped.to_cirq_operation()
         cirq_qubits = wrapped.get_gate_qubits_from_list(q)
-        circuit.append(cirq_op.on(*cirq_qubits))
+        circuit.append(cirq_op.on(*cirq_qubits).with_tags(str(wrapped.pandora_gate.id)))
 
     return circuit
 

@@ -1,4 +1,4 @@
-create or replace procedure linked_hhcxhh_to_cx_parallel(my_proc_id int, sys_range int, max_rewrite_count int, pass_count int, OUT elapsed_time INTERVAL)
+create or replace procedure linked_hhcxhh_to_cx_parallel(my_proc_id int, nprocs int, max_rewrite_count int, pass_count int, OUT elapsed_time INTERVAL)
     language plpgsql
 as
 $$
@@ -37,7 +37,7 @@ begin
             for cx in
                 select * from linked_circuit
                          where
-                             id % sys_range = my_proc_id and
+                             id % nprocs = my_proc_id and
                              type = 18
                            and prev_q1 % 100 = 8 and prev_q2 % 100 = 8
                            and next_q1 % 100 = 8 and next_q2 % 100 = 8
@@ -114,12 +114,12 @@ begin
 
                 delete from linked_circuit where id in (left_q1.id, left_q2.id, right_q1.id, right_q2.id);
 
---                 commit; -- release the cx original
             end loop; -- end gate loop
 
             commit; -- release the cx
 
             select count(*) into total_rewrite_count from linked_circuit where visited != -1;
+
         end loop; -- end rewrite count loop
 
         pass_count = pass_count - 1;
