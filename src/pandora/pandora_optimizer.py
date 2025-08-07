@@ -160,8 +160,7 @@ class PandoraOptimizer(Pandora):
         """
         type_left, type_right = gate_types
         if not self.utilize_bernoulli:
-            stored_procedure = f"call cancel_two_qubit({type_left}, {type_right}, {gate_param}, \
-                                {proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
+            stored_procedure = f"call cancel_two_qubit({type_left}, {type_right}, {gate_param}, {gate_param}, {proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
         else:
             stored_procedure = f"call cancel_two_qubit_bernoulli({type_left},{type_right},{gate_param}," \
                                f"{self.bernoulli_percentage},{self.pass_count})"
