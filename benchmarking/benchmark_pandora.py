@@ -40,9 +40,9 @@ if __name__ == "__main__":
 
     conn = get_connection(config_file_path=FILEPATH)
 
-    n_rounds = 100
+    n_rounds = 1
     nr_passes = 1
-    sample_percentage = 1
+    sample_percentage = 10
 
     pool = None
     if NPROCS > 0:
@@ -62,7 +62,7 @@ if __name__ == "__main__":
             proc_calls = []
             for proc_id in range(NPROCS):
                 proc_calls.append(
-                    f"call linked_hhcxhh_to_cx_parallel({proc_id}, {NPROCS}, {rewrites}, {nr_passes}, null)")
+                    f"call linked_hhcxhh_to_cx({proc_id}, {NPROCS}, {nr_passes}, 100)")
 
             reset_pandora(connection=conn, quantum_circuit=qc)
 
@@ -72,7 +72,7 @@ if __name__ == "__main__":
                 pool.map(map_procedure_call, proc_calls)
             else:
                 cursor = conn.cursor()
-                cursor.execute(f"call linked_hhcxhh_to_cx_seq({sample_percentage}, {nr_passes})")
+                cursor.execute(f"call linked_hhcxhh_to_cx_seq({nr_passes})")
                 cursor.close()
 
             tot_time = time.time() - start_time
