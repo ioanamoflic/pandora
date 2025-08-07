@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
     adder_circuit = get_adder(n_bits=N_BITS)
 
-    pandora_optimizer = PandoraOptimizer(utilize_bernoulli=True,
+    pandora_optimizer = PandoraOptimizer(utilize_bernoulli=False,
                                          bernoulli_percentage=10,
                                          timeout=600,
                                          logger_id=N_BITS,
