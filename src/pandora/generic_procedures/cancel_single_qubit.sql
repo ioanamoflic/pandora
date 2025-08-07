@@ -3,15 +3,23 @@ create or replace procedure cancel_single_qubit(type_1 int, type_2 int, param_1 
 as
 $$
 declare
-    first_prev_id bigint;
-    second_next_id bigint;
-
     gate record;
     first record;
     second record;
 
-    a record;
-    b record;
+    m11 record;
+    m12 record;
+    m13 record;
+    m21 record;
+    m22 record;
+    m23 record;
+
+    m11_id bigint;
+    m12_id bigint;
+    m13_id bigint;
+    m21_id bigint;
+    m22_id bigint;
+    m23_id bigint;
 
 	start_time timestamp;
 
@@ -24,8 +32,8 @@ begin
             select * from linked_circuit
                      where
                        id % nprocs = my_proc_id
-                       and type = type_1
                        and param = param_1
+                       and type = type_1
                        and mod(next_q1, 100) = type_2
         loop
             select * into first from linked_circuit where id = gate.id for update skip locked;
@@ -41,27 +49,27 @@ begin
                 continue;
             end if;
 
-            first_prev_id := div(first.prev_q1, 1000);
-            second_next_id := div(second.next_q1, 1000);
+            m11_id := div(first.prev_q1, 1000);
+            m21_id := div(second.next_q1, 1000);
 
-            select * into a from linked_circuit where id = first_prev_id for update skip locked;
-            select * into b from linked_circuit where id = second_next_id for update skip locked;
+            select * into m11 from linked_circuit where id = m11_id for update skip locked;
+            select * into m21 from linked_circuit where id = m21_id for update skip locked;
 
-            if a.id is null or b.id is null then
+            if m11.id is null or m21.id is null then
                 commit;
                 continue;
             end if;
 
             if mod(div(first.prev_q1, 100), 10) = 0 then
-                update linked_circuit set next_q1 = second.next_q1 where id = first_prev_id;
+                update linked_circuit set next_q1 = second.next_q1 where id = m11_id;
             else
-                update linked_circuit set next_q2 = second.next_q1 where id = first_prev_id;
+                update linked_circuit set next_q2 = second.next_q1 where id = m11_id;
             end if;
 
             if mod(div(second.next_q1, 100), 10) = 0 then
-                update linked_circuit set prev_q1 = first.prev_q1 where id = second_next_id;
+                update linked_circuit set prev_q1 = first.prev_q1 where id = m21_id;
             else
-                update linked_circuit set prev_q2 = first.prev_q1 where id = second_next_id;
+                update linked_circuit set prev_q2 = first.prev_q1 where id = m21_id;
             end if;
 
             delete from linked_circuit where id in (first.id, second.id);
