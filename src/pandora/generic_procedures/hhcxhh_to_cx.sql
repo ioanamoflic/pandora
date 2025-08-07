@@ -3,9 +3,6 @@ create or replace procedure linked_hhcxhh_to_cx(my_proc_id int, nprocs int, pass
 as
 $$
 declare
-    distinct_count int;
-    distinct_existing int;
-
     cx record;
     gate record;
     left_q1 record;
@@ -25,9 +22,17 @@ declare
 	right_q1_id bigint;
 	right_q2_id bigint;
 
+    h_type int;
+
+    a record;
+    b record;
+    c record;
+    d record;
+
 	start_time timestamp;
 begin
     start_time := CLOCK_TIMESTAMP();
+    h_type := 8;
 
     while pass_count > 0 loop
         for gate in
@@ -39,11 +44,12 @@ begin
                        and next_q1 % 100 = 8 and next_q2 % 100 = 8
         loop
 
-            if gate.id is null then
+            select * into cx from linked_circuit where id = gate.id for update skip locked;
+
+            if cx.id is null then
+                commit;
                 continue;
             end if;
-
-            select * into cx from linked_circuit where id = gate.id;
 
             -- Compute the Hadamard IDs
             cx_prev_q1_id := div(cx.prev_q1, 1000);
@@ -52,10 +58,20 @@ begin
             cx_next_q2_id := div(cx.next_q2, 1000);
 
             -- Select the Hadamards
-            select * into left_q1 from linked_circuit where id=cx_prev_q1_id;
-            select * into left_q2 from linked_circuit where id=cx_prev_q2_id;
-            select * into right_q1 from linked_circuit where id=cx_next_q1_id;
-            select * into right_q2 from linked_circuit where id=cx_next_q2_id;
+            select * into left_q1 from linked_circuit where id=cx_prev_q1_id for update skip locked;
+            select * into left_q2 from linked_circuit where id=cx_prev_q2_id for update skip locked;
+            select * into right_q1 from linked_circuit where id=cx_next_q1_id for update skip locked;
+            select * into right_q2 from linked_circuit where id=cx_next_q2_id for update skip locked;
+
+            if left_q1.id is null or left_q2.id is null or right_q1.id is null or right_q2.id is null then
+                commit;
+                continue;
+            end if;
+
+            if left_q1.type != h_type or left_q2.type != h_type or right_q1.type != h_type or right_q2.type != h_type then
+                commit;
+                continue;
+            end if;
 
             -- Compute the IDs of the Hadamard neighbours
             left_q1_id := div(left_q1.prev_q1, 1000);
@@ -63,21 +79,13 @@ begin
             right_q1_id := div(right_q1.next_q1, 1000);
             right_q2_id := div(right_q2.next_q1, 1000);
 
-            -- How many neighbours are there?
-            select count(*) into distinct_count from (select distinct unnest(array[left_q1_id, left_q2_id, right_q1_id, right_q2_id])) as it;
+            select * into a from linked_circuit where id=left_q1_id for update skip locked;
+            select * into b from linked_circuit where id=left_q2_id for update skip locked;
+            select * into c from linked_circuit where id=right_q1_id for update skip locked;
+            select * into d from linked_circuit where id=right_q2_id for update skip locked;
 
-            -- Lock the neighbours
-            select count(*) into distinct_existing from
-                                                           (select * from linked_circuit where id in (left_q1_id, left_q2_id, right_q1_id, right_q2_id) for update skip locked) as it;
-
-            -- Check that the number of locked neighbours is equal to the number of neighbours
-            if distinct_count != distinct_existing then
-                continue;
-            end if;
-
-            -- Lock the Hadamards and CX
-            select count(*) into distinct_count from (select * from linked_circuit where id in (left_q1.id, left_q2.id, right_q1.id, right_q2.id, cx.id) for update skip locked) as it;
-            if distinct_count != 5 then
+            if a.id is null or b.id is null or c.id is null or d.id is null then
+                commit;
                 continue;
             end if;
 
