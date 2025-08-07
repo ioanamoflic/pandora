@@ -75,13 +75,17 @@ if __name__ == "__main__":
     else:
         N_BITS = int(sys.argv[1])
 
+    # nproc has to be 24
+    # dedicated_nproc = 1
+    # set nproc accordingly
+
     adder_circuit = get_adder(n_bits=N_BITS)
 
     pandora_optimizer = PandoraOptimizer(utilize_bernoulli=True,
                                          bernoulli_percentage=10,
                                          timeout=600,
                                          logger_id=N_BITS,
-                                         nproc=4)  # dedicated_nproc will override this value
+                                         nproc=24)
 
     pandora_optimizer.build_circuit(circuit=adder_circuit)
 
@@ -99,59 +103,75 @@ if __name__ == "__main__":
     CX = PandoraGateTranslator.CXPowGate.value
 
     # cancelling Hadamards
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(H, H), gate_params=(1, 1), dedicated_nproc=4)
+    pandora_optimizer.cancel_single_qubit_gates(proc_id=1, gate_types=(H, H), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(proc_id=2, gate_types=(H, H), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(proc_id=3, gate_types=(H, H), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(proc_id=4, gate_types=(H, H), gate_params=(1, 1), dedicated_nproc=1)
+
     # cancelling Z gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z, Z), gate_params=(1, 1), dedicated_nproc=2)
+    pandora_optimizer.cancel_single_qubit_gates(proc_id=5, gate_types=(Z, Z), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(proc_id=6, gate_types=(Z, Z), gate_params=(1, 1), dedicated_nproc=1)
+
     # cancelling T+T† gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z_rot, Z_rot), gate_params=(0.25, -0.25), dedicated_nproc=2)
+    pandora_optimizer.cancel_single_qubit_gates(proc_id=7, gate_types=(Z_rot, Z_rot), gate_params=(0.25, -0.25),
+                                                dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(proc_id=8, gate_types=(Z_rot, Z_rot), gate_params=(0.25, -0.25),
+                                                dedicated_nproc=1)
+
     # cancelling S+S† gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z_rot, Z_rot), gate_params=(0.5, -0.5), dedicated_nproc=2)
+    pandora_optimizer.cancel_single_qubit_gates(proc_id=9, gate_types=(Z_rot, Z_rot), gate_params=(0.5, -0.5),
+                                                dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(proc_id=10, gate_types=(Z_rot, Z_rot), gate_params=(0.5, -0.5),
+                                                dedicated_nproc=1)
+
     # cancelling X gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(X, X), gate_params=(1, 1), dedicated_nproc=2)
+    pandora_optimizer.cancel_single_qubit_gates(proc_id=11, gate_types=(X, X), gate_params=(1, 1), dedicated_nproc=1)
+    pandora_optimizer.cancel_single_qubit_gates(proc_id=12, gate_types=(X, X), gate_params=(1, 1), dedicated_nproc=1)
+
 
     """
         Two-qubit gate cancellations
     """
 
     # cancelling CX gates
-    pandora_optimizer.cancel_two_qubit_gates(gate_types=(CX, CX), gate_param=1, dedicated_nproc=1)
+    pandora_optimizer.cancel_two_qubit_gates(proc_id=13, gate_types=(CX, CX), gate_param=1, dedicated_nproc=1)
     """
         Fusing gates
     """
 
     # TT = S
-    pandora_optimizer.fuse_single_qubit_gates(gate_types=(Z_rot, Z_rot, Z_rot), gate_params=(0.25, 0.25, 0.5),
+    pandora_optimizer.fuse_single_qubit_gates(proc_id=14, gate_types=(Z_rot, Z_rot, Z_rot), gate_params=(0.25, 0.25, 0.5),
                                               dedicated_nproc=1)
     # T†T† = S†
-    pandora_optimizer.fuse_single_qubit_gates(gate_types=(Z_rot, Z_rot, Z_rot), gate_params=(-0.25, -0.25, -0.5),
+    pandora_optimizer.fuse_single_qubit_gates(proc_id=15, gate_types=(Z_rot, Z_rot, Z_rot), gate_params=(-0.25, -0.25, -0.5),
                                               dedicated_nproc=1)
     # SS = Z
-    pandora_optimizer.fuse_single_qubit_gates(gate_types=(Z_rot, Z_rot, Z_rot), gate_params=(0.5, 0.5, 1.0),
+    pandora_optimizer.fuse_single_qubit_gates(proc_id=16, gate_types=(Z_rot, Z_rot, Z_rot), gate_params=(0.5, 0.5, 1.0),
                                               dedicated_nproc=1)
     # S†S† = Z
-    pandora_optimizer.fuse_single_qubit_gates(gate_types=(Z_rot, Z_rot, Z), gate_params=(-0.5, -0.5, 1.0),
+    pandora_optimizer.fuse_single_qubit_gates(proc_id=17, gate_types=(Z_rot, Z_rot, Z), gate_params=(-0.5, -0.5, 1.0),
                                               dedicated_nproc=1)
     """
         Commuting Z-rotations to the left
     """
 
     # commute Z to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=Z, gate_param=1, dedicated_nproc=1)
+    pandora_optimizer.commute_rotation_with_control_left(proc_id=18, gate_type=Z, gate_param=1, dedicated_nproc=1)
     # commute S to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=Z_rot, gate_param=0.5, dedicated_nproc=1)
+    pandora_optimizer.commute_rotation_with_control_left(proc_id=19, gate_type=Z_rot, gate_param=0.5, dedicated_nproc=1)
     # commute S† to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=Z_rot, gate_param=-0.5, dedicated_nproc=1)
+    pandora_optimizer.commute_rotation_with_control_left(proc_id=20, gate_type=Z_rot, gate_param=-0.5, dedicated_nproc=1)
     # commute T to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=Z_rot, gate_param=0.25, dedicated_nproc=1)
+    pandora_optimizer.commute_rotation_with_control_left(proc_id=21, gate_type=Z_rot, gate_param=0.25, dedicated_nproc=1)
     # commute T† to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=Z_rot, gate_param=-0.25, dedicated_nproc=1)
+    pandora_optimizer.commute_rotation_with_control_left(proc_id=22, gate_type=Z_rot, gate_param=-0.25, dedicated_nproc=1)
 
     """
         Reversing CNOTs
     """
 
-    pandora_optimizer.hhcxhh_to_cx(dedicated_nproc=1)
-    pandora_optimizer.cx_to_hhcxhh(dedicated_nproc=1)
+    pandora_optimizer.hhcxhh_to_cx(proc_id=13, dedicated_nproc=23)
+    pandora_optimizer.cx_to_hhcxhh(proc_id=13, dedicated_nproc=24)
 
     """
         Log

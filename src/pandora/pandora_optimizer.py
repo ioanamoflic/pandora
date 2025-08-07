@@ -28,18 +28,18 @@ class PandoraOptimizer(Pandora):
             fine-grained control over a specific optimisation type.
 
         For running a fixed number of optimisations:
-            * set run_nr to control the number of times a certain rewrite rule will be applied.
+            * set pass_count to control the number of times a certain rewrite rule will be applied.
               This is most likely used for testing purposes.
-            * e.g. for run_nr = 1000, the optimisation will run until it applies its rewrite rule exactly 1000 times. If
+            * e.g. for pass_count = 1000, the optimisation will run until it applies its rewrite rule exactly 1000 times. If
               the optimisation is not applicable, the optimisation will run infinitely (or until timeout).
 
         For running optimisations in a simulated annealing-like way:
-            *  run_nr defaults to math.inf, therefore the optimisations run infinitely or until timeout (given in sec)
+            *  pass_count defaults to math.inf, therefore the optimisations run infinitely or until timeout (given in sec)
                time has passed
     """
 
     LARGE_RUN_NR = int(1e6)
-    RESET_ID = int(1e6)
+    RESET_ID = int(5e6)
     LOG_SLEEP_FOR = 1  # sleep for 1 seconds when logging optimisations
 
     def __init__(self,
@@ -48,11 +48,11 @@ class PandoraOptimizer(Pandora):
                  nproc: int = 1,
                  timeout: int = 100,
                  block_size: int = None,
-                 run_nr: int = LARGE_RUN_NR,
+                 pass_count: int = LARGE_RUN_NR,
                  logger_id: int = None
                  ):
         super().__init__()
-        self.run_nr = run_nr
+        self.pass_count = pass_count
         self.block_size = block_size
         self.nproc = nproc
         self.utilize_bernoulli = utilize_bernoulli
@@ -119,6 +119,7 @@ class PandoraOptimizer(Pandora):
 
     def cancel_single_qubit_gates(self,
                                   gate_types: tuple[PandoraGateTranslator, PandoraGateTranslator],
+                                  proc_id=0,
                                   gate_params: tuple[float, float] = (1.0, 1.0),
                                   dedicated_nproc: int = None) -> None:
         """
@@ -135,15 +136,16 @@ class PandoraOptimizer(Pandora):
 
         if not self.utilize_bernoulli:
             stored_procedure = f"call cancel_single_qubit({type_left}, {type_right}, {param_left}, {param_right}," \
-                               f"{self.block_size},{self.run_nr})"
+                               f"{proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
         else:
             stored_procedure = f"call cancel_single_qubit_bernoulli({type_left}, {type_right}, {param_left}, " \
-                               f"{param_right},{self.bernoulli_percentage}, {self.run_nr})"""
+                               f"{param_right},{self.bernoulli_percentage}, {self.pass_count})"""
 
         self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
 
     def cancel_two_qubit_gates(self,
                                gate_types: tuple[PandoraGateTranslator, PandoraGateTranslator],
+                               proc_id=0,
                                gate_param: float = 1.0,
                                dedicated_nproc: int = None) -> None:
         """
@@ -159,13 +161,14 @@ class PandoraOptimizer(Pandora):
         type_left, type_right = gate_types
         if not self.utilize_bernoulli:
             stored_procedure = f"call cancel_two_qubit({type_left}, {type_right}, {gate_param}, \
-                                {self.block_size},{self.run_nr})"
+                                {proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
         else:
             stored_procedure = f"call cancel_two_qubit_bernoulli({type_left},{type_right},{gate_param}," \
-                               f"{self.bernoulli_percentage},{self.run_nr})"
+                               f"{self.bernoulli_percentage},{self.pass_count})"
         self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
 
     def hhcxhh_to_cx(self,
+                     proc_id=0,
                      dedicated_nproc: int = None) -> None:
 
         """
@@ -179,13 +182,14 @@ class PandoraOptimizer(Pandora):
         """
 
         if not self.utilize_bernoulli:
-            stored_procedure = f"call linked_hhcxhh_to_cx({self.block_size},{self.run_nr})"
+            stored_procedure = f"call linked_hhcxhh_to_cx({proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
         else:
-            stored_procedure = f"call linked_hhcxhh_to_cx_bernoulli({self.bernoulli_percentage},{self.run_nr})"
+            stored_procedure = f"call linked_hhcxhh_to_cx_bernoulli({self.bernoulli_percentage},{self.pass_count})"
 
         self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
 
     def cx_to_hhcxhh(self,
+                     proc_id=0,
                      dedicated_nproc: int = None) -> None:
 
         """
@@ -199,14 +203,15 @@ class PandoraOptimizer(Pandora):
         """
 
         if not self.utilize_bernoulli:
-            stored_procedure = f"call linked_cx_to_hhcxhh({self.block_size},{self.run_nr})"
+            stored_procedure = f"call linked_cx_to_hhcxhh({proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
         else:
-            stored_procedure = f"call linked_cx_to_hhcxhh_bernoulli({self.bernoulli_percentage},{self.run_nr})"
+            stored_procedure = f"call linked_cx_to_hhcxhh_bernoulli({self.bernoulli_percentage},{self.pass_count})"
 
         self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
 
     def fuse_single_qubit_gates(self,
                                 gate_types: tuple[PandoraGateTranslator, PandoraGateTranslator, PandoraGateTranslator],
+                                proc_id=0,
                                 gate_params: tuple[float, float, float] = (1.0, 1.0, 1.0),
                                 dedicated_nproc: int = None
                                 ) -> None:
@@ -222,16 +227,17 @@ class PandoraOptimizer(Pandora):
         param_left, param_right, param_result = gate_params
         if not self.utilize_bernoulli:
             stored_procedure = f"call fuse_single_qubit({type_left},{type_right},{type_result},{param_left}," \
-                               f"{param_right},{param_result},{self.block_size},{self.run_nr})"
+                               f"{param_right},{param_result},{proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
         else:
             stored_procedure = f"call fuse_single_qubit_bernoulli({type_left},{type_right},{type_result}," \
-                               f"{param_left},{param_right},{param_result},{self.bernoulli_percentage},{self.run_nr})"
+                               f"{param_left},{param_right},{param_result},{self.bernoulli_percentage},{self.pass_count})"
 
         self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
 
     def commute_rotation_with_control_left(self,
                                            gate_type: PandoraGateTranslator,
                                            gate_param: float = 1.0,
+                                           proc_id=0,
                                            dedicated_nproc: int = None) -> None:
 
         """
@@ -246,16 +252,17 @@ class PandoraOptimizer(Pandora):
 
         if not self.utilize_bernoulli:
             stored_procedure = f"call commute_single_control_right({gate_type},{gate_param}," \
-                               f"{self.block_size}, {self.run_nr})"
+                               f"{proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
         else:
             stored_procedure = f"call commute_single_control_right_bernoulli({gate_type},{gate_param}," \
-                               f"{self.bernoulli_percentage}, {self.run_nr})"
+                               f"{self.bernoulli_percentage}, {self.pass_count})"
 
         self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
 
     def commute_rotation_with_control_right(self,
                                             gate_type: PandoraGateTranslator,
                                             gate_param: float = 1.0,
+                                            proc_id=0,
                                             dedicated_nproc: int = None) -> None:
 
         """
@@ -270,10 +277,10 @@ class PandoraOptimizer(Pandora):
 
         if not self.utilize_bernoulli:
             stored_procedure = f"call commute_single_control_left({gate_type},{gate_param}," \
-                               f"{self.block_size},{self.run_nr})"
+                               f"{proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
         else:
             stored_procedure = f"call commute_single_control_left_bernoulli({gate_type}, {gate_param}, " \
-                               f"{self.bernoulli_percentage},{self.run_nr})"
+                               f"{self.bernoulli_percentage},{self.pass_count})"
 
         self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
 
@@ -293,8 +300,8 @@ class PandoraOptimizer(Pandora):
 
         """
         if not self.utilize_bernoulli:
-            stored_procedure = f"call commute_cx_ctrl_target({self.block_size},{self.run_nr})"
+            stored_procedure = f"call commute_cx_ctrl_target({self.block_size},{self.pass_count})"
         else:
-            stored_procedure = f"call commute_cx_ctrl_target_bernoulli({self.bernoulli_percentage},{self.run_nr})"
+            stored_procedure = f"call commute_cx_ctrl_target_bernoulli({self.bernoulli_percentage},{self.pass_count})"
 
         self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
