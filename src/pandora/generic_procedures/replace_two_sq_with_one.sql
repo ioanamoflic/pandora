@@ -11,11 +11,10 @@ declare
     second record;
     gate record;
 
-    distinct_count bigint;
-    distinct_existing bigint;
-    new_next bigint;
+    a record;
+    b record;
 
-    pattern_count int;
+    new_next bigint;
 
     start_time timestamp;
 
@@ -25,49 +24,39 @@ begin
 	 while pass_count > 0 loop
 
         for gate in
-            select * from linked_circuit --tablesample bernoulli(10)
+            select * from linked_circuit
             where id % nprocs = my_proc_id
             and type=type_1
             and mod(next_q1, 100) = type_2
             and param=param1
         loop
-            select * into first from linked_circuit where id = gate.id;
-            if first.id is null then
-                continue;
-            end if;
+            select * into first from linked_circuit where id = gate.id for update skip locked;
+            select * into second from linked_circuit where id = div(first.next_q1, 1000) for update skip locked;
 
-            select count(*) into pattern_count from (select * from linked_circuit
-                                                     where id in (first.id, div(first.next_q1, 1000))
-                                                     for update skip locked
-                                                     ) as it;
-            if pattern_count != 2 then
+            if first.id is null or second.id is null then
                 commit;
                 continue;
             end if;
 
-			select * into second from linked_circuit where id = div(first.next_q1, 1000);
-
-			if first.id is null or second.id is null or second.param != param2 or second.type != type_2 or
-			       div(second.prev_q1, 1000) != first.id then
+			if second.param != param2 or second.type != type_2 or div(second.prev_q1, 1000) != first.id then
 			    commit;
 			    continue;
 			end if;
 
-            second_next_id := div(second.next_q1, 1000);
             first_prev_id := div(first.prev_q1, 1000);
+            second_next_id := div(second.next_q1, 1000);
 
-            select count(*) into distinct_count from (select distinct unnest(array[first_prev_id, second_next_id])) as it;
-            select count(*) into distinct_existing from (select id from linked_circuit where id in (first_prev_id, second_next_id)
-                                                                                       for update skip locked) as it;
-            if distinct_count != distinct_existing then
-               commit;
-               continue;
+            select * into a from linked_circuit where id = first_prev_id for update skip locked;
+            select * into b from linked_circuit where id = second_next_id for update skip locked;
+
+            if a.id is null or b.id is null then
+                commit;
+                continue;
             end if;
 
-            new_next := (first.id * 10) * 100 + first.type;
+            new_next := (first.id * 10) * 100 + type_replace;
 
             update linked_circuit set (type, next_q1, param) = (type_replace, second.next_q1, param_replace) where id = first.id;
---             select param from linked_circuit where id = first.id;
 
             if mod(div(second.next_q1, 100), 10) = 0 then
                 update linked_circuit set prev_q1 = new_next where id = second_next_id;
