@@ -123,11 +123,15 @@ begin
             -- this procedure is too fast
             perform pg_sleep(0.1);
 
+            if extract(epoch from (clock_timestamp() - start_time)) > timeout then
+                exit;
+            end if;
+
         end loop; -- end gate loop
 
-        if extract(epoch from (clock_timestamp() - start_time)) > timeout then
-            exit;
-        end if;
+--         if extract(epoch from (clock_timestamp() - start_time)) > timeout then
+--             exit;
+--         end if;
 
         pass_count = pass_count - 1;
 
