@@ -34,6 +34,11 @@ declare
 
     start_time timestamp;
 
+    a record;
+    b record;
+    c record;
+    d record;
+
 begin
     port_nr := 0; -- single qubit gate has a single port with index 0
     gate_type := 8; -- Hadamard
@@ -58,11 +63,16 @@ begin
             cx_next_q1_id := div(cx.next_q1, 1000);
             cx_next_q2_id := div(cx.next_q2, 1000);
 
+            select * into a from linked_circuit where id = cx_prev_q1_id for update skip locked;
+            select * into b from linked_circuit where id = cx_prev_q2_id for update skip locked;
+            select * into c from linked_circuit where id = cx_next_q1_id for update skip locked;
+            select * into d from linked_circuit where id = cx_next_q2_id for update skip locked;
+
+            select count(*) into distinct_existing from linked_circuit where id in
+                (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id);
+
             select count(*) into distinct_count from
-                (select distinct unnest(array[cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id])) as it;
-            select count(*) into distinct_existing from
-                (select * from linked_circuit where id in
-                    (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id) for update skip locked) as it;
+                (select distinct unnest(array[a, b, c, d])) as it;
 
             -- Lock the 4 neighbours
             if distinct_count != distinct_existing then
