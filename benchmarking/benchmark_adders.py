@@ -170,8 +170,8 @@ if __name__ == "__main__":
         Reversing CNOTs
     """
 
-    pandora_optimizer.hhcxhh_to_cx(proc_id=13, dedicated_nproc=23)
-    pandora_optimizer.cx_to_hhcxhh(proc_id=13, dedicated_nproc=24)
+    pandora_optimizer.hhcxhh_to_cx(proc_id=23, dedicated_nproc=1)
+    pandora_optimizer.cx_to_hhcxhh(proc_id=24, dedicated_nproc=1)
 
     """
         Log
