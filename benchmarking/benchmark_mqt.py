@@ -183,11 +183,20 @@ if __name__ == "__main__":
                 else:
                     circ2 = qiskit.qasm3.load(f"circ2_{q}_{i}_{EQUIV}_{CNT}.qasm")
 
+                # ZX
+                # run_simulation_checker = False
+                # run_alternating_checker = False
+
+                # DD
+                # run_simulation_checker=False
+                # run_zx_checker=False
+
                 st_time_mqt = time.time()
                 result = verify(circ1, circ2,
                                 timeout=timeout,
                                 run_simulation_checker=False,
-                                run_zx_checker=True)
+                                run_alterating_checker=False)
+
                 check_time = time.time() - st_time_mqt
                 mqt_check_time = result.check_time
                 equiv = result.equivalence
