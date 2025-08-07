@@ -109,9 +109,6 @@ begin
             raise notice 'margins % % % %', m11_id, m12_id, m21_id, m22_id;
             raise notice 'ports % % % %', first_port0, first_port1, second_port0, second_port1;
 
-            -- Update the CNOT: flip the switch value and set visited
-            update linked_circuit set (prev_q1, prev_q2, next_q1, next_q2, switch, visited) = (left_h_q2.prev_q1, left_h_q1.prev_q1, right_h_q2.next_q1, right_h_q1.next_q1, not first.switch, my_proc_id) where id = first.id;
-
             if mod(div(first.prev_q1, 100), 10) = 0 then
                 update linked_circuit set next_q1 = first_port0 where id = m11_id;
             else
@@ -135,6 +132,9 @@ begin
             else
                 update linked_circuit set prev_q2 = second_port1 where id = m22_id;
             end if;
+
+            -- Update the CNOT: flip the switch value and set visited
+            update linked_circuit set (prev_q1, prev_q2, next_q1, next_q2, switch, visited) = (left_h_q2.prev_q1, left_h_q1.prev_q1, right_h_q2.next_q1, right_h_q1.next_q1, not first.switch, my_proc_id) where id = first.id;
 
             delete from linked_circuit where id in (left_h_q1.id, left_h_q2.id, right_h_q1.id, right_h_q2.id);
 

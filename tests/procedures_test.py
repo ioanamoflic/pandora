@@ -265,8 +265,8 @@ def test_cx_to_hhcxhh_b(connection):
                                              remove_io_gates=False,
                                              just_count=False,
                                              is_test=False)
-    print(initial_circuit)
-    print(extracted_circuit)
+    # print(initial_circuit)
+    # print(extracted_circuit)
 
     qubit_map = dict(
         zip(
@@ -287,7 +287,12 @@ def test_hhcxhh_to_cx_a(connection):
     reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
 
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
-    initial_circuit = cirq.Circuit([cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q1, q2), cirq.H.on(q1), cirq.H.on(q2)])
+    # initial_circuit = cirq.Circuit([cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q1, q2), cirq.H.on(q1), cirq.H.on(q2)])
+    initial_circuit = benchmark_cirq.create_random_circuit(n_qubits=3, n_templates=3,
+                                                           templates=['add_base_change'],
+                                                           add_margins=False)
+    print(initial_circuit)
+
     final_circuit = cirq.Circuit([cirq.CX.on(q2, q1)])
 
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
@@ -304,6 +309,10 @@ def test_hhcxhh_to_cx_a(connection):
                                              remove_io_gates=True,
                                              just_count=False,
                                              is_test=False)
+
+
+    print(extracted_circuit)
+
     qubit_map = dict(
         zip(
             sorted(final_circuit.all_qubits()),
@@ -770,7 +779,7 @@ def check_logical_correctness_random(connection, stop_after: int):
         # (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         # (1, f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
     ]
 
     thread_procedures = all_thread_proc
@@ -868,7 +877,7 @@ if __name__ == "__main__":
     # test_cx_to_hhcxhh_a(conn)
     # test_cx_to_hhcxhh_b(conn)
     test_hhcxhh_to_cx_a(conn)
-    test_hhcxhh_to_cx_b(conn)
+    # test_hhcxhh_to_cx_b(conn)
     # test_replace_two_sq_with_one(conn)
     # test_case_1(conn)
     # test_case_2(conn)
