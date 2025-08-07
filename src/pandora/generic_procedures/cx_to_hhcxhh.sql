@@ -6,9 +6,6 @@ declare
     cx record;
     gate record;
 
-    distinct_count int;
-    distinct_existing int;
-
     cx_prev_q1_id bigint;
 	cx_prev_q2_id bigint;
 	cx_next_q1_id bigint;
@@ -28,7 +25,6 @@ declare
     right_q1_link bigint;
     right_q2_link bigint;
 
-
     cx_id_ctrl bigint;
     cx_id_tgt bigint;
 
@@ -47,7 +43,7 @@ begin
 
     while pass_count > 0 loop
         for gate in
-            select id from linked_circuit --tablesample bernoulli(10)
+            select id from linked_circuit
                      where id % nprocs = my_proc_id
                      and type in (15, 18)
         loop
@@ -68,14 +64,8 @@ begin
             select * into c from linked_circuit where id = cx_next_q1_id for update skip locked;
             select * into d from linked_circuit where id = cx_next_q2_id for update skip locked;
 
-            select count(*) into distinct_existing from linked_circuit where id in
-                (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id);
-
-            select count(*) into distinct_count from
-                (select distinct unnest(array[a, b, c, d])) as it;
-
             -- Lock the 4 neighbours
-            if distinct_count != distinct_existing then
+            if a.id is null or b.id is null or c.id is null or d.id is null then
                 commit;
                 continue;
             end if;

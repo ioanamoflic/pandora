@@ -3,9 +3,6 @@ create or replace procedure cancel_two_qubit(type_1 int, type_2 int, param_1 flo
 as
 $$
 declare
-    distinct_count int;
-    distinct_existing int;
-
     first record;
     second record;
     gate record;
@@ -17,7 +14,10 @@ declare
     second_next_q1_id bigint;
 	second_next_q2_id bigint;
 
-    pattern_count int;
+    a record;
+    b record;
+    c record;
+    d record;
 
     start_time timestamp with time zone;
 
@@ -35,22 +35,16 @@ begin
                      and div(next_q1, 1000) = div(next_q2, 1000)
                      and mod(next_q1, 100) = type_2
         loop
-            select * into first from linked_circuit where id = gate.id;
+            select * into first from linked_circuit where id = gate.id for update skip locked;
+            select * into second from linked_circuit where id = div(first.next_q1, 1000) for update skip locked;
 
-            select count(*) into pattern_count from (select * from linked_circuit
-                                                     where id in (first.id, div(first.next_q1, 1000))
-                                                     for update skip locked
-                                                     ) as it;
-            if pattern_count != 2 then
+            if first.id is null or second.id is null then
                 commit;
                 continue;
             end if;
 
-            select * into second from linked_circuit where id = div(first.next_q1, 1000);
-
-            if first.id is null or second.id is null or second.param != param_2 or second.type != type_2
+            if second.param != param_2 or second.type != type_2 then
 --                 or second.switch != first.switch
-                then
                 commit;
                 continue;
             end if;
@@ -68,12 +62,14 @@ begin
             second_next_q1_id := div(second.next_q1, 1000);
             second_next_q2_id := div(second.next_q2, 1000);
 
-            select count(*) into distinct_count from (select distinct unnest(array[first_prev_q1_id, first_prev_q2_id, second_next_q1_id, second_next_q2_id])) as it;
-            select count(*) into distinct_existing from
-            (select * from linked_circuit where id in (first_prev_q1_id, first_prev_q2_id, second_next_q1_id, second_next_q2_id) for update skip locked) as it;
+            select * into a from linked_circuit where id = first_prev_q1_id for update skip locked;
+            select * into b from linked_circuit where id = first_prev_q2_id for update skip locked;
+            select * into c from linked_circuit where id = second_next_q1_id for update skip locked;
+            select * into d from linked_circuit where id = second_next_q2_id for update skip locked;
 
-            if distinct_count != distinct_existing then
-                commit; -- release lock
+            -- Lock the 4 neighbours
+            if a.id is null or b.id is null or c.id is null or d.id is null then
+                commit;
                 continue;
             end if;
 
