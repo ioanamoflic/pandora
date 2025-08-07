@@ -48,17 +48,17 @@ begin
 
             select * into second from linked_circuit where id = div(first.next_q1, 1000);
 
+            if first.id is null or second.id is null or second.param != param_2 or second.type != type_2
+--                 or second.switch != first.switch
+                then
+                commit;
+                continue;
+            end if;
+
             first_id_plus_one := (first.id * 10 + 1) * 100 + first.type;
             first_id_plus_zero := (first.id * 10) * 100 + first.type;
 
---             select * into second from linked_circuit
---                                  where prev_q1 = first_id_plus_zero
---                                  and prev_q2 = first_id_plus_one
---                                  and switch = first.switch;
-
-            if first.id is null or second.id is null or second.param!=param_2 or second.switch != first.switch
-                or second.prev_q1 != first_id_plus_zero or second.prev_q2 != first_id_plus_one or second.type != type_2
-            then
+            if second.prev_q1 != first_id_plus_zero or second.prev_q2 != first_id_plus_one then
                 commit;
                 continue;
             end if;

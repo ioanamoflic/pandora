@@ -53,17 +53,16 @@ begin
                 continue;
             end if;
 
+            cx_prev_q1_id := div(cx.prev_q1, 1000);
+            cx_prev_q2_id := div(cx.prev_q2, 1000);
+            cx_next_q1_id := div(cx.next_q1, 1000);
+            cx_next_q2_id := div(cx.next_q2, 1000);
+
             select count(*) into distinct_count from
                 (select distinct unnest(array[cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id])) as it;
             select count(*) into distinct_existing from
                 (select * from linked_circuit where id in
                     (cx_prev_q1_id, cx_prev_q2_id, cx_next_q1_id, cx_next_q2_id) for update skip locked) as it;
-
-
-            cx_prev_q1_id := div(cx.prev_q1, 1000);
-            cx_prev_q2_id := div(cx.prev_q2, 1000);
-            cx_next_q1_id := div(cx.next_q1, 1000);
-            cx_next_q2_id := div(cx.next_q2, 1000);
 
             -- Lock the 4 neighbours
             if distinct_count != distinct_existing then
@@ -76,10 +75,13 @@ begin
 
             insert into linked_circuit(prev_q1, type, param, next_q1, visited, label) values (cx.prev_q1, gate_type, 1, cx_id_tgt, my_proc_id, cx.label)
                                                           returning id into left_h_q1_id;
+
             insert into linked_circuit(prev_q1, type, param, next_q1, visited, label) values (cx.prev_q2, gate_type, 1, cx_id_ctrl, my_proc_id, cx.label)
                                                           returning id into left_h_q2_id;
+
             insert into linked_circuit(prev_q1, type, param, next_q1, visited, label) values (cx_id_tgt, gate_type, 1, cx.next_q1, my_proc_id, cx.label)
                                                           returning id into right_h_q1_id;
+
             insert into linked_circuit(prev_q1, type, param, next_q1, visited, label) values (cx_id_ctrl, gate_type, 1, cx.next_q2,my_proc_id, cx.label)
                                                           returning id into right_h_q2_id;
 
