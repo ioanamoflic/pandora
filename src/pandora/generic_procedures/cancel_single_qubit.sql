@@ -42,7 +42,7 @@ begin
 
             select * into second from linked_circuit where id = div(first.next_q1, 1000);
 
-            if first.id is null or second.id is null or second.param!=param_2 then
+            if first.id is null or second.id is null or second.param != param_2 or second.type != type_2 then
                 commit;
                 continue;
             end if;

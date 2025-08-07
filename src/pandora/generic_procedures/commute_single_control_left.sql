@@ -57,16 +57,19 @@ begin
             end if;
 
             cx_next_q1_id := div(two_qubit_gate.next_q1, 1000);
-            cx_next_q2_id := div(two_qubit_gate.next_q2, 1000);
-            cx_prev_q2_id := div(two_qubit_gate.prev_q2, 1000);
+--             cx_next_q2_id := div(two_qubit_gate.next_q2, 1000);
+--             cx_prev_q2_id := div(two_qubit_gate.prev_q2, 1000);
 
             sg_prev_id := div(sg.prev_q1, 1000);
 
-            select count(*) into distinct_count from (select distinct unnest(array[sg_prev_id, cx_next_q1_id,
-                cx_next_q2_id, cx_prev_q2_id])) as it;
-            select count(*) into distinct_existing from (select * from linked_circuit where id in (sg_prev_id, cx_next_q1_id,
-                cx_next_q2_id, cx_prev_q2_id)
-                                         for update skip locked) as it;
+            select count(*) into distinct_count from (select distinct unnest(array[sg_prev_id, cx_next_q1_id
+--                 ,cx_next_q2_id, cx_prev_q2_id
+                ]
+                )) as it;
+            select count(*) into distinct_existing from (select * from linked_circuit where id in (sg_prev_id, cx_next_q1_id
+--                 cx_next_q2_id, cx_prev_q2_id
+
+                ) for update skip locked) as it;
 
             if distinct_count != distinct_existing then
                 commit;
