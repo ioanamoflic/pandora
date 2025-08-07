@@ -3,29 +3,43 @@ create or replace procedure linked_hhcxhh_to_cx(my_proc_id int, nprocs int, pass
 as
 $$
 declare
-    distinct_count int;
-    distinct_existing int;
-
-    cx record;
     gate record;
-    left_q1 record;
-    left_q2 record;
-    right_q1 record;
-    right_q2 record;
+    first record;
+    second record;
 
-    cx_prev_q1_id bigint;
-	cx_prev_q2_id bigint;
-	cx_next_q1_id bigint;
-	cx_next_q2_id bigint;
+    m11 record;
+    m12 record;
+    m13 record;
+    m21 record;
+    m22 record;
+    m23 record;
 
-    cx_id_ctrl bigint;
-    cx_id_tgt bigint;
-    left_q1_id bigint;
-	left_q2_id bigint;
-	right_q1_id bigint;
-	right_q2_id bigint;
+    m11_id bigint;
+    m12_id bigint;
+    m13_id bigint;
+    m21_id bigint;
+    m22_id bigint;
+    m23_id bigint;
 
 	start_time timestamp;
+
+    left_h_q1 record;
+	left_h_q2 record;
+	right_h_q1 record;
+	right_h_q2 record;
+
+    -- used for computing the links
+    port_nr bigint;
+    gate_type bigint;
+
+    -- the links to the right and left
+    first_port0 bigint;
+    first_port1 bigint;
+    first_port2 bigint;
+    second_port0 bigint;
+    second_port1 bigint;
+    second_port2 bigint;
+
 begin
     start_time := CLOCK_TIMESTAMP();
 
@@ -39,83 +53,90 @@ begin
                        and next_q1 % 100 = 8 and next_q2 % 100 = 8
         loop
 
-            if gate.id is null then
+            select * into first from linked_circuit where id = gate.id for update skip locked;
+            second := first;
+
+            if first.id is null or second.id is null then
+                commit;
                 continue;
             end if;
 
-            select * into cx from linked_circuit where id = gate.id;
+            --- Get the Hadamards and lock them - we have a CNOT therefore, q1 and q2
+            m11_id := div(first.prev_q1, 1000);
+            m12_id := div(first.prev_q2, 1000);
+            m21_id := div(second.next_q1, 1000);
+            m22_id := div(second.next_q2, 1000);
 
-            -- Compute the Hadamard IDs
-            cx_prev_q1_id := div(cx.prev_q1, 1000);
-            cx_prev_q2_id := div(cx.prev_q2, 1000);
-            cx_next_q1_id := div(cx.next_q1, 1000);
-            cx_next_q2_id := div(cx.next_q2, 1000);
-
-            -- Select the Hadamards
-            select * into left_q1 from linked_circuit where id=cx_prev_q1_id;
-            select * into left_q2 from linked_circuit where id=cx_prev_q2_id;
-            select * into right_q1 from linked_circuit where id=cx_next_q1_id;
-            select * into right_q2 from linked_circuit where id=cx_next_q2_id;
-
-            -- Compute the IDs of the Hadamard neighbours
-            left_q1_id := div(left_q1.prev_q1, 1000);
-            left_q2_id := div(left_q2.prev_q1, 1000);
-            right_q1_id := div(right_q1.next_q1, 1000);
-            right_q2_id := div(right_q2.next_q1, 1000);
-
-            -- How many neighbours are there?
-            select count(*) into distinct_count from (select distinct unnest(array[left_q1_id, left_q2_id, right_q1_id, right_q2_id])) as it;
-
-            -- Lock the neighbours
-            select count(*) into distinct_existing from
-                                                           (select * from linked_circuit where id in (left_q1_id, left_q2_id, right_q1_id, right_q2_id) for update skip locked) as it;
-
-            -- Check that the number of locked neighbours is equal to the number of neighbours
-            if distinct_count != distinct_existing then
+            select * into m11 from linked_circuit where id = m11_id for update skip locked;
+            select * into m12 from linked_circuit where id = m12_id for update skip locked;
+            select * into m21 from linked_circuit where id = m21_id for update skip locked;
+            select * into m22 from linked_circuit where id = m22_id for update skip locked;
+            if m11.id is null or m12.id is null or m21.id is null or m22.id is null then
+                commit;
+                continue;
+            end if;
+            if m11.type != 8 or m12.type != 8 or m21.type != 8 or m22.type != 8 then
+                commit;
                 continue;
             end if;
 
-            -- Lock the Hadamards and CX
-            select count(*) into distinct_count from (select * from linked_circuit where id in (left_q1.id, left_q2.id, right_q1.id, right_q2.id, cx.id) for update skip locked) as it;
-            if distinct_count != 5 then
+            -- Store the Hadamard gates
+            left_h_q1 := m11;
+            left_h_q2 := m12;
+            right_h_q1 := m21;
+            right_h_q2 := m22;
+
+            -- Get the IDs of the margins -- we have single qubit gates, therefore q1 only
+            m11_id := div(m11.prev_q1, 1000);
+            m12_id := div(m12.prev_q1, 1000);
+            m21_id := div(m21.next_q1, 1000);
+            m22_id := div(m22.next_q1, 1000);
+
+            select * into m11 from linked_circuit where id = m11_id for update skip locked;
+            select * into m12 from linked_circuit where id = m12_id for update skip locked;
+            select * into m21 from linked_circuit where id = m21_id for update skip locked;
+            select * into m22 from linked_circuit where id = m22_id for update skip locked;
+            if m11.id is null or m12.id is null or m21.id is null or m22.id is null then
+                commit;
                 continue;
             end if;
 
-            -- compute new link_ids for neighbouring gates
-            cx_id_ctrl := (cx.id * 10 + 0) * 100 + cx.type;
-            cx_id_tgt  := (cx.id * 10 + 1) * 100 + cx.type;
+            first_port0 := first.id * 1000 + 0 * 100 + first.type;
+            first_port1 := first.id * 1000 + 1 * 100 + first.type;
+            second_port0 := second.id * 1000 + 0 * 100 + second.type;
+            second_port1 := second.id * 1000 + 1 * 100 + second.type;
 
-            --- Works only for ports 1 and 2. not working for port 3
+            raise notice 'margins % % % %', m11_id, m12_id, m21_id, m22_id;
+            raise notice 'ports % % % %', first_port0, first_port1, second_port0, second_port1;
 
-            if mod(div(left_q1.prev_q1, 100), 10) = 0 then
-                update linked_circuit set next_q1 = cx_id_tgt where id = left_q1_id;
+            -- Update the CNOT: flip the switch value and set visited
+            update linked_circuit set (prev_q1, prev_q2, next_q1, next_q2, switch, visited) = (left_h_q2.prev_q1, left_h_q1.prev_q1, right_h_q2.next_q1, right_h_q1.next_q1, not first.switch, my_proc_id) where id = first.id;
+
+            if mod(div(first.prev_q1, 100), 10) = 0 then
+                update linked_circuit set next_q1 = first_port0 where id = m11_id;
             else
-                update linked_circuit set next_q2 = cx_id_tgt where id = left_q1_id;
+                update linked_circuit set next_q2 = first_port0 where id = m11_id;
             end if;
 
-            if mod(div(left_q2.prev_q1, 100), 10) = 0 then
-                update linked_circuit set next_q1 = cx_id_ctrl where id = left_q2_id;
+            if mod(div(first.prev_q2, 100), 10) = 0 then
+                update linked_circuit set next_q1 = first_port1 where id = m12_id;
             else
-                update linked_circuit set next_q2 = cx_id_ctrl where id = left_q2_id;
+                update linked_circuit set next_q2 = first_port1 where id = m12_id;
             end if;
 
-            if mod(div(right_q1.next_q1, 100), 10) = 0 then
-                update linked_circuit set prev_q1 = cx_id_tgt where id = right_q1_id;
+            if mod(div(second.next_q1, 100), 10) = 0 then
+                update linked_circuit set prev_q1 = second_port0 where id = m21_id;
             else
-                update linked_circuit set prev_q2 = cx_id_tgt where id = right_q1_id;
+                update linked_circuit set prev_q2 = second_port0 where id = m21_id;
             end if;
 
-            if mod(div(right_q2.next_q1, 100), 10) = 0 then
-                update linked_circuit set prev_q1 = cx_id_ctrl where id = right_q2_id;
+            if mod(div(second.next_q2, 100), 10) = 0 then
+                update linked_circuit set prev_q1 = second_port1 where id = m22_id;
             else
-                update linked_circuit set prev_q2 = cx_id_ctrl where id = right_q2_id;
+                update linked_circuit set prev_q2 = second_port1 where id = m22_id;
             end if;
 
-            -- make sure to update the links for the cx
-            update linked_circuit set (switch, prev_q1, prev_q2, next_q1, next_q2, visited)
-                        = (not cx.switch, left_q2.prev_q1, left_q1.prev_q1, right_q2.next_q1, right_q1.next_q1, my_proc_id) where id = cx.id;
-
-            delete from linked_circuit where id in (left_q1.id, left_q2.id, right_q1.id, right_q2.id);
+            delete from linked_circuit where id in (left_h_q1.id, left_h_q2.id, right_h_q1.id, right_h_q2.id);
 
             commit; -- release the cx
 
