@@ -1,9 +1,8 @@
-create or replace procedure generate_optimisation_stats(sleep_for float, logid int)
+create or replace procedure generate_optimisation_stats(sleep_for float, logid int, timeout int)
     language plpgsql
 as
 $$
 declare
-    stop boolean;
     total int;
     t_cnt int;
     s_cnt int;
@@ -11,14 +10,13 @@ declare
     cx_cnt int;
     x_cnt int;
     count int := 0;
+
+    start_time timestamp;
+
 begin
+    start_time := CLOCK_TIMESTAMP();
+
     while true loop
-
-        select st.stop into stop from stop_condition as st limit 1;
-	    if stop=True then
-            exit;
-        end if;
-
         count := count + 1;
 
         select count(*) into total from linked_circuit;
@@ -34,5 +32,10 @@ begin
         perform pg_sleep(sleep_for);
 
     	commit;
+
+        if extract(epoch from (clock_timestamp() - start_time)) > timeout then
+            exit;
+        end if;
+
 	end loop;
 end;$$;

@@ -25,7 +25,6 @@ begin
     start_time := clock_timestamp();
 
 	while pass_count > 0 loop
-
         for gate in
             select * from linked_circuit
                      where
@@ -44,7 +43,6 @@ begin
             end if;
 
             if second.param != param_2 or second.type != type_2 then
---                 or second.switch != first.switch
                 commit;
                 continue;
             end if;
@@ -101,15 +99,11 @@ begin
 
             commit; -- release locks after applying template
 
-            if extract(epoch from (clock_timestamp() - start_time)) > timeout then
-                exit;
-            end if;
-
         end loop; -- end gate loop
 
---         if extract(epoch from (clock_timestamp() - start_time)) > timeout then
---             exit;
---         end if;
+	    if extract(epoch from (clock_timestamp() - start_time)) > timeout then
+            exit;
+        end if;
 
         pass_count = pass_count - 1;
 

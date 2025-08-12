@@ -1,6 +1,8 @@
+from multiprocessing import Pool
+
 from pandora import Pandora
-from pandora.connection_util import db_multi_threaded, stop_all_lurking_procedures, reset_database_id, \
-    get_stats_for_adder
+from pandora.connection_pool_util import init_worker, map_procedure_call
+from pandora.connection_util import stop_all_lurking_procedures, reset_database_id, get_stats_for_adder
 from pandora.gate_translator import PandoraGateTranslator
 
 
@@ -43,37 +45,50 @@ class PandoraOptimizer(Pandora):
     LOG_SLEEP_FOR = 1  # sleep for 1 seconds when logging optimisations
 
     def __init__(self,
-                 bernoulli_percentage: float = False,
-                 utilize_bernoulli: bool = None,
-                 nproc: int = 1,
                  timeout: int = 100,
-                 block_size: int = None,
-                 pass_count: int = LARGE_RUN_NR,
-                 logger_id: int = None
+                 pass_count: int = 10,
+                 logger_id: int = None,
+                 proc_count: int = None
                  ):
         super().__init__()
         self.pass_count = pass_count
-        self.block_size = block_size
-        self.nproc = nproc
-        self.utilize_bernoulli = utilize_bernoulli
-        self.bernoulli_percentage = bernoulli_percentage
         self.timeout = timeout
+        self.proc_count = proc_count
         self.logger_id = logger_id
 
+        self._nproc = 0
         self._thread_proc = list()
+
+    def _create_pool(self, config_file_path):
+        """
+        Create process pool of size self.nprocs.
+        """
+        pool = Pool(processes=self.proc_count, initializer=init_worker, initargs=(config_file_path,))
+        pool.map(print, ".")  # warm-up
+        return pool
+
+    def _close_pool(self, proc_pool):
+        """
+        Close process pool and clear task list.
+        """
+        proc_pool.close()
+        proc_pool.join()
+        self.clear()
 
     def _call_thread_proc(self, thread_proc) -> None:
         """
         Append a specific configuration to the global process list
         """
+        self._nproc += 1
         self._thread_proc.append(thread_proc)
 
-    def _add_stopper(self):
+    def add_stopper(self):
         """
         Add stopper such that stored procedures don't run forever.
+        This stops all stored procedures immediately.
         """
         stopper = f"call stopper({self.timeout})"
-        self._call_thread_proc((1, stopper))
+        self._call_thread_proc(stopper)
 
     def _reset_table_id(self):
         """
@@ -83,19 +98,24 @@ class PandoraOptimizer(Pandora):
                           table_name='linked_circuit',
                           large_buffer_value=self.RESET_ID)
 
-    def start(self) -> None:
+    def start(self, config_file_path) -> None:
         """
         Start the optimisation algorithm according to the created configuration.
         """
-        self._add_stopper()
+        assert len(self._thread_proc) > 0
+        assert len(self._thread_proc) == self.proc_count
+
         self._reset_table_id()
-        db_multi_threaded(thread_proc=self._thread_proc)
+        pool = self._create_pool(config_file_path=config_file_path)
+        pool.map(map_procedure_call, self._thread_proc)
+        self._close_pool(proc_pool=pool)
 
     def clear(self):
         """
         Clear all current stored procedures.
         """
         self._thread_proc.clear()
+        self._nproc = 0
 
     def stop(self):
         """
@@ -107,19 +127,17 @@ class PandoraOptimizer(Pandora):
         """
         Log the optimisation results at fixed intervals. Used for plotting.
         """
-        logger_proc = f"call generate_optimisation_stats({self.LOG_SLEEP_FOR}, {self.logger_id})"
-        self._call_thread_proc((1, logger_proc))
+        logger_proc = f"call generate_optimisation_stats({self.LOG_SLEEP_FOR}, {self.logger_id}, {self.timeout})"
+        self._call_thread_proc(logger_proc)
 
     def generate_csv(self, logger_id):
         """
             Generate the csv of the optimisation output. The identifier is the logger_id.
         """
-
         get_stats_for_adder(self.connection, logger_id)
 
     def cancel_single_qubit_gates(self,
                                   gate_types: tuple[PandoraGateTranslator, PandoraGateTranslator],
-                                  proc_id=0,
                                   gate_params: tuple[float, float] = (1.0, 1.0),
                                   dedicated_nproc: int = None) -> None:
         """
@@ -134,18 +152,13 @@ class PandoraOptimizer(Pandora):
         type_left, type_right = gate_types
         param_left, param_right = gate_params
 
-        if not self.utilize_bernoulli:
+        for _ in range(dedicated_nproc):
             stored_procedure = f"call cancel_single_qubit({type_left}, {type_right}, {param_left}, {param_right}," \
-                               f"{proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
-        else:
-            stored_procedure = f"call cancel_single_qubit_bernoulli({type_left}, {type_right}, {param_left}, " \
-                               f"{param_right},{self.bernoulli_percentage}, {self.pass_count})"""
-
-        self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
+                               f"{self._nproc}, {self.proc_count}, {self.pass_count}, {self.timeout})"
+            self._call_thread_proc(stored_procedure)
 
     def cancel_two_qubit_gates(self,
                                gate_types: tuple[PandoraGateTranslator, PandoraGateTranslator],
-                               proc_id=0,
                                gate_param: float = 1.0,
                                dedicated_nproc: int = None) -> None:
         """
@@ -159,16 +172,13 @@ class PandoraOptimizer(Pandora):
 
         """
         type_left, type_right = gate_types
-        if not self.utilize_bernoulli:
-            stored_procedure = f"call cancel_two_qubit({type_left}, {type_right}, {gate_param}, {gate_param}, {proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
-        else:
-            stored_procedure = f"call cancel_two_qubit_bernoulli({type_left},{type_right},{gate_param}," \
-                               f"{self.bernoulli_percentage},{self.pass_count})"
-        self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
 
-    def hhcxhh_to_cx(self,
-                     proc_id=0,
-                     dedicated_nproc: int = None) -> None:
+        for _ in range(dedicated_nproc):
+            stored_procedure = f"call cancel_two_qubit({type_left}, {type_right}, {gate_param}, {gate_param}, " \
+                               f"{self._nproc}, {self.proc_count}, {self.pass_count}, {self.timeout})"
+            self._call_thread_proc(stored_procedure)
+
+    def hhcxhh_to_cx(self, dedicated_nproc: int = None) -> None:
 
         """
         Applies rewrite rule
@@ -179,17 +189,11 @@ class PandoraOptimizer(Pandora):
 
         where applicable on the linked_list Pandora table.
         """
+        for _ in range(dedicated_nproc):
+            stored_procedure = f"call linked_hhcxhh_to_cx({self._nproc}, {self.proc_count}, {self.pass_count}, {self.timeout})"
+            self._call_thread_proc(stored_procedure)
 
-        if not self.utilize_bernoulli:
-            stored_procedure = f"call linked_hhcxhh_to_cx({proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
-        else:
-            stored_procedure = f"call linked_hhcxhh_to_cx_bernoulli({self.bernoulli_percentage},{self.pass_count})"
-
-        self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
-
-    def cx_to_hhcxhh(self,
-                     proc_id=0,
-                     dedicated_nproc: int = None) -> None:
+    def cx_to_hhcxhh(self, dedicated_nproc: int = None) -> None:
 
         """
         Applies rewrite rule
@@ -200,17 +204,12 @@ class PandoraOptimizer(Pandora):
 
         where applicable on the linked_list Pandora table.
         """
-
-        if not self.utilize_bernoulli:
-            stored_procedure = f"call linked_cx_to_hhcxhh({proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
-        else:
-            stored_procedure = f"call linked_cx_to_hhcxhh_bernoulli({self.bernoulli_percentage},{self.pass_count})"
-
-        self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
+        for _ in range(dedicated_nproc):
+            stored_procedure = f"call linked_cx_to_hhcxhh({self._nproc}, {self.proc_count}, {self.pass_count}, {self.timeout})"
+            self._call_thread_proc(stored_procedure)
 
     def fuse_single_qubit_gates(self,
                                 gate_types: tuple[PandoraGateTranslator, PandoraGateTranslator, PandoraGateTranslator],
-                                proc_id=0,
                                 gate_params: tuple[float, float, float] = (1.0, 1.0, 1.0),
                                 dedicated_nproc: int = None
                                 ) -> None:
@@ -224,19 +223,16 @@ class PandoraOptimizer(Pandora):
 
         type_left, type_right, type_result = gate_types
         param_left, param_right, param_result = gate_params
-        if not self.utilize_bernoulli:
-            stored_procedure = f"call fuse_single_qubit({type_left},{type_right},{type_result},{param_left}," \
-                               f"{param_right},{param_result},{proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
-        else:
-            stored_procedure = f"call fuse_single_qubit_bernoulli({type_left},{type_right},{type_result}," \
-                               f"{param_left},{param_right},{param_result},{self.bernoulli_percentage},{self.pass_count})"
 
-        self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
+        for _ in range(dedicated_nproc):
+            stored_procedure = f"call fuse_single_qubit({type_left},{type_right},{type_result},{param_left}," \
+                               f"{param_right},{param_result},{self._nproc}, {self.proc_count}, {self.pass_count}, " \
+                               f"{self.timeout})"
+            self._call_thread_proc(stored_procedure)
 
     def commute_rotation_with_control_left(self,
                                            gate_type: PandoraGateTranslator,
                                            gate_param: float = 1.0,
-                                           proc_id=0,
                                            dedicated_nproc: int = None) -> None:
 
         """
@@ -249,21 +245,16 @@ class PandoraOptimizer(Pandora):
         where applicable on the linked_list Pandora table.
         """
 
-        if not self.utilize_bernoulli:
+        for _ in range(dedicated_nproc):
             stored_procedure = f"call commute_single_control_right({gate_type},{gate_param}," \
-                               f"{proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
-        else:
-            stored_procedure = f"call commute_single_control_right_bernoulli({gate_type},{gate_param}," \
-                               f"{self.bernoulli_percentage}, {self.pass_count})"
-
-        self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
+                               f"{self._nproc}, {self.proc_count}, {self.pass_count}, {self.timeout})"
+            self._call_thread_proc(stored_procedure)
 
     def commute_rotation_with_control_right(self,
                                             gate_type: PandoraGateTranslator,
                                             gate_param: float = 1.0,
-                                            proc_id=0,
                                             dedicated_nproc: int = None) -> None:
-
+        # TODO update this stored procedure
         """
         Applies rewrite rule
 
@@ -274,18 +265,13 @@ class PandoraOptimizer(Pandora):
         where applicable on the linked_list Pandora table.
         """
 
-        if not self.utilize_bernoulli:
+        for _ in range(dedicated_nproc):
             stored_procedure = f"call commute_single_control_left({gate_type},{gate_param}," \
-                               f"{proc_id}, {self.nproc}, {self.pass_count}, {self.timeout})"
-        else:
-            stored_procedure = f"call commute_single_control_left_bernoulli({gate_type}, {gate_param}, " \
-                               f"{self.bernoulli_percentage},{self.pass_count})"
+                               f"{self._nproc}, {self.proc_count}, {self.pass_count}, {self.timeout})"
+            self._call_thread_proc(stored_procedure)
 
-        self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
-
-    def commute_cnots(self,
-                      dedicated_nproc: int = None) -> None:
-
+    def commute_cnots(self, dedicated_nproc: int = None) -> None:
+        # TODO update this stored procedure
         """
         Applies rewrite rule
 
@@ -298,9 +284,6 @@ class PandoraOptimizer(Pandora):
         where applicable on the linked_list Pandora table.
 
         """
-        if not self.utilize_bernoulli:
+        for _ in range(dedicated_nproc):
             stored_procedure = f"call commute_cx_ctrl_target({self.block_size},{self.pass_count})"
-        else:
-            stored_procedure = f"call commute_cx_ctrl_target_bernoulli({self.bernoulli_percentage},{self.pass_count})"
-
-        self._call_thread_proc((self.nproc if not dedicated_nproc else dedicated_nproc, stored_procedure))
+            self._call_thread_proc(stored_procedure)

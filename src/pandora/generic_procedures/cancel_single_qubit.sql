@@ -19,7 +19,6 @@ begin
     start_time := CLOCK_TIMESTAMP();
 
 	 while pass_count > 0 loop
-
         for gate in
             select * from linked_circuit
                      where
@@ -68,17 +67,13 @@ begin
 
             commit; -- release the locks
 
-            if extract(epoch from (clock_timestamp() - start_time)) > timeout then
-                exit;
-            end if;
-
         end loop; -- end gate loop
 
 	    pass_count = pass_count - 1;
 
---         if extract(epoch from (clock_timestamp() - start_time)) > timeout then
---             exit;
---         end if;
+	    if extract(epoch from (clock_timestamp() - start_time)) > timeout then
+            exit;
+        end if;
 
     end loop; -- end pass loop
 end;$$;
