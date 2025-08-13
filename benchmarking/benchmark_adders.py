@@ -77,94 +77,47 @@ if __name__ == "__main__":
 
     adder_circuit = get_adder(n_bits=N_BITS)
 
-    pandora_optimizer = PandoraOptimizer(utilize_bernoulli=True,
-                                         bernoulli_percentage=10,
-                                         timeout=600,
-                                         logger_id=N_BITS,
-                                         nproc=4)  # dedicated_nproc will override this value
+    NPROCS = 1
+    FILENAME = sys.argv[1]
+    from benchmark_mqt import create_pool, close_pool, reset_pandora, get_connection, map_procedure_call
+    conn = get_connection(config_file_path=FILENAME)
+    pool = create_pool(n_workers=NPROCS, config_file_path=FILENAME)
+    # Warmup
+    pool.map(print, ".")
+    reset_pandora(connection=conn, quantum_circuit=adder_circuit)
 
-    pandora_optimizer.build_circuit(circuit=adder_circuit)
-
-    # decompose Toffoli gates in Pandora
-    pandora_optimizer.decompose_toffolis()
-
-    """
-        Single-qubit gate cancellations
-    """
-
-    H = PandoraGateTranslator.HPowGate.value
-    Z = PandoraGateTranslator._PauliZ.value
-    X = PandoraGateTranslator._PauliX.value
-    Z_rot = PandoraGateTranslator.ZPowGate.value
     CX = PandoraGateTranslator.CXPowGate.value
+    myH = PandoraGateTranslator.HPowGate.value
+    myCX = PandoraGateTranslator.CXPowGate.value
+    myZPow = PandoraGateTranslator.ZPowGate.value
+    myPauliX = PandoraGateTranslator._PauliX.value
+    myPauliZ = PandoraGateTranslator._PauliZ.value
 
-    # cancelling Hadamards
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(H, H), gate_params=(1, 1), dedicated_nproc=4)
-    # cancelling Z gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z, Z), gate_params=(1, 1), dedicated_nproc=2)
-    # cancelling T+T† gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z_rot, Z_rot), gate_params=(0.25, -0.25), dedicated_nproc=2)
-    # cancelling S+S† gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z_rot, Z_rot), gate_params=(0.5, -0.5), dedicated_nproc=2)
-    # cancelling X gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(X, X), gate_params=(1, 1), dedicated_nproc=2)
+    nprocs = NPROCS
+    larger_pass_count = 1000
+    stop_after = 5
+    proc_calls = [
+        (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myPauliZ}, {myPauliZ}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (
+        #     1,
+            # f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (
+        #     1,
+            # f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL commute_single_control_left({myZPow}, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+    ]
 
-    """
-        Two-qubit gate cancellations
-    """
+    pool.map(map_procedure_call, proc_calls)
 
-    # cancelling CX gates
-    pandora_optimizer.cancel_two_qubit_gates(gate_types=(CX, CX), gate_param=1, dedicated_nproc=1)
-    """
-        Fusing gates
-    """
-
-    # TT = S
-    pandora_optimizer.fuse_single_qubit_gates(gate_types=(Z_rot, Z_rot, Z_rot), gate_params=(0.25, 0.25, 0.5),
-                                              dedicated_nproc=1)
-    # T†T† = S†
-    pandora_optimizer.fuse_single_qubit_gates(gate_types=(Z_rot, Z_rot, Z_rot), gate_params=(-0.25, -0.25, -0.5),
-                                              dedicated_nproc=1)
-    # SS = Z
-    pandora_optimizer.fuse_single_qubit_gates(gate_types=(Z_rot, Z_rot, Z_rot), gate_params=(0.5, 0.5, 1.0),
-                                              dedicated_nproc=1)
-    # S†S† = Z
-    pandora_optimizer.fuse_single_qubit_gates(gate_types=(Z_rot, Z_rot, Z), gate_params=(-0.5, -0.5, 1.0),
-                                              dedicated_nproc=1)
-    """
-        Commuting Z-rotations to the left
-    """
-
-    # commute Z to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=Z, gate_param=1, dedicated_nproc=1)
-    # commute S to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=Z_rot, gate_param=0.5, dedicated_nproc=1)
-    # commute S† to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=Z_rot, gate_param=-0.5, dedicated_nproc=1)
-    # commute T to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=Z_rot, gate_param=0.25, dedicated_nproc=1)
-    # commute T† to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=Z_rot, gate_param=-0.25, dedicated_nproc=1)
-
-    """
-        Reversing CNOTs
-    """
-
-    pandora_optimizer.hhcxhh_to_cx(dedicated_nproc=1)
-    pandora_optimizer.cx_to_hhcxhh(dedicated_nproc=1)
-
-    """
-        Log
-    """
-
-    pandora_optimizer.log()
-
-    """
-        Start
-    """
-    pandora_optimizer.start()
-
-    """
-        For plotting
-    """
-    pandora_optimizer.generate_csv(logger_id=N_BITS)
+    pool.close()
+    pool.join()

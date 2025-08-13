@@ -884,7 +884,7 @@ if __name__ == "__main__":
     # test_case_1_repeated(conn, n=10)
     # test_case_2_repeated(conn, n=10)
     # test_qualtran_adder_opt_reconstruction(conn, stop_after=5)
-    # check_logical_correctness_random(conn, stop_after=5)
+    check_logical_correctness_random(conn, stop_after=5)
     # test_BVZ_optimization(conn, stop_after=3)
     conn.close()
     # extracted_circuit = extract_cirq_circuit(connection=conn,

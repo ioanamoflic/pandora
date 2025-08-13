@@ -67,30 +67,30 @@ begin
             m21_id := div(second.next_q1, 1000);
             m22_id := div(second.next_q2, 1000);
 
-            select * into m11 from linked_circuit where id = m11_id for update skip locked;
-            select * into m12 from linked_circuit where id = m12_id for update skip locked;
-            select * into m21 from linked_circuit where id = m21_id for update skip locked;
-            select * into m22 from linked_circuit where id = m22_id for update skip locked;
-            if m11.id is null or m12.id is null or m21.id is null or m22.id is null then
+            select * into left_h_q1 from linked_circuit where id = m11_id for update skip locked;
+            select * into left_h_q2 from linked_circuit where id = m12_id for update skip locked;
+            select * into right_h_q1 from linked_circuit where id = m21_id for update skip locked;
+            select * into right_h_q2 from linked_circuit where id = m22_id for update skip locked;
+            if left_h_q1.id is null or left_h_q2.id is null or right_h_q1.id is null or right_h_q2.id is null then
                 commit;
                 continue;
             end if;
-            if m11.type != 8 or m12.type != 8 or m21.type != 8 or m22.type != 8 then
+            if left_h_q1.type != 8 or left_h_q2.type != 8 or right_h_q1.type != 8 or right_h_q2.type != 8 then
                 commit;
                 continue;
             end if;
 
             -- Store the Hadamard gates
-            left_h_q1 := m11;
-            left_h_q2 := m12;
-            right_h_q1 := m21;
-            right_h_q2 := m22;
+--             left_h_q1 := m11;
+--             left_h_q2 := m12;
+--             right_h_q1 := m21;
+--             right_h_q2 := m22;
 
             -- Get the IDs of the margins -- we have single qubit gates, therefore q1 only
-            m11_id := div(m11.prev_q1, 1000);
-            m12_id := div(m12.prev_q1, 1000);
-            m21_id := div(m21.next_q1, 1000);
-            m22_id := div(m22.next_q1, 1000);
+            m11_id := div(left_h_q1.prev_q1, 1000);
+            m12_id := div(left_h_q2.prev_q1, 1000);
+            m21_id := div(right_h_q1.next_q1, 1000);
+            m22_id := div(right_h_q2.next_q1, 1000);
 
             select * into m11 from linked_circuit where id = m11_id for update skip locked;
             select * into m12 from linked_circuit where id = m12_id for update skip locked;
