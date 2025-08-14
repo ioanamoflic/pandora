@@ -321,16 +321,6 @@ def fig5():
 
     circuits = df_mqt['circ_idx']
 
-    # mqt_eq_total_32 = df_mqt['mqt_eq_total_32']
-    # pandora_eq_total_32 = df_mqt['pandora_eq_total_32']
-    #
-    # mqt_eq_total_20 = df_mqt['mqt_eq_total_20']
-    # mqt_neq_total_20 = df_mqt['mqt_neq_total_20']
-    # mqt_eq_check_20 = df_mqt['mqt_eq_check_20']
-    # mqt_neq_check_20 = df_mqt['mqt_neq_check_20']
-    # pandora_eq_total_20 = df_mqt['pandora_eq_total_20']
-    # pandora_neq_total_20 = df_mqt['pandora_neq_total_20']
-
     pandora_equiv = df_mqt['pandora_time_equiv']
     pandora_neq = df_mqt['pandora_time_neq']
     dd_equiv = df_mqt['dd_time_equiv']
@@ -338,11 +328,8 @@ def fig5():
     zx_equiv = df_mqt['zx_time_equiv']
 
     fig, (ax1) = plt.subplots(1, 1, figsize=(4.7, 3.2), gridspec_kw={'height_ratios': [1]})
-    # bar_width = 0.35
-    # x = circuits
 
     ax1.grid(True, linestyle=':', alpha=0.6, zorder=0)
-    # ax1.bar(x - bar_width / 2, mqt_eq_total_32, width=bar_width, label='MQT 32q eq', color='peachpuff', zorder=2)
     ax1.plot(circuits, dd_equiv, marker='o', label='DD equiv', color='lightpink', zorder=3)
     ax1.plot(circuits, dd_neq, marker='D', label='DD neq', color='lightpink', zorder=3)
     ax1.plot(circuits, zx_equiv, marker='o', label='ZX equiv', color='powderblue', zorder=3)
@@ -353,22 +340,6 @@ def fig5():
     ax1.set_xlabel("Circuit")
     ax1.set_yscale('log')
     ax1.legend()
-    #
-    # ax2.grid(True, linestyle=':', alpha=0.6, zorder=0)
-    # ax2.bar(x - bar_width / 2, mqt_eq_total_20, width=bar_width, label='MQT 20q eq', color='peachpuff',
-    #         zorder=2)
-    # ax2.bar(x + bar_width / 2, mqt_neq_total_20, width=bar_width, label='MQT 20q neq', color='lightsteelblue', zorder=2)
-    #
-    # ax2.plot(x, mqt_eq_check_20, marker='o', linestyle='--', color='coral', label='MQT 20q eq check', zorder=3)
-    # ax2.plot(x, mqt_neq_check_20, marker='o', linestyle='--', color='mediumslateblue', label='MQT 20q neq check',
-    #          zorder=3)
-    # ax2.plot(x, pandora_neq_total_20, marker='D', linestyle='-', color='red', label='Pandora 20q neq', zorder=3)
-    # ax2.plot(x, pandora_eq_total_20, marker='^', linestyle='-', color='maroon', label='Pandora 20q eq', zorder=3)
-    #
-    # ax2.set_yscale('log')
-    # ax2.set_ylabel("Seconds")
-    # ax2.set_xlabel("Circuit")
-    # ax2.legend(fontsize="x-small")
 
     plt.savefig("fig5.pdf", bbox_inches='tight', dpi=600)
     plt.savefig("fig5.png", bbox_inches='tight', dpi=600)
@@ -409,10 +380,10 @@ def fig_adders():
 
 
 if __name__ == "__main__":
-    # fig1()
-    # fig2()
-    # fig3()
-    # fig4()
+    fig1()
+    fig2()
+    fig3()
+    fig4()
     fig5()
-    # fig_adders()
-    # fig1_V2()
+    fig_adders()
+    fig1_V2()

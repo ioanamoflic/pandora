@@ -8,7 +8,6 @@ declare
 
     first record;
     second record;
---     compare record;
     gate record;
 
     first_id_plus_one bigint;
@@ -56,23 +55,6 @@ begin
                                      where prev_q1 = first_id_plus_zero
                                      and prev_q2 = first_id_plus_one
                                      and switch = first.switch;
---                 compare := second;
-
---                 if compare.id is null or compare.type != type_2 then
---                     -- LOOK BACKWARD (second, first)
---                     -- first becomes second
---                     second := first;
---                     -- select a different first from the database - LOOK BACKWARD
---                     select * into first from linked_circuit
---                                         where next_q1 = first_id_plus_zero
---                                             and next_q2 = first_id_plus_one
---                                             and switch = first.switch;
---                                         -- for update skip locked;
---
---                     compare := first;
---                 end if;
-
---                 if compare.id is not null and compare.type=type_2 then
 
                 if second.id is not null and second.type=type_2 then
                     -- LOOK FORWARD (first, second)

@@ -6,19 +6,18 @@ import re
 from pandora import PandoraOptimizer
 from pandora.gate_translator import PandoraGateTranslator
 
-pandora_ingestible_gate_set = cirq.Gateset(
-    cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel,
-    cirq.GlobalPhaseGate, cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
-    cirq.CZPowGate, cirq.CXPowGate, cirq.ZZPowGate, cirq.XXPowGate, cirq.CCXPowGate,
+cpt_gate_set = cirq.Gateset(
+    cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
+    cirq.CZPowGate, cirq.CXPowGate,
     cirq.X, cirq.Y, cirq.Z,
 )
 
 
 def keep(op: cirq.Operation):
     gate = op.without_classical_controls().gate
-    ret = gate in pandora_ingestible_gate_set
+    ret = gate in cpt_gate_set
     if isinstance(gate, cirq.ops.raw_types._InverseCompositeGate):
-        ret |= op.gate._original in pandora_ingestible_gate_set
+        ret |= op.gate._original in cpt_gate_set
     return ret
 
 
