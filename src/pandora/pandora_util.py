@@ -152,13 +152,19 @@ def pandora_to_circuit(pandora_gates: list[PandoraGate],
     """
     pandora_gate_id_map = wrap_pandora_gates(pandora_gates=pandora_gates)
 
+    # Print header
+    print(
+        f"{'id':>7} | {'prev_q1':>8} | {'prev_q2':>8} | {'prev_q3':>8} | {'type':>4} | "
+        f"{'next_q1':>8} | {'next_q2':>8} | {'next_q3':>8}"
+    )
+    print("-" * 70)
+
+    # Print each gate
     for gate in pandora_gates:
         print(
-            f"id={gate.id:2d} | "
-            f"prev_q1={str(gate.prev_q1):>4} | prev_q2={str(gate.prev_q2):>4} | prev_q3={str(gate.prev_q3):>4} | "
-            f"type={gate.type:>4} | "
-            f"next_q1={str(gate.next_q1):>4} | next_q2={str(gate.next_q2):>4} | next_q3={str(gate.next_q3):>4}"
-    )
+            f"{gate.id:7d} | {str(gate.prev_q1):>8} | {str(gate.prev_q2):>8} | {str(gate.prev_q3):>8} | {gate.type:4d} | "
+            f"{str(gate.next_q1):>8} | {str(gate.next_q2):>8} | {str(gate.next_q3):>8}"
+        )
 
     # TODO - Make it work for three qubit gates
     sorted_gates = sort_pandora_wrapped_by_moment(pandora_gate_id_map, original_qubits_test, is_test)
