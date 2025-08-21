@@ -19,5 +19,5 @@ sat_instance = circuit.shortest_error_sat_problem()
 wcnf = WCNF(from_string=sat_instance)
 
 with RC2(wcnf) as rc2:
-    print(rc2.compute())
+    # print(rc2.compute())
     print("distance ", rc2.cost)
