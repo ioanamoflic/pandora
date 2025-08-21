@@ -81,13 +81,13 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
         'lattice_surgery_procedures/simplify_two_parity_check.sql',
         'lattice_surgery_procedures/simplify_erasure_error.sql',
         'lattice_surgery_procedures/cnotify_XX.sql',
-        'lattice_surgery_procedures/cnotify_ZZ.sql'
+        'lattice_surgery_procedures/cnotify_ZZ.sql',
 
         # toffoli rewrite procedures
-        'lattice_surgery_procedures/rewrite_toffoli_pattern_a',
-        'lattice_surgery_procedures/rewrite_toffoli_pattern_b',
-        'lattice_surgery_procedures/rewrite_toffoli_pattern_c',
-        'lattice_surgery_procedures/rewrite_toffoli_pattern_d'
+        'generic_procedures/rewrite_toffoli_pattern_a.sql',
+        'generic_procedures/rewrite_toffoli_pattern_b.sql',
+        'generic_procedures/rewrite_toffoli_pattern_c.sql',
+        'generic_procedures/rewrite_toffoli_pattern_d.sql'
     ]
     cursor = connection.cursor()
 

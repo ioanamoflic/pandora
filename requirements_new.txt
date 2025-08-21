@@ -7,3 +7,6 @@ qiskit
 mqt.qcec
 qiskit_qasm3_import
 pytket
+
+stim
+python-sat

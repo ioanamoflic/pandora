@@ -102,20 +102,28 @@ class PandoraGateWrapper:
 
         self.pandora_gate = pandora_gate
         self.moment = moment
-        self.q1 = q1
-        self.q2 = q2
-        self.q3 = q3
-        # pre-compute the ids of previous gates
-        self.prev_id1 = self.get_neighbour_gate_id(pandora_gate.prev_q1)
-        self.prev_id2 = self.get_neighbour_gate_id(pandora_gate.prev_q2)
-        self.prev_id3 = self.get_neighbour_gate_id(pandora_gate.prev_q3)
-        # pre-compute the ids of next gates
-        self.next_id1 = self.get_neighbour_gate_id(pandora_gate.next_q1)
-        self.next_id2 = self.get_neighbour_gate_id(pandora_gate.next_q2)
-        self.next_id3 = self.get_neighbour_gate_id(pandora_gate.next_q3)
+
+        self.q = [q1, q2, q3]
+        # self.q1 = q1
+        # self.q2 = q2
+        # self.q3 = q3
+        # # pre-compute the ids of previous gates
+        self.prev_id = [self.get_neighbour_gate_id(pandora_gate.prev_q1),
+                        self.get_neighbour_gate_id(pandora_gate.prev_q2),
+                        self.get_neighbour_gate_id(pandora_gate.prev_q3)]
+        # self.prev_id1 = self.get_neighbour_gate_id(pandora_gate.prev_q1)
+        # self.prev_id2 = self.get_neighbour_gate_id(pandora_gate.prev_q2)
+        # self.prev_id3 = self.get_neighbour_gate_id(pandora_gate.prev_q3)
+        # # pre-compute the ids of next gates
+        self.next_id = [self.get_neighbour_gate_id(pandora_gate.next_q1),
+                        self.get_neighbour_gate_id(pandora_gate.next_q2),
+                        self.get_neighbour_gate_id(pandora_gate.next_q3)]
+        # self.next_id1 = self.get_neighbour_gate_id(pandora_gate.next_q1)
+        # self.next_id2 = self.get_neighbour_gate_id(pandora_gate.next_q2)
+        # self.next_id3 = self.get_neighbour_gate_id(pandora_gate.next_q3)
 
     def __str__(self):
-        return f'{self.pandora_gate.type}({self.q1}, {self.q2}, {self.q3})'
+        return f'{self.pandora_gate.type}({self.q[0]}, {self.q[1]}, {self.q[2]})'
 
     @staticmethod
     def get_neighbour_gate_id(connection_value) -> [None, int]:
@@ -131,18 +139,21 @@ class PandoraGateWrapper:
         Given a list of arbitrary cirq qubits, return the values of the qubits in that list which correspond to
         indices q1, q2, q3.
         """
+        nr_qubits = -1
         if self.pandora_gate.type in SINGLE_QUBIT_GATES:
-            if self.q1 is None:
+            nr_qubits = 1
+        elif self.pandora_gate.type in TWO_QUBIT_GATES:
+            nr_qubits = 2
+        elif self.pandora_gate.type in THREE_QUBIT_GATES:
+            nr_qubits = 3
+
+        ret = []
+        for i in range(nr_qubits):
+            if self.q[i] is None:
                 raise PandoraGateWrappedMissingQubits
-            return [qubit_list[self.q1]]
-        if self.pandora_gate.type in TWO_QUBIT_GATES:
-            if self.q1 is None or self.q2 is None:
-                raise PandoraGateWrappedMissingQubits
-            return [qubit_list[self.q1], qubit_list[self.q2]]
-        if self.pandora_gate.type in THREE_QUBIT_GATES:
-            if self.q1 is None or self.q2 is None or self.q3 is None:
-                raise PandoraGateWrappedMissingQubits
-            return [qubit_list[self.q1], qubit_list[self.q2], qubit_list[self.q3]]
+            ret.append(qubit_list[self.q[i]])
+
+        return ret
 
     def to_cirq_operation(self) -> cirq.GateOperation:
         """

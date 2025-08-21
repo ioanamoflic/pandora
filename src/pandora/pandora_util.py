@@ -2,7 +2,7 @@ import cirq
 import qiskit
 
 from pandora.exceptions import PandoraGateOrderingError, PandoraWrappedGateMissingLinks
-from pandora.gate_translator import SINGLE_QUBIT_GATES, TWO_QUBIT_GATES, PandoraGateTranslator
+from pandora.gate_translator import SINGLE_QUBIT_GATES, TWO_QUBIT_GATES, THREE_QUBIT_GATES, PandoraGateTranslator
 from pandora.gates import PandoraGateWrapper, PandoraGate
 
 
@@ -42,41 +42,56 @@ def sort_pandora_wrapped_by_moment(pandora_gate_id_map: dict[int, PandoraGateWra
             current_gate_code = current_wrapped_gate.pandora_gate.type
 
             # single qubit case
+            nr_qubits = -1
             if current_gate_code in SINGLE_QUBIT_GATES:
-                if current_wrapped_gate.prev_id1 not in pandora_gate_id_map.keys():
-                    raise PandoraGateOrderingError
-                prev_wrapped_gate = pandora_gate_id_map[current_wrapped_gate.prev_id1]
-                if prev_wrapped_gate.moment != default_moment:
-                    current_wrapped_gate.moment = prev_wrapped_gate.moment + 1
-                else:
-                    all_are_marked = False
+                nr_qubits = 1
+                # if current_wrapped_gate.prev_id[0] not in pandora_gate_id_map.keys():
+                #     raise PandoraGateOrderingError
+                #
+                # prev_wrapped_gate = pandora_gate_id_map[current_wrapped_gate.prev_id[0]]
+                # if prev_wrapped_gate.moment != default_moment:
+                #     current_wrapped_gate.moment = prev_wrapped_gate.moment + 1
+                # else:
+                #     all_are_marked = False
 
             # two qubit case
-            if current_gate_code in TWO_QUBIT_GATES:
+            elif current_gate_code in TWO_QUBIT_GATES:
                 # two qubit gate following two qubit gate
-                if current_wrapped_gate.prev_id1 not in pandora_gate_id_map.keys():
+                nr_qubits = 2
+            elif current_gate_code in THREE_QUBIT_GATES:
+                nr_qubits = 3
+
+            assert(nr_qubits != -1)
+
+            for i in range(nr_qubits):
+                if current_wrapped_gate.prev_id[i] not in pandora_gate_id_map.keys():
                     raise PandoraGateOrderingError
 
-                if current_wrapped_gate.prev_id2 not in pandora_gate_id_map.keys():
-                    raise PandoraGateOrderingError
+                # if current_wrapped_gate.prev_id[1] not in pandora_gate_id_map.keys():
+                #     raise PandoraGateOrderingError
 
-                prev_wrapped_gate_q1 = pandora_gate_id_map[current_wrapped_gate.prev_id1]
-                prev_wrapped_gate_q2 = pandora_gate_id_map[current_wrapped_gate.prev_id2]
-                prev_q1_id = prev_wrapped_gate_q1.pandora_gate.id
-                prev_q2_id = prev_wrapped_gate_q2.pandora_gate.id
+            prev_wrapped_gate_qs = [pandora_gate_id_map[current_wrapped_gate.prev_id[i]].moment for i in range(nr_qubits)]
 
-                if prev_q1_id == prev_q2_id:
-                    if prev_wrapped_gate_q1.moment != default_moment:
-                        current_wrapped_gate.moment = prev_wrapped_gate_q1.moment + 1
-                    else:
-                        all_are_marked = False
+            # prev_wrapped_gate_q1 = pandora_gate_id_map[current_wrapped_gate.prev_id[0]]
+            # prev_wrapped_gate_q2 = pandora_gate_id_map[current_wrapped_gate.prev_id[1]]
 
-                # two qubit gate following some other gates
-                if prev_q1_id != prev_q2_id:
-                    if default_moment not in [prev_wrapped_gate_q1.moment, prev_wrapped_gate_q2.moment]:
-                        current_wrapped_gate.moment = max(prev_wrapped_gate_q1.moment, prev_wrapped_gate_q2.moment) + 1
-                    else:
-                        all_are_marked = False
+            # prev_q1_id = prev_wrapped_gate_q1.pandora_gate.id
+            # prev_q2_id = prev_wrapped_gate_q2.pandora_gate.id
+
+            # if prev_q1_id == prev_q2_id:
+            #     if default_moment != prev_wrapped_gate_q1.moment:
+            #         current_wrapped_gate.moment = prev_wrapped_gate_q1.moment + 1
+            #     else:
+            #         all_are_marked = False
+            #
+            # # two qubit gate following some other gates
+            # # if prev_q1_id != prev_q2_id:
+            # else:
+            if default_moment not in prev_wrapped_gate_qs:#[prev_wrapped_gate_q1.moment, prev_wrapped_gate_q2.moment]:
+                current_wrapped_gate.moment = max(prev_wrapped_gate_qs) + 1
+                # current_wrapped_gate.moment = max(prev_wrapped_gate_q1.moment, prev_wrapped_gate_q2.moment) + 1
+            else:
+                all_are_marked = False
 
     assert all([wrapped.moment != default_moment for wrapped in pandora_gate_id_map.values()])
     if is_test:
@@ -99,7 +114,7 @@ def pandora_wrapped_to_qiskit_circuit(wrapped_gates: list[PandoraGateWrapper],
     q = list(range(n_qubits))
 
     for wrapped in wrapped_gates:
-        if wrapped.prev_id1 is None and wrapped.next_id1 is None:
+        if wrapped.prev_id[0] is None and wrapped.next_id[0] is None:
             raise PandoraWrappedGateMissingLinks
         qiskit_gate = wrapped.to_qiskit_gate()
         qiskit_qubits = wrapped.get_gate_qubits_from_list(q)
@@ -117,8 +132,9 @@ def pandora_wrapped_to_cirq_circuit(wrapped_gates: list[PandoraGateWrapper],
     q = [cirq.NamedQubit(str(j)) for j in range(n_qubits)]
 
     for wrapped in wrapped_gates:
-        if wrapped.prev_id1 is None and wrapped.next_id1 is None:
+        if wrapped.prev_id[0] is None and wrapped.next_id[0] is None:
             raise PandoraWrappedGateMissingLinks
+
         cirq_op = wrapped.to_cirq_operation()
         cirq_qubits = wrapped.get_gate_qubits_from_list(q)
         circuit.append(cirq_op.on(*cirq_qubits))
@@ -144,57 +160,84 @@ def pandora_to_circuit(pandora_gates: list[PandoraGate],
             f"next_q1={str(gate.next_q1):>4} | next_q2={str(gate.next_q2):>4} | next_q3={str(gate.next_q3):>4}"
     )
 
+    # TODO - Make it work for three qubit gates
     sorted_gates = sort_pandora_wrapped_by_moment(pandora_gate_id_map, original_qubits_test, is_test)
     sorted_ids = [wrapped.pandora_gate.id for wrapped in sorted_gates]
 
     rh = dict(zip(sorted_ids, sorted_gates))
 
-    n_qubits = 0
+    nr_circuit_qubits = 0
     for wrapped in rh.values():
         if wrapped.pandora_gate.type == PandoraGateTranslator.In.value:
-            wrapped.q1 = n_qubits
-            n_qubits += 1
+            wrapped.q[0] = nr_circuit_qubits
+            nr_circuit_qubits += 1
 
     for wrapped in rh.values():
+
         wrapped_id = wrapped.pandora_gate.id
+        nr_qubits = 0
 
         # find q1 for single qubit gate
-        if wrapped.pandora_gate.type in SINGLE_QUBIT_GATES:
-            if wrapped.pandora_gate.type != PandoraGateTranslator.In.value:
-                prev_wrapped_gate = rh[wrapped.prev_id1]
-                if prev_wrapped_gate.next_id1 == wrapped_id:
-                    wrapped.q1 = prev_wrapped_gate.q1
-                elif prev_wrapped_gate.next_id2 == wrapped_id:
-                    wrapped.q1 = prev_wrapped_gate.q2
+        if wrapped.pandora_gate.type in SINGLE_QUBIT_GATES and wrapped.pandora_gate.type != PandoraGateTranslator.In.value:
+            nr_qubits = 1
+                # for port_i in range(nr_qubits):
+                #     prev_wrapped_gate = rh[wrapped.prev_id[port_i]]
+                #     # each gate has three ports. check all three
+                #     for i in range(3):
+                #         if prev_wrapped_gate.next_id[i] == wrapped_id:
+                #             wrapped.q[port_i] = prev_wrapped_gate.q[i]
+
+                # if prev_wrapped_gate.next_id[0] == wrapped_id:
+                #     wrapped.q[0] = prev_wrapped_gate.q[0]
+                # elif prev_wrapped_gate.next_id[1] == wrapped_id:
+                #     wrapped.q[0] = prev_wrapped_gate.q[1]
 
         # find q1, q2 for two qubit gate
-        if wrapped.pandora_gate.type in TWO_QUBIT_GATES:
-            # previous gate is two qubit gate on same q1 q2
-            if wrapped.prev_id1 == wrapped.prev_id2:
-                previous_wrapped_gate = rh[wrapped.prev_id1]
-                if previous_wrapped_gate.pandora_gate.switch == wrapped.pandora_gate.switch:
-                    wrapped.q1, wrapped.q2 = previous_wrapped_gate.q1, previous_wrapped_gate.q2
-                else:
-                    wrapped.q1, wrapped.q2 = previous_wrapped_gate.q2, previous_wrapped_gate.q1
-            else:
-                # previous gates are different for q1 q2
-                previous_wrapped_q1 = rh[wrapped.prev_id1]
-                previous_wrapped_q2 = rh[wrapped.prev_id2]
+        elif wrapped.pandora_gate.type in TWO_QUBIT_GATES:
+            # # previous gate is two qubit gate on same q1 q2
+            # if wrapped.prev_id1 == wrapped.prev_id2:
+            #     previous_wrapped_gate = rh[wrapped.prev_id1]
+            #     if previous_wrapped_gate.pandora_gate.switch == wrapped.pandora_gate.switch:
+            #         wrapped.q1, wrapped.q2 = previous_wrapped_gate.q1, previous_wrapped_gate.q2
+            #     else:
+            #         wrapped.q1, wrapped.q2 = previous_wrapped_gate.q2, previous_wrapped_gate.q1
+            # else:
 
-                if previous_wrapped_q1.next_id1 == wrapped_id:
-                    wrapped.q1 = previous_wrapped_q1.q1
-                elif previous_wrapped_q1.next_id2 == wrapped_id:
-                    wrapped.q1 = previous_wrapped_q1.q2
+            # previous gates are different for q1 q2
+            # wrapped_id = wrapped.pandora_gate.id
+            nr_qubits = 2
 
-                if previous_wrapped_q2.next_id1 == wrapped_id:
-                    wrapped.q2 = previous_wrapped_q2.q1
-                elif previous_wrapped_q2.next_id2 == wrapped_id:
-                    wrapped.q2 = previous_wrapped_q2.q2
+        elif wrapped.pandora_gate.type in THREE_QUBIT_GATES:
+            nr_qubits = 3
+
+        for port_i in range(nr_qubits):
+            prev_wrapped_gate = rh[wrapped.prev_id[port_i]]
+            # each gate has three ports. check all three
+            for i in range(3):
+                if prev_wrapped_gate.next_id[i] == wrapped_id: #aici nu functioneaza la 3 porturi pentru ca nu leaga bine control la target
+                    wrapped.q[port_i] = prev_wrapped_gate.q[i]
+
+                #
+                # previous_wrapped_q1 = rh[wrapped.prev_id1]
+                # if previous_wrapped_q1.next_id1 == wrapped_id:
+                #     wrapped.q1 = previous_wrapped_q1.q1
+                # elif previous_wrapped_q1.next_id2 == wrapped_id:
+                #     wrapped.q1 = previous_wrapped_q1.q2
+                #
+                # wrapped_id = wrapped.pandora_gate.id
+                # previous_wrapped_q2 = rh[wrapped.prev_id2]
+                # if previous_wrapped_q2.next_id1 == wrapped_id:
+                #     wrapped.q2 = previous_wrapped_q2.q1
+                # elif previous_wrapped_q2.next_id2 == wrapped_id:
+                #     wrapped.q2 = previous_wrapped_q2.q2
+
+    for wrapped in rh.values():
+        print(wrapped)
 
     wrapped_gates = list(rh.values())
     if circuit_type == 'cirq':
-        circuit = pandora_wrapped_to_cirq_circuit(wrapped_gates=wrapped_gates, n_qubits=n_qubits)
+        circuit = pandora_wrapped_to_cirq_circuit(wrapped_gates=wrapped_gates, n_qubits=nr_circuit_qubits)
     else:
-        circuit = pandora_wrapped_to_qiskit_circuit(wrapped_gates=wrapped_gates, n_qubits=n_qubits)
+        circuit = pandora_wrapped_to_qiskit_circuit(wrapped_gates=wrapped_gates, n_qubits=nr_circuit_qubits)
 
     return circuit
