@@ -23,7 +23,7 @@ for d in /scratch/project_462000921/db_data/*/ ; do
 
     pg_ctl -D $PGDATA -o \"-p $PORT\" stop
     "
-    export EXEC="srun singularity exec -B $d -B $PGDATA:/var/lib/postgresql/data -B $PGRUN:/var/run/postgresql -B $(pwd):/pandora -e -C apptainer/images/pandora_new.sif"
+    export EXEC="srun singularity exec -B $d -B $PGDATA:/var/lib/postgresql/data -B $PGRUN:/var/run/postgresql -B $(pwd):/pandora -e -C apptainer/images/pandora.sif"
 
     $EXEC bash -c "$SCRIPTTORUN"
 done

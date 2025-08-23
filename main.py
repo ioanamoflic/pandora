@@ -31,8 +31,7 @@ if __name__ == "__main__":
         pandora.build_circuit_in_parallel(nprocs=NPROC,
                                           N=N,
                                           config_file_path=abs_path,
-                                          window_size=10000,
-                                          conn_lifetime=120)
+                                          window_size=10000)
     elif sys.argv[next_arg] == 'rsa':
         BIG_N = int(sys.argv[next_arg + 1])
         NPROC = int(sys.argv[next_arg + 2])
@@ -46,5 +45,4 @@ if __name__ == "__main__":
                                           n_containers=n_containers,
                                           N=BIG_N,
                                           config_file_path=abs_path,
-                                          window_size=10000,
-                                          conn_lifetime=120)
+                                          window_size=10000)

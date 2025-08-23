@@ -89,14 +89,8 @@ if __name__ == "__main__":
         op_nodes = qc_dag.op_nodes()
         op_nodes_length = len(op_nodes)
 
-        search_times = []
         rewrite_times = []
-
         for pass_i in range(nr_passes):
-
-            t0 = time.time()
-            # nodes = get_random_seq_gates_from_circuit(input_dag.op_nodes(), sample_percentage)
-            # random.shuffle(nodes)
             t1 = time.time()
 
             if DIR == 0:
@@ -113,14 +107,12 @@ if __name__ == "__main__":
 
             t2 = time.time()
 
-            search_times.append(t1 - t0)
             rewrite_times.append(t2 - t1)
 
-        total_search = sum(search_times)
         total_rewrite = sum(rewrite_times)
 
-        print('Time to optimize S+R=T:', total_search, total_rewrite, total_search + total_rewrite, flush=True)
+        print('Time to rewrite:', total_rewrite, flush=True)
 
         with open('qiskit_template_search_random_flip.csv', 'a') as f:
             writer = csv.writer(f)
-            writer.writerow((nq, total_search, total_rewrite, sample_percentage))
+            writer.writerow((nq, total_rewrite, sample_percentage))

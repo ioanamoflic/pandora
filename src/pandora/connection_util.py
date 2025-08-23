@@ -40,21 +40,10 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
             None.
     """
     procedures = [
-        #
+        # equivalence benchmark
         'generic_procedures/cancel_two_qubit_equiv.sql',
 
-        # bernoulli sample version
-        # 'generic_procedures/cancel_single_qubit_bernoulli.sql',
-        # 'generic_procedures/cancel_two_qubit_bernoulli.sql',
-        # 'generic_procedures/commute_single_control_left_bernoulli.sql',
-        # 'generic_procedures/commute_single_control_right_bernoulli.sql',
-        # 'generic_procedures/replace_two_sq_with_one_bernoulli.sql',
-        # 'generic_procedures/insert_two_qubit_bernoulli.sql',
-        # 'generic_procedures/cx_to_hhcxhh_bernoulli.sql',
-        # 'generic_procedures/hhcxhh_to_cx_bernoulli.sql',
-        # 'generic_procedures/commute_cx_ctrl_target_bernoulli.sql',
-
-        # system sample version
+        # sequential
         'generic_procedures/cancel_single_qubit.sql',
         'generic_procedures/cancel_two_qubit.sql',
         'generic_procedures/commute_single_control_left.sql',
@@ -62,22 +51,15 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
         'generic_procedures/insert_two_qubit.sql',
         'generic_procedures/replace_two_sq_with_one.sql',
         'generic_procedures/toffoli_decomposition.sql',
-        # 'generic_procedures/cx_to_hhcxhh.sql',
-        # 'generic_procedures/hhcxhh_to_cx.sql',
+        'generic_procedures/cx_to_hhcxhh.sql',
+        'generic_procedures/hhcxhh_to_cx.sql',
 
         # worker procedures
         'generic_procedures/stopper.sql',
         'generic_procedures/generate_edge_list.sql',
 
         # benchmarking only procedures
-        # 'generic_procedures/memorize_cx_ids.sql',
-        # 'generic_procedures/cx_to_hhcxhh_visit.sql',
-        # 'generic_procedures/cx_to_hhcxhh_cached.sql',
-        # 'generic_procedures/cx_to_hhcxhh_batched.sql',
-        'generic_procedures/cx_to_hhcxhh_seq.sql',
         'generic_procedures/hhcxhh_to_cx_seq.sql',
-        'generic_procedures/hhcxhh_to_cx.sql',
-        'generic_procedures/cx_to_hhcxhh.sql',
         'generic_procedures/hhcxhh_to_cx_parallel.sql',
         'generic_procedures/_generate_optimisation_stats.sql',
 
@@ -172,7 +154,7 @@ def create_named_circuit_table(connection, table_name: str) -> None:
         next_q1 int,
         next_q2 int,
         next_q3 int,
-        visited boolean,
+        visited smallint,
         label   serial,
         cl_ctrl boolean,
         meas_key smallint
@@ -515,37 +497,6 @@ def get_gate_types(connection,
         types.append((pandora_gate.id, PANDORA_TO_READABLE[pandora_gate.type]))
 
     return types
-
-
-def insert_hack(batches: list[list[Any]], bs_per_process: int) -> None:
-    """
-    TODO
-    """
-    connection = get_connection()
-    connection.set_session(autocommit=True)
-    process_batches = create_batches(batches, batch_size=int(bs_per_process))
-
-    for batch in process_batches:
-        insert_single_batch(connection, batch=batch)
-
-
-def parallel_insert(pandora_gates: list[PandoraGate], nprocs: int, bs_per_process: int) -> None:
-    """
-    VERY memory intensive. Hopefully faster?
-    """
-    pandora_gates = list(pandora_gates)
-    process_batch_size: int = len(pandora_gates) // nprocs
-    batches = create_batches(pandora_gates, batch_size=int(process_batch_size))
-
-    process_list = []
-    for i, batch_of_inserts in enumerate(batches):
-        p = Process(target=insert_hack, args=(batch_of_inserts, bs_per_process))
-        process_list.append(p)
-
-    for i in range(nprocs):
-        process_list[i].start()
-    for i in range(nprocs):
-        process_list[i].join()
 
 
 def map_hack(aff,

@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     pandora_optimizer.build_circuit(circuit=adder_circuit)
 
-    # decompose Toffoli gates in Pandora -- needs update
+    # decompose Toffoli gates in Pandora -- needs update, decomposing in Qualtran for now
     # pandora_optimizer.decompose_toffolis()
 
     """

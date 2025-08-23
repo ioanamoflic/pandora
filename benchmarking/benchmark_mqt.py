@@ -117,18 +117,16 @@ if __name__ == "__main__":
     NPROCS = 24
     FILENAME = None
     EQUIV = 0
-    CNT = None
     BENCH = None
     conn = None
     pool = None
 
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 4:
         sys.exit(0)
-    elif len(sys.argv) == 5:
+    elif len(sys.argv) == 4:
         FILENAME = sys.argv[1]
         EQUIV = int(sys.argv[2])
         BENCH = sys.argv[3]
-        CNT = sys.argv[4]
 
     if BENCH == 'pandora':
         conn = get_connection(config_file_path=FILENAME)
@@ -155,14 +153,14 @@ if __name__ == "__main__":
 
             if BENCH == 'pandora':
                 circ1 = generate_random_cnot_circuit(q, q ** 3)
-                with open(f"circ1_{q}_{i}_{EQUIV}_{CNT}.qasm", "w") as f:
+                with open(f"circ1_{q}_{i}_{EQUIV}.qasm", "w") as f:
                     qiskit.qasm3.dump(circ1, f)
 
                 if EQUIV == 0:
                     circ2 = circ1.copy()
                 else:
                     circ2 = remove_random_gate(circ1)
-                    with open(f"circ2_{q}_{i}_{EQUIV}_{CNT}.qasm", "w") as f:
+                    with open(f"circ2_{q}_{i}_{EQUIV}.qasm", "w") as f:
                         qiskit.qasm3.dump(circ2, f)
 
                 start_time_pandora = time.time()
@@ -177,17 +175,17 @@ if __name__ == "__main__":
                 print('Equiv: ', equiv)
 
             else:
-                circ1 = qiskit.qasm3.load(f"circ1_{q}_{i}_{EQUIV}_{CNT}.qasm")
+                circ1 = qiskit.qasm3.load(f"circ1_{q}_{i}_{EQUIV}.qasm")
                 if EQUIV == 0:
                     circ2 = circ1.copy()
                 else:
-                    circ2 = qiskit.qasm3.load(f"circ2_{q}_{i}_{EQUIV}_{CNT}.qasm")
+                    circ2 = qiskit.qasm3.load(f"circ2_{q}_{i}_{EQUIV}.qasm")
 
-                # ZX
+                # benchmark ZX
                 # run_simulation_checker = False
                 # run_alternating_checker = False
 
-                # DD
+                # benchmark DD
                 # run_simulation_checker=False
                 # run_zx_checker=False
 
@@ -208,7 +206,7 @@ if __name__ == "__main__":
 
         print("----- ", total / nr_runs)
 
-    with open(f'{BENCH}_{EQUIV}_verification_{CNT}.csv', 'a') as f:
+    with open(f'{BENCH}_{EQUIV}_verification.csv', 'a') as f:
         writer = csv.writer(f)
         for row in times:
             writer.writerow(row)

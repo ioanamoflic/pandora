@@ -1,4 +1,4 @@
-import benchmarking.benchmark_cirq
+import benchmarking.cirq_util
 from pandora.connection_util import *
 
 from qualtran.bloqs.arithmetic.addition import Add
@@ -33,9 +33,9 @@ def test_random_reconstruction(n_circuits=100):
     for i in range(n_circuits):
         print(f'Random test {i}')
         start_time = time.time()
-        initial_circuit = benchmarking.benchmark_cirq.create_random_circuit(n_qubits=3,
-                                                                            n_templates=3,
-                                                                            templates=templates, add_margins=True)
+        initial_circuit = benchmarking.cirq_util.create_random_circuit(n_qubits=3,
+                                                                       n_templates=3,
+                                                                       templates=templates, add_margins=True)
 
         print(f'Time for create_random_circuit: {time.time() - start_time}')
 

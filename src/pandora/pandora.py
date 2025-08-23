@@ -1,8 +1,7 @@
 import datetime
 
 from .parallel_decompose import parallel_decompose_multi_and_insert
-
-from pandora.connection_util import *
+from .connection_util import *
 from .widgetization.union_find import UnionFindWidgetizer
 
 
@@ -178,7 +177,7 @@ class Pandora:
                                   config_file_path: str = None,
                                   N=None,
                                   window_size=1000,
-                                  conn_lifetime=120) -> None:
+                                  ) -> None:
         """
         This method tries to build an arbitrary pyLIQTR circuit into Pandora. Note that the pyLIQTR decomposition
         might fail due to missing decompositions.
@@ -195,9 +194,6 @@ class Pandora:
             N:
             config_file_path: config file name. If None, will use defaults from PandoraConfig.
             window_size: size of decomposition window
-            conn_lifetime: lifetime (in seconds) of a database connection. This is needed as long-running connections
-            in postgres cache a lot of stuff and tend to bloat the memory over time. Once lifetime is exceeded, each
-            process closes its connection and creates a new one.
         """
         self.build_pandora()
         print("Decomposing circuit for pandora...")

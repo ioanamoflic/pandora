@@ -16,5 +16,5 @@ bash
 "
 
 # Run Pandora in the apptainer
-export EXEC="apptainer exec -B $(pwd):/pandora -e -C apptainer/images/pandora_new.sif"
+export EXEC="apptainer exec -B $(pwd):/pandora -e -C apptainer/images/pandora.sif"
 $EXEC bash -c "$SCRIPTTORUN"

@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     n_rounds = 1
     nr_passes = 1
-    sample_percentage = 10
+    sample_percentage = 1
 
     pool = None
     if NPROCS > 0:
