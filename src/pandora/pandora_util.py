@@ -45,18 +45,7 @@ def sort_pandora_wrapped_by_moment(pandora_gate_id_map: dict[int, PandoraGateWra
             nr_qubits = -1
             if current_gate_code in SINGLE_QUBIT_GATES:
                 nr_qubits = 1
-                # if current_wrapped_gate.prev_id[0] not in pandora_gate_id_map.keys():
-                #     raise PandoraGateOrderingError
-                #
-                # prev_wrapped_gate = pandora_gate_id_map[current_wrapped_gate.prev_id[0]]
-                # if prev_wrapped_gate.moment != default_moment:
-                #     current_wrapped_gate.moment = prev_wrapped_gate.moment + 1
-                # else:
-                #     all_are_marked = False
-
-            # two qubit case
             elif current_gate_code in TWO_QUBIT_GATES:
-                # two qubit gate following two qubit gate
                 nr_qubits = 2
             elif current_gate_code in THREE_QUBIT_GATES:
                 nr_qubits = 3
@@ -180,33 +169,8 @@ def pandora_to_circuit(pandora_gates: list[PandoraGate],
         # find q1 for single qubit gate
         if wrapped.pandora_gate.type in SINGLE_QUBIT_GATES and wrapped.pandora_gate.type != PandoraGateTranslator.In.value:
             nr_qubits = 1
-                # for port_i in range(nr_qubits):
-                #     prev_wrapped_gate = rh[wrapped.prev_id[port_i]]
-                #     # each gate has three ports. check all three
-                #     for i in range(3):
-                #         if prev_wrapped_gate.next_id[i] == wrapped_id:
-                #             wrapped.q[port_i] = prev_wrapped_gate.q[i]
-
-                # if prev_wrapped_gate.next_id[0] == wrapped_id:
-                #     wrapped.q[0] = prev_wrapped_gate.q[0]
-                # elif prev_wrapped_gate.next_id[1] == wrapped_id:
-                #     wrapped.q[0] = prev_wrapped_gate.q[1]
-
-        # find q1, q2 for two qubit gate
         elif wrapped.pandora_gate.type in TWO_QUBIT_GATES:
-            # # previous gate is two qubit gate on same q1 q2
-            # if wrapped.prev_id1 == wrapped.prev_id2:
-            #     previous_wrapped_gate = rh[wrapped.prev_id1]
-            #     if previous_wrapped_gate.pandora_gate.switch == wrapped.pandora_gate.switch:
-            #         wrapped.q1, wrapped.q2 = previous_wrapped_gate.q1, previous_wrapped_gate.q2
-            #     else:
-            #         wrapped.q1, wrapped.q2 = previous_wrapped_gate.q2, previous_wrapped_gate.q1
-            # else:
-
-            # previous gates are different for q1 q2
-            # wrapped_id = wrapped.pandora_gate.id
             nr_qubits = 2
-
         elif wrapped.pandora_gate.type in THREE_QUBIT_GATES:
             nr_qubits = 3
 
@@ -214,22 +178,9 @@ def pandora_to_circuit(pandora_gates: list[PandoraGate],
             prev_wrapped_gate = rh[wrapped.prev_id[port_i]]
             # each gate has three ports. check all three
             for i in range(3):
-                if prev_wrapped_gate.next_id[i] == wrapped_id: #aici nu functioneaza la 3 porturi pentru ca nu leaga bine control la target
+                if prev_wrapped_gate.next_id[i] == wrapped_id:
+                    # TODO: aici nu functioneaza la 3 porturi pentru ca nu leaga bine control la target
                     wrapped.q[port_i] = prev_wrapped_gate.q[i]
-
-                #
-                # previous_wrapped_q1 = rh[wrapped.prev_id1]
-                # if previous_wrapped_q1.next_id1 == wrapped_id:
-                #     wrapped.q1 = previous_wrapped_q1.q1
-                # elif previous_wrapped_q1.next_id2 == wrapped_id:
-                #     wrapped.q1 = previous_wrapped_q1.q2
-                #
-                # wrapped_id = wrapped.pandora_gate.id
-                # previous_wrapped_q2 = rh[wrapped.prev_id2]
-                # if previous_wrapped_q2.next_id1 == wrapped_id:
-                #     wrapped.q2 = previous_wrapped_q2.q1
-                # elif previous_wrapped_q2.next_id2 == wrapped_id:
-                #     wrapped.q2 = previous_wrapped_q2.q2
 
     for wrapped in rh.values():
         print(wrapped)
