@@ -10,12 +10,14 @@ APP_NAME="pandora"
 
 base() {
     mkdir -p "$IMAGES_DIR"
-    apptainer build "$IMAGES_DIR/$BASE_IMAGE.sif" "docker://$BASE_IMAGE"
+    #apptainer build "$IMAGES_DIR/$BASE_IMAGE.sif" "docker://$BASE_IMAGE"
+    docker build -t local/$APP_NAME:latest .
 }
 
 build() {
     mkdir -p "$IMAGES_DIR"
-    apptainer build "$IMAGES_DIR/$APP_NAME.sif" project.apptainer
+    singularity build images/pandora.sif docker-daemon://local/$APP_NAME:latest
+    #apptainer build --sandbox "$IMAGES_DIR/$APP_NAME.sif" project.apptainer
 }
 
 run() {

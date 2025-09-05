@@ -1,0 +1,10 @@
+FROM postgres:latest 
+WORKDIR /usr/local/app
+
+# Install the application dependencies
+COPY requirements.txt ./
+RUN apt update
+RUN apt install python3 git -y
+RUN apt install python3-pip -y
+RUN pip install  --break-system-packages --no-cache-dir -r requirements.txt
+

@@ -5,8 +5,10 @@ From: images/postgres:latest.sif
     ../requirements.txt requirements.txt
 
 %post
+    mkdir -vp /scratch-local/tmp
+    export TMPDIR=/scratch-local/tmp
     apt update
-    apt-get -y install python3 git
+    apt install python3 git -y
     apt install python3-pip -y
     pip3 install --break-system-packages -r requirements.txt
 

@@ -33,28 +33,28 @@ if __name__ == "__main__":
     hrl_data_path = os.path.abspath(".")
 
     # Example
-    print("Initialising circuit")
-    circuit = make_fh_circuit(N=10, p_algo=0.9999999904, times=0.01)
-    print("initialised circuit")
+    #print("Initialising circuit")
+    #circuit = make_fh_circuit(N=10, p_algo=0.9999999904, times=0.01)
+    #print("initialised circuit")
 
-    moment = iter(circuit)
-    qsvt = next(iter(next(moment)))
+    #moment = iter(circuit)
+    #qsvt = next(iter(next(moment)))
 
-    circuit = cirq.Circuit()
-    circuit.append(qsvt)
+    #circuit = cirq.Circuit()
+    #circuit.append(qsvt)
 
-    DECOMP_LEVEL = 4
-    decomposed_circuit = chain_decompose_multi(
-        circuit,
-        DECOMP_LEVEL
-    )
-    target = find_target_gate(
-        decomposed_circuit,
-        pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU
-    )
+    #DECOMP_LEVEL = 4
+    #decomposed_circuit = chain_decompose_multi(
+    #    circuit,
+    #    DECOMP_LEVEL
+    #)
+    #target = find_target_gate(
+    #    decomposed_circuit,
+    #    pyLIQTR.BlockEncodings.PauliStringLCU.PauliStringLCU
+    #)
 
-    # Add a new table for this gate
-    conn = add_cache_db(pandora, target, 'lcu')
+    ## Add a new table for this gate
+    #conn = add_cache_db(pandora, target, 'lcu')
 
     #  # Example widgetisation
     #  widgets = conn.widgetize(max_t=10,
