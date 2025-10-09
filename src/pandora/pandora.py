@@ -33,6 +33,8 @@ class PandoraConfig:
 
 class Pandora:
 
+    default_label = 'd'
+
     def __init__(self, pandora_config=PandoraConfig(), max_time=3600, decomposition_window_size=1000000):
         self.pandora_config = pandora_config
         if self.pandora_config.database != 'postgres':
@@ -84,15 +86,15 @@ class Pandora:
 
         return connection
 
-    def build_pandora(self):
+    def build_pandora(self, verbose=False):
         """
         Creates the Pandora database tables from scratch and updates all stored procedures.
         """
         drop_and_replace_tables(self.connection,
                                 clean=True,
-                                verbose=True)
+                                verbose=verbose)
         refresh_all_stored_procedures(self.connection,
-                                      verbose=True)
+                                      verbose=verbose)
 
     def build_dedicated_table(self, table_name: str):
         create_named_circuit_table(connection=self.connection,
@@ -170,6 +172,18 @@ class Pandora:
             print("Building edge list...")
             self.build_edge_list()
 
+    def build_simple_circuit(self,
+                             circuit: Any):
+        self.build_pandora()
+        pandora_gates, _ = cirq_to_pandora(cirq_circuit=circuit,
+                                           last_id=0,
+                                           add_margins=True,
+                                           label=self.default_label)
+        insert_single_batch(connection=self.connection,
+                            batch=pandora_gates,
+                            is_test=True,
+                            table_name='linked_circuit_test')
+
     def build_circuit_in_parallel(self,
                                   nprocs: int,
                                   container_id: int = None,
@@ -222,6 +236,20 @@ class Pandora:
             process_list[i].join()
 
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
+
+    def extract_circuit(self, qubit_dict=None):
+        """
+        Returns the circuit stored in Pandora as a cirq Circuit object.
+        Assumes is_test = True.
+        """
+        extracted_circuit: cirq.Circuit = extract_cirq_circuit(connection=self.connection,
+                                                               circuit_label=self.default_label,
+                                                               remove_io_gates=True,
+                                                               is_test=False,
+                                                               table_name='linked_circuit_test',
+                                                               original_qubits_test=qubit_dict,
+                                                               just_count=False)
+        return extracted_circuit
 
     def widgetize(self,
                   max_t: int,
