@@ -6,6 +6,8 @@ from itertools import cycle
 from multiprocessing import Process
 
 import psycopg2
+from qiskit import QuantumCircuit
+from qiskit.converters import circuit_to_dag, dag_to_circuit
 
 from pandora.cirq_to_pandora_util import *
 from pandora.gate_translator import PANDORA_TO_READABLE, GLOBAL_IN_ID, GLOBAL_OUT_ID
@@ -334,13 +336,24 @@ def remove_io_gates_from_circuit(circuit: cirq.Circuit) -> cirq.Circuit:
     return io_free_reconstructed
 
 
+def remove_io_gates_from_qiskit_circuit(circuit):
+    dag = circuit_to_dag(circuit)
+
+    for node in list(dag.op_nodes()):
+        if node.op.label in ["In", "Out"]:
+            dag.remove_op_node(node)
+
+    return dag_to_circuit(dag)
+
+
 def extract_cirq_circuit(connection,
+                         circuit_type='cirq',
                          circuit_label: str = None,
                          table_name: str = None,
                          remove_io_gates: bool = False,
                          original_qubits_test: dict[str, int] = None,
                          is_test=True,
-                         just_count=True) -> cirq.Circuit | int:
+                         just_count=True) -> cirq.Circuit | QuantumCircuit | int:
     """
     Extracts a circuit with a given label from the database and returns the corresponding cirq circuit.
     Params:
@@ -369,11 +382,16 @@ def extract_cirq_circuit(connection,
 
     pandora_gates: list[PandoraGate] = [PandoraGate(*tup) for tup in tuples]
     final_circ: cirq.Circuit = pandora_to_circuit(pandora_gates=pandora_gates,
+                                                  circuit_type=circuit_type,
                                                   original_qubits_test=original_qubits_test,
                                                   is_test=is_test)
 
     if remove_io_gates:
-        return remove_io_gates_from_circuit(final_circ)
+        if circuit_type == 'cirq':
+            return remove_io_gates_from_circuit(final_circ)
+        elif circuit_type == 'qiskit':
+            return remove_io_gates_from_qiskit_circuit(final_circ)
+
     return final_circ
 
 

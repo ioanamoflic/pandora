@@ -2,6 +2,7 @@ import datetime
 
 from .parallel_decompose import parallel_decompose_multi_and_insert
 from .connection_util import *
+from .qiskit_to_pandora_util import convert_qiskit_to_pandora
 from .widgetization.union_find import UnionFindWidgetizer
 
 
@@ -32,7 +33,6 @@ class PandoraConfig:
 
 
 class Pandora:
-
     default_label = 'd'
 
     def __init__(self, pandora_config=PandoraConfig(), max_time=3600, decomposition_window_size=1000000):
@@ -173,12 +173,21 @@ class Pandora:
             self.build_edge_list()
 
     def build_simple_circuit(self,
+                             circuit_type: str,
                              circuit: Any):
         self.build_pandora()
-        pandora_gates, _ = cirq_to_pandora(cirq_circuit=circuit,
-                                           last_id=0,
-                                           add_margins=True,
-                                           label=self.default_label)
+
+        pandora_gates = []
+
+        if circuit_type == 'cirq':
+            pandora_gates, _ = cirq_to_pandora(cirq_circuit=circuit,
+                                               last_id=0,
+                                               add_margins=True,
+                                               label=self.default_label)
+        elif circuit_type == 'qiskit':
+            pandora_gates, _ = convert_qiskit_to_pandora(qiskit_circuit=circuit,
+                                                         label=self.default_label,
+                                                         add_margins=True)
         insert_single_batch(connection=self.connection,
                             batch=pandora_gates,
                             is_test=True,
@@ -237,12 +246,13 @@ class Pandora:
 
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
-    def extract_circuit(self, qubit_dict=None):
+    def extract_circuit(self, circuit_type, qubit_dict=None):
         """
         Returns the circuit stored in Pandora as a cirq Circuit object.
         Assumes is_test = True.
         """
         extracted_circuit: cirq.Circuit = extract_cirq_circuit(connection=self.connection,
+                                                               circuit_type=circuit_type,
                                                                circuit_label=self.default_label,
                                                                remove_io_gates=True,
                                                                is_test=False,
