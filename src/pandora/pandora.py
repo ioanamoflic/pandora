@@ -4,8 +4,13 @@ import datetime
 
 import psycopg2
 
-from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
-    make_cyclic_o3_circuit, make_hc_circuit
+#try:
+#    from pandora.pyliqtr_to_pandora_util import make_transverse_ising_circuit, make_fh_circuit, make_mg_coating_walk_op, \
+#    make_cyclic_o3_circuit, make_hc_circuit
+#
+#except:
+#    pass
+
 from pandora.qualtran_to_pandora_util import *
 from pandora.benchmarking.benchmark_adders import get_maslov_adder
 
