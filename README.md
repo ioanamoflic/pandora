@@ -22,6 +22,10 @@ c) multi-threaded speed-up (vertical) when reverting the direction of CNOT gates
 
 **Pandora** is integrated with <a href="https://github.com/quantumlib/Qualtran" target=_blank>Google Qualtran</a> and <a href="https://github.com/isi-usc-edu/pyLIQTR" target=_blank>pyLIQTR</a>.
 
+## Whole pipeline
+
+![pipeline.jpg](pipeline.jpg)
+
 ## Apptainer Setup
 Installation instructions can be found in the `README.md` of the `apptainer` folder. In a nutshell, you need to have
 Apptainer installed on your computer, a Docker image of Postgres available locally, and then to follow the 
