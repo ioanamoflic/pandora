@@ -1,4 +1,4 @@
-IMG_DIR=images
+IMG_DIR=apptainer/images
 APP_NAME=pandora
 
 
