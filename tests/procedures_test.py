@@ -1,5 +1,6 @@
 import random
-from benchmarking import benchmark_cirq
+from pandora import benchmarking
+from pandora.benchmarking import benchmark_cirq
 
 from pandora.qualtran_to_pandora_util import *
 from pandora.connection_util import *

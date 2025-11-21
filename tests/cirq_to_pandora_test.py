@@ -1,4 +1,5 @@
-import benchmarking.benchmark_cirq
+from pandora import benchmarking
+import pandora.benchmarking.benchmark_cirq
 from pandora.qualtran_to_pandora_util import get_adder, get_qrom, get_adder_as_cirq_circuit, \
     get_qrom_as_cirq_circuit
 from pandora.connection_util import *
