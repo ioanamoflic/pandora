@@ -87,3 +87,127 @@ Please use
 ## Acknowledgements
 **This research was performed in part with funding from the Defense Advanced Research Projects Agency [under the Quantum Benchmarking
 (QB) program under award no. HR00112230006 and HR001121S0026 contracts].**
+
+## SQL code example explanation
+```sql
+create or replace procedure cancel_single_qubit(type_1 int, type_2 int, param_1 float, param_2 float, my_proc_id int, nprocs int, pass_count int, timeout int)
+    language plpgsql
+as
+$$
+    --     We are performing this rewrite:
+    --
+    --     First (type_1, param_2) ---- Second (type_2, param_2) ----  =  ------------
+
+    --     LinkID (edge in the circuit DAG) has the format *IPTT where:
+    --     - unlimited number of digits for the gate id I
+    --     - one digit for the port P. For example, a CNOT gate has 2 ports, a Toffoli has 3 ports etc.
+    --     - two digits for the gate type T. For example, a Toffoli is 23, a CNOT is 15/18 etc.
+    --
+    --     Considering the LinkID X, in order to:
+    --     - get the gate id: X / 1000 will return the *I digits
+    --     - get the port number: (X / 100) % 10 will return the P digit
+    --     - get the type: X % 100 will return the T digits
+declare
+    -- helper variables
+    first_prev_id bigint;
+    second_next_id bigint;
+
+    gate record;
+    first record;
+    second record;
+
+    a record;
+    b record;
+
+	start_time timestamp;
+
+begin
+    start_time := CLOCK_TIMESTAMP();
+
+     -- pass_count is usually set for benchmarking purposes (we know exactly how many templates we should
+     -- rewrite), otherwise it is set to a very large number
+     -- we should never loop infinitely as we have a timeout set (see below)
+
+	 while pass_count > 0 loop
+	    -- loop through all candidate gates that currently fit the pattern we are looking for:
+	    -- first gate (L) with type = type_1 and parameter = param_1 having a neighbouring second gate (R)
+        -- which also has the type type_2 (see *IPTT format)
+        for gate in
+            select * from linked_circuit
+                     where
+                       id % nprocs = my_proc_id
+                       and type = type_1
+                       and param = param_1
+                       and mod(next_q1, 100) = type_2
+        loop
+            -- attempt to lock the two gates
+            -- if not already locked by another process (skip locked), lock the pair of gates (for update)
+            select * into first from linked_circuit where id = gate.id for update skip locked;
+            select * into second from linked_circuit where id = div(first.next_q1, 1000) for update skip locked;
+
+            -- if acquiring locks is not successful (e.g. gates deleted already by another process),
+            -- commit and move to the next candidate pair
+            -- locks are released at commit!
+            if first.id is null or second.id is null then
+                commit;
+                continue;
+            end if;
+
+            -- note that we never actually checked whether the second gate has the correct parameter
+            -- if not, commit and move to the next candidate pair
+            if second.param != param_2 or second.type != type_2 then
+                commit;
+                continue;
+            end if;
+
+            -- compute the ids of the two gates (see *IPTT format)
+            first_prev_id := div(first.prev_q1, 1000);
+            second_next_id := div(second.next_q1, 1000);
+
+            -- attempt to lock the neighbours of the pair (left of first gate and right of second gate)
+            -- this is needed as we have to update the LinkIDs and we need to lock the neighbours pointing to
+            -- the pair as well
+            select * into a from linked_circuit where id = first_prev_id for update skip locked;
+            select * into b from linked_circuit where id = second_next_id for update skip locked;
+
+            -- if locking the neighbours failed, commit and move to the next candidate pair
+            if a.id is null or b.id is null then
+                commit;
+                continue;
+            end if;
+
+            -- if we made it this far, it means we have managed to acquire all the necessary locks
+            -- before deleting the single-qubit gate pair, we make sure to update the links of the neighbours
+
+            -- we link the left neighbour of the first gate to the right neighbour of the second gate (see *IPTT format)
+            if mod(div(first.prev_q1, 100), 10) = 0 then
+                update linked_circuit set next_q1 = second.next_q1 where id = first_prev_id;
+            else
+                update linked_circuit set next_q2 = second.next_q1 where id = first_prev_id;
+            end if;
+
+            -- we link the right neighbour of the second gate to the left neighbour of the first gate (see *IPTT format)
+            if mod(div(second.next_q1, 100), 10) = 0 then
+                update linked_circuit set prev_q1 = first.prev_q1 where id = second_next_id;
+            else
+                update linked_circuit set prev_q2 = first.prev_q1 where id = second_next_id;
+            end if;
+
+            -- neighbouring links are updated, the only thing left to do is to delete the rows in the database
+            delete from linked_circuit where id in (first.id, second.id);
+
+            commit; -- release the locks
+
+        end loop; -- end gate loop
+
+        -- we finished a circuit pass
+	    pass_count = pass_count - 1;
+
+        -- if we exceeded the allotted time, return to avoid looping infinitely
+	    if extract(epoch from (clock_timestamp() - start_time)) > timeout then
+            exit;
+        end if;
+
+    end loop; -- end pass loop
+end;$$;
+```
