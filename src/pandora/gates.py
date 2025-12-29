@@ -132,7 +132,9 @@ class PandoraGateWrapper:
         """
         if connection_value is None:
             return connection_value
-        return connection_value // 10
+
+        #TODO: Clean the id - value translations
+        return connection_value // 1000
 
     def get_gate_qubits_from_list(self, qubit_list) -> list:
         """
