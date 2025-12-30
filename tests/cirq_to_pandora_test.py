@@ -12,26 +12,6 @@ from pandora.qualtran_to_pandora_util import get_cirq_circuit_for_bloq, assert_c
 from pandora.cirq_util import create_random_circuit
 from pyLIQTR.utils.repeat import circuit_to_quregs
 
-
-def get_adder_as_cirq_circuit(n_bits) -> cirq.Circuit:
-    """
-    Used of testing.
-    """
-    bloq = Add(QUInt(n_bits))
-    clifford_t_circuit = get_cirq_circuit_for_bloq(bloq)
-    assert_circuit_is_pandora_ingestible(clifford_t_circuit)
-    return clifford_t_circuit
-
-
-def get_qrom_as_cirq_circuit(data) -> cirq.Circuit:
-    """
-    Used of testing.
-    """
-    bloq = QROM.build_from_data(data)
-    qrom_circuit = get_cirq_circuit_for_bloq(bloq)
-    return qrom_circuit
-
-
 def test_random_reconstruction(n_circuits=100):
     templates = ['add_two_hadamards', 'add_two_cnots', 'add_base_change', 'add_t_t_dag', 'add_t_cx', 'add_cx_t']
     for i in range(n_circuits):
@@ -112,7 +92,11 @@ def test_reconstruction(connection, full_circuit):
 def test_qualtran_adder_reconstruction(connection):
     for n_bits in range(2, 30):
         print(f'Adder test {n_bits}')
-        full_circuit = get_adder_as_cirq_circuit(n_bits=n_bits)
+
+        bloq = Add(QUInt(n_bits))
+        full_circuit = get_cirq_circuit_for_bloq(bloq)
+        assert_circuit_is_pandora_ingestible(full_circuit)
+
         test_reconstruction(connection=connection, full_circuit=full_circuit)
         print(f'Passed adder({n_bits})!')
 
@@ -122,7 +106,9 @@ def test_qualtran_qrom_reconstruction(connection):
     for i in range(3, 30):
         print(f'QROM test {i}')
         data = [*range(1, i)]
-        full_circuit = get_qrom_as_cirq_circuit(data=data)
+        bloq = QROM.build_from_data(data)
+        full_circuit = get_cirq_circuit_for_bloq(bloq)
+
         test_reconstruction(connection=connection, full_circuit=full_circuit)
         print(f'Passed qrom({i})!')
 
