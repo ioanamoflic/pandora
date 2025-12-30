@@ -80,12 +80,12 @@ def test_qualtran_adder_reconstruction(connection):
 
         full_adder_circuit = get_adder_as_cirq_circuit(n_bits=n_bits)
 
+        qubit_dict = dict((str(qubit), i) for i, qubit in enumerate(sorted(full_adder_circuit.all_qubits(),
+                                                                           key=lambda q: str(q))))
         adder_batches = windowed_cirq_to_pandora(circuit=full_adder_circuit,
                                                  window_size=2,
                                                  is_test=True)
 
-        qubit_dict = dict((str(qubit), i) for i, qubit in enumerate(sorted(full_adder_circuit.all_qubits(),
-                                                                           key=lambda q: str(q))))
         for i, (batch, _) in enumerate(adder_batches):
             insert_single_batch(connection=connection,
                                 batch=batch,
@@ -96,7 +96,8 @@ def test_qualtran_adder_reconstruction(connection):
                                                                circuit_label='x',
                                                                remove_io_gates=True,
                                                                table_name='linked_circuit_test',
-                                                               original_qubits_test=qubit_dict)
+                                                               original_qubits_test=qubit_dict,
+                                                               just_count=False)
 
         init_circuit = remove_measurements(remove_classically_controlled_ops(full_adder_circuit))
         extracted_circuit = remove_measurements(remove_classically_controlled_ops(extracted_circuit))
@@ -176,7 +177,9 @@ def test_qualtran_qrom_reconstruction(connection):
 
 if __name__ == "__main__":
     conn = get_connection()
+
     test_random_reconstruction(n_circuits=10)
     test_qualtran_adder_reconstruction(connection=conn)
-    test_qualtran_qrom_reconstruction(connection=conn)
+    # test_qualtran_qrom_reconstruction(connection=conn)
+
     conn.close()

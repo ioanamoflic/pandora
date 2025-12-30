@@ -305,8 +305,6 @@ def insert_single_batch(connection,
             sql_statement = \
                 ("""INSERT INTO linked_circuit_test(id, prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, 
                 next_q1, next_q2, next_q3, visited, label, cl_ctrl, meas_key, qubit_name) VALUES """ + args)
-            cursor.execute(sql_statement)
-            connection.commit()
         else:
             args = ','.join(
                 cursor.mogrify("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", tup.to_tuple())
@@ -315,8 +313,11 @@ def insert_single_batch(connection,
                 (f"INSERT INTO {table_name}(id, "
                  f"prev_q1, prev_q2, prev_q3, type, param, global_shift, switch, next_q1, "
                  "next_q2, next_q3, visited, label, cl_ctrl, meas_key) VALUES" + args)
-            cursor.execute(sql_statement)
-            connection.commit()
+
+        print(sql_statement)
+        cursor.execute(sql_statement)
+        connection.commit()
+
     except psycopg2.Error as err:
         print("Error at bulk insertion: ", err)
     finally:
