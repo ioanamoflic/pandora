@@ -246,20 +246,20 @@ class Pandora:
 
         print(f"Decomposing circuit took: {time.time() - start_decomp}")
 
-    def extract_circuit(self, circuit_type, qubit_dict=None):
-        """
-        Returns the circuit stored in Pandora as a cirq Circuit object.
-        Assumes is_test = True.
-        """
-        extracted_circuit: cirq.Circuit = extract_cirq_circuit(connection=self.connection,
-                                                               circuit_type=circuit_type,
-                                                               circuit_label=self.default_label,
-                                                               remove_io_gates=True,
-                                                               is_test=False,
-                                                               table_name='linked_circuit_test',
-                                                               original_qubits_test=qubit_dict,
-                                                               just_count=False)
-        return extracted_circuit
+    # def extract_circuit(self, circuit_type, qubit_dict=None):
+    #     """
+    #     Returns the circuit stored in Pandora as a cirq Circuit object.
+    #     Assumes is_test = True.
+    #     """
+    #     extracted_circuit: cirq.Circuit = extract_cirq_circuit(connection=self.connection,
+    #                                                            circuit_type=circuit_type,
+    #                                                            circuit_label=self.default_label,
+    #                                                            remove_io_gates=True,
+    #                                                            is_test=False,
+    #                                                            table_name='linked_circuit_test',
+    #                                                            original_qubits_test=qubit_dict,
+    #                                                            just_count=False)
+    #     return extracted_circuit
 
     def widgetize(self,
                   max_t: int,

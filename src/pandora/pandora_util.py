@@ -128,12 +128,10 @@ def pandora_wrapped_to_cirq_circuit(wrapped_gates: list[PandoraGateWrapper],
 
 
 def pandora_to_circuit(pandora_gates: list[PandoraGate],
-                       circuit_type: ['cirq', 'qiskit'] = 'cirq',
                        original_qubits_test: dict[str, int] = None,
-                       is_test=False) \
-        -> cirq.Circuit | qiskit.QuantumCircuit:
+                       is_test=False):
     """
-    Takes a list of Pandora gates (unwrapped) and returns the corresponding cirq Circuit or qiskit QuantumCircuit.
+    Takes a list of Pandora gates (unwrapped) and returns a list of wrapped gates
     """
     pandora_gate_id_map = wrap_pandora_gates(pandora_gates=pandora_gates)
     sorted_gates = sort_pandora_wrapped_by_moment(pandora_gate_id_map, original_qubits_test, is_test)
@@ -183,10 +181,4 @@ def pandora_to_circuit(pandora_gates: list[PandoraGate],
                 elif previous_wrapped_q2.next_id2 == wrapped_id:
                     wrapped.q2 = previous_wrapped_q2.q2
 
-    wrapped_gates = list(rh.values())
-    if circuit_type == 'cirq':
-        circuit = pandora_wrapped_to_cirq_circuit(wrapped_gates=wrapped_gates, n_qubits=n_qubits)
-    else:
-        circuit = pandora_wrapped_to_qiskit_circuit(wrapped_gates=wrapped_gates, n_qubits=n_qubits)
-
-    return circuit
+    return list(rh.values()), n_qubits

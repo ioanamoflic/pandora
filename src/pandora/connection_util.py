@@ -11,7 +11,7 @@ from qiskit.converters import circuit_to_dag, dag_to_circuit
 
 from pandora.cirq_to_pandora_util import *
 from pandora.gate_translator import PANDORA_TO_READABLE, GLOBAL_IN_ID, GLOBAL_OUT_ID
-from pandora.pandora_util import pandora_to_circuit
+from pandora.pandora_util import pandora_to_circuit, pandora_wrapped_to_cirq_circuit
 
 
 def get_connection(autocommit=True, config_file_path=None):
@@ -348,7 +348,6 @@ def remove_io_gates_from_qiskit_circuit(circuit):
 
 
 def extract_cirq_circuit(connection,
-                         circuit_type='cirq',
                          circuit_label: str = None,
                          table_name: str = None,
                          remove_io_gates: bool = False,
@@ -382,18 +381,19 @@ def extract_cirq_circuit(connection,
         return len(tuples)
 
     pandora_gates: list[PandoraGate] = [PandoraGate(*tup) for tup in tuples]
-    final_circ: cirq.Circuit = pandora_to_circuit(pandora_gates=pandora_gates,
-                                                  circuit_type=circuit_type,
+    wrapped_gates_circ, n_qubits = pandora_to_circuit(pandora_gates=pandora_gates,
                                                   original_qubits_test=original_qubits_test,
                                                   is_test=is_test)
 
-    if remove_io_gates:
-        if circuit_type == 'cirq':
-            return remove_io_gates_from_circuit(final_circ)
-        elif circuit_type == 'qiskit':
-            return remove_io_gates_from_qiskit_circuit(final_circ)
+    final_circ = pandora_wrapped_to_cirq_circuit(wrapped_gates=wrapped_gates_circ, n_qubits=n_qubits)
 
-    return final_circ
+    # if remove_io_gates:
+    # if circuit_type == 'cirq':
+    return remove_io_gates_from_circuit(final_circ)
+        # elif circuit_type == 'qiskit':
+        #     return remove_io_gates_from_qiskit_circuit(final_circ)
+
+    # return final_circ
 
 
 def get_edge_list(connection) -> list[tuple[int, int]]:

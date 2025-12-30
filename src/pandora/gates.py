@@ -152,17 +152,6 @@ class PandoraGateWrapper:
     def __str__(self):
         return f'{self.pandora_gate.type}({self.q1}, {self.q2}, {self.q3})'
 
-    # @staticmethod
-    # def get_neighbour_gate_id(connection_value) -> [None, int]:
-    #     """
-    #     Returns the id of the neighbour gate on a link with value = connection_value.
-    #     """
-    #     if connection_value is None:
-    #         return connection_value
-    #
-    #     #TODO: Clean the id - value translations
-    #     return connection_value // 1000
-
     def get_gate_qubits_from_list(self, qubit_list) -> list:
         """
         Given a list of arbitrary cirq qubits, return the values of the qubits in that list which correspond to

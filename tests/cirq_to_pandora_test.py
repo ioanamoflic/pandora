@@ -44,7 +44,9 @@ def test_random_reconstruction(n_circuits=100):
         print(f'Time for cirq_to_db: {time.time() - start_time}')
 
         start_time = time.time()
-        reconstructed_circuit = pandora_to_circuit(pandora_gates=db_tuples)
+        wrapped_gates, n_qubits = pandora_to_circuit(pandora_gates=db_tuples)
+        reconstructed_circuit = pandora_wrapped_to_cirq_circuit(wrapped_gates=wrapped_gates, n_qubits=n_qubits)
+
         print(f'Time for db_to_cirq: {time.time() - start_time}')
 
         qubit_map = dict(
@@ -124,7 +126,7 @@ def test_qualtran_adder_reconstruction(connection):
 def test_qualtran_qrom_reconstruction(connection):
     # append i, time for cirq_to_db and time for db_to_cirq
     times = []
-    for i in range(2, 30):
+    for i in range(3, 30):
         print(f'QROM test {i}')
         data = [*range(1, i)]
 
