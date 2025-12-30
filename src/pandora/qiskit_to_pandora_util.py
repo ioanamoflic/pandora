@@ -1,14 +1,12 @@
 from qiskit.converters import circuit_to_dag, dag_to_circuit
 
 from pandora.gate_translator import MAX_QUBITS_PER_GATE, QISKIT_TO_PANDORA, PandoraGateTranslator
-from pandora.gates import PandoraGate
+from pandora.gates import PandoraGate, get_link_id, get_gate_id, get_gate_port
 
 from qiskit import QuantumCircuit
 from qiskit.circuit import Measure, CircuitInstruction
 
 from typing import Dict
-
-from pandora.pandora_util import get_link_id, get_gate_id, get_gate_port
 
 
 def remove_io_gates(circuit):

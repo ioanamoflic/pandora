@@ -6,6 +6,33 @@ from pandora.gate_translator import PandoraGateTranslator, PANDORA_TO_CIRQ, CAN_
     REQUIRES_ROTATION, SINGLE_QUBIT_GATES, TWO_QUBIT_GATES, THREE_QUBIT_GATES, PANDORA_TO_QISKIT, IS_IO
 import cirq
 
+"""
+    LinkID has the following format *IPTT where:
+    - unlimited number of digits for the gateid I
+    - one digit for the port P. For example, a CNOT gate has 2 ports, a Toffoli has 3 ports etc.
+    - two digits for the gate type T. For example, a Toffoli is 23, a CNOT is 15/18 etc.
+
+    Considering the LinkID X, in order to:
+    - get the gateid: X / 1000 will return the *I digits
+    - get the port number: (X / 100) % 10 will return the P digit
+    - get the type: X % 100 will return the T digits
+"""
+
+def get_link_id(gate_id, gate_port, gate_type):
+    return gate_id * 1000 + gate_port * 100 + gate_type
+
+
+def get_gate_id(link_id):
+    return link_id // 1000
+
+
+def get_gate_port(link_id):
+    return (link_id // 100) % 10
+
+
+def get_gate_type(link_id):
+    return link_id % 100
+
 
 class PandoraGate:
     def __init__(self,
@@ -114,27 +141,27 @@ class PandoraGateWrapper:
         self.q2 = q2
         self.q3 = q3
         # pre-compute the ids of previous gates
-        self.prev_id1 = self.get_neighbour_gate_id(pandora_gate.prev_q1)
-        self.prev_id2 = self.get_neighbour_gate_id(pandora_gate.prev_q2)
-        self.prev_id3 = self.get_neighbour_gate_id(pandora_gate.prev_q3)
+        self.prev_id1 = get_gate_id(pandora_gate.prev_q1)
+        self.prev_id2 = get_gate_id(pandora_gate.prev_q2)
+        self.prev_id3 = get_gate_id(pandora_gate.prev_q3)
         # pre-compute the ids of next gates
-        self.next_id1 = self.get_neighbour_gate_id(pandora_gate.next_q1)
-        self.next_id2 = self.get_neighbour_gate_id(pandora_gate.next_q2)
-        self.next_id3 = self.get_neighbour_gate_id(pandora_gate.next_q3)
+        self.next_id1 = get_gate_id(pandora_gate.next_q1)
+        self.next_id2 = get_gate_id(pandora_gate.next_q2)
+        self.next_id3 = get_gate_id(pandora_gate.next_q3)
 
     def __str__(self):
         return f'{self.pandora_gate.type}({self.q1}, {self.q2}, {self.q3})'
 
-    @staticmethod
-    def get_neighbour_gate_id(connection_value) -> [None, int]:
-        """
-        Returns the id of the neighbour gate on a link with value = connection_value.
-        """
-        if connection_value is None:
-            return connection_value
-
-        #TODO: Clean the id - value translations
-        return connection_value // 1000
+    # @staticmethod
+    # def get_neighbour_gate_id(connection_value) -> [None, int]:
+    #     """
+    #     Returns the id of the neighbour gate on a link with value = connection_value.
+    #     """
+    #     if connection_value is None:
+    #         return connection_value
+    #
+    #     #TODO: Clean the id - value translations
+    #     return connection_value // 1000
 
     def get_gate_qubits_from_list(self, qubit_list) -> list:
         """

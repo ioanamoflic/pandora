@@ -6,55 +6,7 @@ import qiskit
 from qiskit import QuantumCircuit
 from qualtran.bloqs.arithmetic.addition import And
 
-
-class In(cirq.Gate, ABC):
-    def __init__(self, is_classic=False, key=None):
-        super(In, self)
-        if key is None:
-            self.gate = 'In'
-        else:
-            self.gate = key
-        self.is_classic = is_classic
-
-    def _num_qubits_(self):
-        return 1
-
-    def _unitary_(self):
-        return np.array([
-            [1.0, 0.0],
-            [0.0, 1.0]
-        ])
-
-    def _circuit_diagram_info_(self, args):
-        return self.gate
-
-    def __str__(self):
-        return self.gate
-
-
-class Out(cirq.Gate, ABC):
-    def __init__(self, is_classic=False, key=None):
-        super(Out, self)
-        self.is_classic = is_classic
-        if key is None:
-            self.gate = 'Out'
-        else:
-            self.gate = key
-
-    def _num_qubits_(self):
-        return 1
-
-    def _unitary_(self):
-        return np.array([
-            [1.0, 0.0],
-            [0.0, 1.0]
-        ])
-
-    def _circuit_diagram_info_(self, args):
-        return self.gate
-
-    def __str__(self):
-        return self.gate
+from .cirq_util import In, Out
 
 
 # each gate will have a different code used as a fast(er) comparison key in the database

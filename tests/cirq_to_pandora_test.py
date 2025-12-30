@@ -1,4 +1,3 @@
-import benchmarking.cirq_util
 from pandora.connection_util import *
 
 from qualtran.bloqs.arithmetic.addition import Add
@@ -8,6 +7,7 @@ from qualtran import QUInt
 from pandora.pandora_util import pandora_to_circuit
 from pandora.qualtran_to_pandora_util import get_cirq_circuit_for_bloq, assert_circuit_is_pandora_ingestible
 
+from pandora.cirq_util import create_random_circuit
 
 def get_adder_as_cirq_circuit(n_bits) -> cirq.Circuit:
     """
@@ -33,9 +33,9 @@ def test_random_reconstruction(n_circuits=100):
     for i in range(n_circuits):
         print(f'Random test {i}')
         start_time = time.time()
-        initial_circuit = benchmarking.cirq_util.create_random_circuit(n_qubits=3,
-                                                                       n_templates=3,
-                                                                       templates=templates, add_margins=True)
+        initial_circuit = create_random_circuit(n_qubits=3,
+                                                   n_templates=3,
+                                                   templates=templates, add_margins=True)
 
         print(f'Time for create_random_circuit: {time.time() - start_time}')
 
@@ -149,7 +149,8 @@ def test_qualtran_qrom_reconstruction(connection):
                                                                circuit_label='x',
                                                                remove_io_gates=True,
                                                                table_name='linked_circuit_test',
-                                                               original_qubits_test=qubit_dict)
+                                                               original_qubits_test=qubit_dict,
+                                                               just_count=False)
 
         init_circuit = remove_measurements(remove_classically_controlled_ops(full_qrom_circuit))
         extracted_circuit = remove_measurements(remove_classically_controlled_ops(extracted_circuit))
@@ -165,6 +166,9 @@ def test_qualtran_qrom_reconstruction(connection):
 
         init_ops = list(init_circuit.all_operations())
         final_ops = list(extracted_circuit.all_operations())
+
+        print(len(init_ops), len(final_ops))
+
         assert len(init_ops) == len(final_ops)
 
         for i, (op_1, op_2) in enumerate(zip(init_ops, final_ops)):
@@ -178,8 +182,8 @@ def test_qualtran_qrom_reconstruction(connection):
 if __name__ == "__main__":
     conn = get_connection()
 
-    test_random_reconstruction(n_circuits=10)
-    test_qualtran_adder_reconstruction(connection=conn)
-    # test_qualtran_qrom_reconstruction(connection=conn)
+    # test_random_reconstruction(n_circuits=10)
+    # test_qualtran_adder_reconstruction(connection=conn)
+    test_qualtran_qrom_reconstruction(connection=conn)
 
     conn.close()
