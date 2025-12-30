@@ -377,7 +377,8 @@ def windowed_cirq_to_pandora(circuit: Any,
                 batch_elements.append(pandora_gate)
                 pandora_dictionary.pop(pandora_gate.id)
 
-        yield batch_elements, time.time() - start_cirq_to_pandora + cliff_decomp_time
+        if len(batch_elements) > 0:
+            yield batch_elements, time.time() - start_cirq_to_pandora + cliff_decomp_time
 
     start_final = time.time()
     final_batch: list[cirq.Operation] = [Out().on(q) for q in qubit_set]
@@ -388,4 +389,7 @@ def windowed_cirq_to_pandora(circuit: Any,
         last_id=last_id,
         label='x',
         is_test=is_test)
-    yield list(pandora_out_gates.values()), time.time() - start_final
+
+    ml = list(pandora_out_gates.values())
+    if len(ml) > 0:
+        yield ml, time.time() - start_final
