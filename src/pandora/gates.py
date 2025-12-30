@@ -141,13 +141,13 @@ class PandoraGateWrapper:
         self.q2 = q2
         self.q3 = q3
         # pre-compute the ids of previous gates
-        self.prev_id1 = get_gate_id(pandora_gate.prev_q1)
-        self.prev_id2 = get_gate_id(pandora_gate.prev_q2)
-        self.prev_id3 = get_gate_id(pandora_gate.prev_q3)
+        self.prev_id1 = get_gate_id(pandora_gate.prev_q1) if pandora_gate.prev_q1 is not None else None
+        self.prev_id2 = get_gate_id(pandora_gate.prev_q2) if pandora_gate.prev_q2 is not None else None
+        self.prev_id3 = get_gate_id(pandora_gate.prev_q3) if pandora_gate.prev_q3 is not None else None
         # pre-compute the ids of next gates
-        self.next_id1 = get_gate_id(pandora_gate.next_q1)
-        self.next_id2 = get_gate_id(pandora_gate.next_q2)
-        self.next_id3 = get_gate_id(pandora_gate.next_q3)
+        self.next_id1 = get_gate_id(pandora_gate.next_q1) if pandora_gate.next_q1 is not None else None
+        self.next_id2 = get_gate_id(pandora_gate.next_q2) if pandora_gate.next_q2 is not None else None
+        self.next_id3 = get_gate_id(pandora_gate.next_q3) if pandora_gate.next_q3 is not None else None
 
     def __str__(self):
         return f'{self.pandora_gate.type}({self.q1}, {self.q2}, {self.q3})'
