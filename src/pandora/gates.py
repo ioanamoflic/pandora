@@ -55,16 +55,20 @@ class PandoraGate:
                  qubit_name: str = None):
         # self.auto_id = None
         self.id = gate_id
-        self.prev_q1 = self.remove_type_from_link(prev_q1)
-        self.prev_q2 = self.remove_type_from_link(prev_q2)
-        self.prev_q3 = self.remove_type_from_link(prev_q3)
+
+        self.prev_q1 = prev_q1 #self.remove_type_from_link(prev_q1)
+        self.prev_q2 = prev_q2 #self.remove_type_from_link(prev_q2)
+        self.prev_q3 = prev_q3 #self.remove_type_from_link(prev_q3)
+
         self.type = gate_code
         self.param = gate_parameter
         self.global_shift = global_shift
         self.switch = switch
-        self.next_q1 = self.remove_type_from_link(next_q1)
-        self.next_q2 = self.remove_type_from_link(next_q2)
-        self.next_q3 = self.remove_type_from_link(next_q3)
+
+        self.next_q1 = next_q1 #self.remove_type_from_link(next_q1)
+        self.next_q2 = next_q2 #self.remove_type_from_link(next_q2)
+        self.next_q3 = next_q3 #self.remove_type_from_link(next_q3)
+
         self.visited = visited
         self.label = label
         self.cl_ctrl = is_classically_controlled
@@ -72,16 +76,18 @@ class PandoraGate:
         self.qubit_name = qubit_name
 
     def __str__(self):
-        return f'{self.prev_q1}<---------->{self.next_q1}\n' \
-               f'{self.prev_q2}<--{self.type}({self.id})-->{self.next_q2}\n' \
-               f'{self.prev_q3}<---------->{self.next_q3}\n'
+        return f'1: {self.prev_q1}<---------->{self.next_q1}\n' \
+               f'2: {self.prev_q2}<--t-{self.type}(id-{self.id})-->{self.next_q2}\n' \
+               f'3: {self.prev_q3}<---------->{self.next_q3}'
 
-    @staticmethod
-    def remove_type_from_link(link):
-        # if link is not none and next type is not In/Out
-        if link is not None and link > 100:
-            return link // 100
-        return link
+    # @staticmethod
+    # def remove_type_from_link(link):
+    #     # if link is not none and next type is not In/Out
+    #     if link is not None and link > 100:
+    #         return link // 100
+    #     return link
+    #
+    # get_gate_type()
 
     def get_insert_query(self, table_name):
         columns = self.__dict__.keys()
@@ -150,18 +156,21 @@ class PandoraGateWrapper:
         self.next_id3 = get_gate_id(pandora_gate.next_q3) if pandora_gate.next_q3 is not None else None
 
     def __str__(self):
-        return f'{self.pandora_gate.type}({self.q1}, {self.q2}, {self.q3})'
+        return f'PandoraGateWrapper: {self.pandora_gate.type}({self.q1}, {self.q2}, {self.q3})'
 
     def get_gate_qubits_from_list(self, qubit_list) -> list:
         """
         Given a list of arbitrary cirq qubits, return the values of the qubits in that list which correspond to
         indices q1, q2, q3.
         """
+
+        print(self.pandora_gate)
+        print(self)
+        print("qubit1: ", self.q1)
+        print("")
+
         if self.pandora_gate.type in SINGLE_QUBIT_GATES:
             if self.q1 is None:
-                print(str(self.pandora_gate))
-                print(str(self))
-                print(self.q1)
                 raise PandoraGateWrappedMissingQubits
             return [qubit_list[self.q1]]
         if self.pandora_gate.type in TWO_QUBIT_GATES:

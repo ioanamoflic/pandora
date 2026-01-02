@@ -1,25 +1,28 @@
 import cirq
 import qiskit
+from quimb.tensor.circuit_gen import gates_qaoa
 
 from pandora.exceptions import PandoraGateOrderingError, PandoraWrappedGateMissingLinks
 from pandora.gate_translator import SINGLE_QUBIT_GATES, TWO_QUBIT_GATES, PandoraGateTranslator
 from pandora.gates import PandoraGateWrapper, PandoraGate
 
 
-def wrap_pandora_gates(pandora_gates: list[PandoraGate]) -> dict[int, PandoraGateWrapper]:
-    """
-    Maps each raw Pandora gate in the input list to its wrapped version.
-    Returns a dictionary where each key is a gate id and the value is the corresponding PandoraGate object
-    """
-    pandora_gate_id_map = {}
-    for gate in pandora_gates:
-        wrapped = PandoraGateWrapper(pandora_gate=gate)
-        if gate.type == PandoraGateTranslator.In.value:
-            wrapped.moment = 0
-        pandora_gate_id_map[gate.id] = wrapped
-    return pandora_gate_id_map
+# def wrap_pandora_gates(pandora_gates: list[PandoraGate]) -> dict[int, PandoraGateWrapper]:
+#     """
+#     Maps each raw Pandora gate in the input list to its wrapped version.
+#     Returns a dictionary where each key is a gate id and the value is the corresponding PandoraGate object
+#     """
+#     pandora_gate_id_map = {}
+#     for gate in pandora_gates:
+#         wrapped = PandoraGateWrapper(pandora_gate=gate)
+#         if gate.type == PandoraGateTranslator.In.value:
+#             wrapped.moment = 0
+#         pandora_gate_id_map[gate.id] = wrapped
+#     return pandora_gate_id_map
 
-
+"""
+    Maybe this should be performed in SQL. Direclty in the tables.
+"""
 def sort_pandora_wrapped_by_moment(pandora_gate_id_map: dict[int, PandoraGateWrapper],
                                    original_qubits_test: dict[str, int] = None,
                                    is_test=False):
@@ -108,7 +111,7 @@ def pandora_wrapped_to_qiskit_circuit(wrapped_gates: list[PandoraGateWrapper],
     return circuit
 
 
-def pandora_wrapped_to_cirq_circuit(wrapped_gates: list[PandoraGateWrapper],
+def pandora_wrapped_to_cirq_circuit(gates: list[PandoraGateWrapper],
                                     n_qubits: int) -> cirq.Circuit:
     """
     Take a list of PandoraGateWrapper objects and return the corresponding cirq Circuit.
@@ -116,29 +119,46 @@ def pandora_wrapped_to_cirq_circuit(wrapped_gates: list[PandoraGateWrapper],
     circuit = cirq.Circuit()
     q = [cirq.NamedQubit(str(j)) for j in range(n_qubits)]
 
-    for wrapped in wrapped_gates:
-        if wrapped.prev_id1 is None and wrapped.next_id1 is None:
+    for pandora_gate in gates:
+        if pandora_gate.prev_id1 is None and pandora_gate.next_id1 is None:
             raise PandoraWrappedGateMissingLinks
-        cirq_op = wrapped.to_cirq_operation()
-        cirq_qubits = wrapped.get_gate_qubits_from_list(q)
+
+        cirq_op = pandora_gate.to_cirq_operation()
+        cirq_qubits = pandora_gate.get_gate_qubits_from_list(q)
         circuit.append(cirq_op.on(*cirq_qubits))
                        #.with_tags(str(wrapped.pandora_gate.id)))
 
     return circuit
 
 
-def pandora_to_circuit(pandora_gates: list[PandoraGate],
-                       original_qubits_test: dict[str, int] = None,
-                       is_test=False):
+def annotate_pandora_gates(pandora_gates: list[PandoraGate],
+                           original_qubits_test: dict[str, int] = None,
+                           is_test=False):
     """
-    Takes a list of Pandora gates (unwrapped) and returns a list of wrapped gates
+        Takes a list of Pandora gates (unwrapped) and returns a list of gates which include moment and qubit information
     """
-    pandora_gate_id_map = wrap_pandora_gates(pandora_gates=pandora_gates)
+
+    # pandora_gate_id_map = wrap_pandora_gates(pandora_gates=pandora_gates)
+
+    # Wrap the Pandora gates
+    pandora_gate_id_map = {}
+    for gate in pandora_gates:
+        wrapped = PandoraGateWrapper(pandora_gate=gate)
+        if gate.type == PandoraGateTranslator.In.value:
+            wrapped.moment = 0
+        pandora_gate_id_map[gate.id] = wrapped
+    # return pandora_gate_id_map
+
+
     sorted_gates = sort_pandora_wrapped_by_moment(pandora_gate_id_map, original_qubits_test, is_test)
-    sorted_ids = [wrapped.pandora_gate.id for wrapped in sorted_gates]
+    sorted_ids = [gate.pandora_gate.id for gate in sorted_gates]
 
     rh = dict(zip(sorted_ids, sorted_gates))
 
+    """
+        - Set q1 to the inputs
+        - Count the number of qubits this circuit is operating on
+    """
     n_qubits = 0
     for wrapped in rh.values():
         if wrapped.pandora_gate.type == PandoraGateTranslator.In.value:
