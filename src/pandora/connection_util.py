@@ -11,7 +11,7 @@ from qiskit.converters import circuit_to_dag, dag_to_circuit
 
 from pandora.cirq_to_pandora_util import *
 from pandora.gate_translator import PANDORA_TO_READABLE, GLOBAL_IN_ID, GLOBAL_OUT_ID
-from pandora.pandora_util import annotate_pandora_gates, pandora_wrapped_to_cirq_circuit
+from pandora.gates import pandora_to_cirq_circuit, annotate_pandora_gates
 
 
 def get_connection(autocommit=True, config_file_path=None):
@@ -385,7 +385,7 @@ def extract_cirq_circuit(connection,
                                                           original_qubits_test=original_qubits_test,
                                                           is_test=is_test)
 
-    final_circ = pandora_wrapped_to_cirq_circuit(gates=wrapped_gates_circ, n_qubits=n_qubits)
+    final_circ = pandora_to_cirq_circuit(gates=wrapped_gates_circ, n_qubits=n_qubits)
 
     return remove_io_gates_from_circuit(final_circ)
 

@@ -4,11 +4,11 @@ from qualtran.bloqs.arithmetic.addition import Add
 from qualtran.bloqs.data_loading import QROM
 from qualtran import QUInt
 
-from pandora.pandora_util import annotate_pandora_gates
+from pandora.gates import pandora_to_cirq_circuit, annotate_pandora_gates
 from pandora.qualtran_to_pandora_util import get_cirq_circuit_for_bloq, assert_circuit_is_pandora_ingestible
 
 from pandora.cirq_util import create_random_circuit
-from pyLIQTR.utils.repeat import circuit_to_quregs
+
 
 def test_random_reconstruction(n_circuits=100):
     templates = ['add_two_hadamards', 'add_two_cnots', 'add_base_change', 'add_t_t_dag', 'add_t_cx', 'add_cx_t']
@@ -27,7 +27,7 @@ def test_random_reconstruction(n_circuits=100):
 
         start_time = time.time()
         wrapped_gates, n_qubits = annotate_pandora_gates(pandora_gates=db_tuples)
-        reconstructed_circuit = pandora_wrapped_to_cirq_circuit(gates=wrapped_gates, n_qubits=n_qubits)
+        reconstructed_circuit = pandora_to_cirq_circuit(gates=wrapped_gates, n_qubits=n_qubits)
 
         print(f'Time for db_to_cirq: {time.time() - start_time}')
 

@@ -2,7 +2,7 @@ import time
 
 from qiskit.quantum_info import random_clifford
 
-from pandora.pandora_util import annotate_pandora_gates, pandora_wrapped_to_qiskit_circuit
+from pandora.gates import pandora_to_qiskit_circuit, annotate_pandora_gates
 from pandora.qiskit_to_pandora_util import convert_qiskit_to_pandora, remove_io_gates
 
 
@@ -24,7 +24,7 @@ def test_random_reconstruction(n_circuits=100):
 
         start_time = time.time()
         wrapped_gates, n_qubits = annotate_pandora_gates(pandora_gates=db_tuples)
-        circuit = pandora_wrapped_to_qiskit_circuit(wrapped_gates=wrapped_gates, n_qubits=n_qubits)
+        circuit = pandora_to_qiskit_circuit(wrapped_gates=wrapped_gates, n_qubits=n_qubits)
 
         return circuit
 
