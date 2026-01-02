@@ -7,7 +7,7 @@ from pandora.gate_translator import In, Out, PandoraGateTranslator, \
     TWO_QUBIT_GATES, SINGLE_QUBIT_GATES, MAX_QUBITS_PER_GATE, \
     REQUIRES_ROTATION, REQUIRES_EXPONENT, PYLIQTR_ROTATION_TO_PANDORA
 
-from pandora.gates import PandoraGate, PandoraGateWrapper, get_link_id, get_gate_id, get_gate_port
+from pandora.gates import PandoraGate, get_link_id, get_gate_id, get_gate_port
 from pandora.qualtran_to_pandora_util import generator_get_pandora_compatible_batch_via_pyliqtr
 
 

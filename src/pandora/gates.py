@@ -34,6 +34,7 @@ def get_gate_port(link_id):
 def get_gate_type(link_id):
     return link_id % 100
 
+DEFAULT_MOMENT = -1
 
 class PandoraGate:
     def __init__(self,
@@ -54,7 +55,7 @@ class PandoraGate:
                  is_classically_controlled: bool = False,
                  measurement_key: int = None,
                  qubit_name: str = None):
-        # self.auto_id = None
+
         self.id = gate_id
 
         self.prev_q1 = prev_q1 #self.remove_type_from_link(prev_q1)
@@ -68,11 +69,12 @@ class PandoraGate:
         """
             Information used to annotate the Pandora gates
         """
-        self.moment = None
+        self.moment = DEFAULT_MOMENT
         self.q1 = None
         self.q2 = None
         self.q3 = None
 
+        #TODO: These should be getters/setters somehow. And cached?
         # pre-compute the ids of previous gates
         self.prev_id1 = get_gate_id(self.prev_q1) if self.prev_q1 is not None else None
         self.prev_id2 = get_gate_id(self.prev_q2) if self.prev_q2 is not None else None
@@ -98,14 +100,6 @@ class PandoraGate:
                f'2: {self.prev_q2}<--t-{self.type}(id-{self.id})-->{self.next_q2}\n' \
                f'3: {self.prev_q3}<---------->{self.next_q3}'
 
-    # @staticmethod
-    # def remove_type_from_link(link):
-    #     # if link is not none and next type is not In/Out
-    #     if link is not None and link > 100:
-    #         return link // 100
-    #     return link
-    #
-    # get_gate_type()
 
     def get_insert_query(self, table_name):
         columns = self.__dict__.keys()
@@ -221,14 +215,13 @@ def sort_pandora_by_moment(pandora_gate_id_map: dict[int, PandoraGate],
 
     Note that this only works for gates acting on at most two qubits.
     """
-    default_moment = -1
     all_are_marked = False
 
     while all_are_marked is False:
         all_are_marked = True
         for current_gate in pandora_gate_id_map.values():
             # gate already has an assigned moment
-            if current_gate.moment != default_moment:
+            if current_gate.moment != DEFAULT_MOMENT:
                 continue
 
             current_gate_code = current_gate.type
@@ -238,7 +231,7 @@ def sort_pandora_by_moment(pandora_gate_id_map: dict[int, PandoraGate],
                 if current_gate.prev_id1 not in pandora_gate_id_map.keys():
                     raise PandoraGateOrderingError
                 prev_wrapped_gate = pandora_gate_id_map[current_gate.prev_id1]
-                if prev_wrapped_gate.moment != default_moment:
+                if prev_wrapped_gate.moment != DEFAULT_MOMENT:
                     current_gate.moment = prev_wrapped_gate.moment + 1
                 else:
                     all_are_marked = False
@@ -258,28 +251,27 @@ def sort_pandora_by_moment(pandora_gate_id_map: dict[int, PandoraGate],
                 prev_q2_id = prev_wrapped_gate_q2.id
 
                 if prev_q1_id == prev_q2_id:
-                    if prev_wrapped_gate_q1.moment != default_moment:
+                    if prev_wrapped_gate_q1.moment != DEFAULT_MOMENT:
                         current_gate.moment = prev_wrapped_gate_q1.moment + 1
                     else:
                         all_are_marked = False
 
                 # two qubit gate following some other gates
                 if prev_q1_id != prev_q2_id:
-                    if default_moment not in [prev_wrapped_gate_q1.moment, prev_wrapped_gate_q2.moment]:
+                    if DEFAULT_MOMENT not in [prev_wrapped_gate_q1.moment, prev_wrapped_gate_q2.moment]:
                         current_gate.moment = max(prev_wrapped_gate_q1.moment, prev_wrapped_gate_q2.moment) + 1
                     else:
                         all_are_marked = False
 
-    assert all([wrapped.moment != default_moment for wrapped in pandora_gate_id_map.values()])
+    assert all([wrapped.moment != DEFAULT_MOMENT for wrapped in pandora_gate_id_map.values()])
+
     if is_test:
         return sorted(pandora_gate_id_map.values(), key=lambda wrapped: (wrapped.moment,
-                                                                         original_qubits_test[
-                                                                             wrapped.pandora_gate.qubit_name]
-                                                                         if wrapped.pandora_gate.type
+                                                                         original_qubits_test[wrapped.qubit_name]
+                                                                         if wrapped.type
                                                                             == PandoraGateTranslator.In.value
-                                                                         else wrapped.pandora_gate.id))
-    return sorted(pandora_gate_id_map.values(), key=lambda wrapped: (wrapped.moment,
-                                                                     wrapped.pandora_gate.id))
+                                                                         else wrapped.id))
+    return sorted(pandora_gate_id_map.values(), key=lambda wrapped: (wrapped.moment, wrapped.id))
 
 
 def pandora_to_qiskit_circuit(wrapped_gates: list[PandoraGate],
