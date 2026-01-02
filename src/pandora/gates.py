@@ -3,7 +3,7 @@ import qiskit
 import cirq
 
 from pandora.exceptions import *
-from pandora.exceptions import PandoraGateOrderingError, PandoraWrappedGateMissingLinks
+from pandora.exceptions import PandoraGateOrderingError, PandoraGateMissingLinks
 from pandora.gate_translator import PandoraGateTranslator, PANDORA_TO_CIRQ, CAN_HAVE_KEY, REQUIRES_EXPONENT, \
     REQUIRES_ROTATION, SINGLE_QUBIT_GATES, TWO_QUBIT_GATES, THREE_QUBIT_GATES, PANDORA_TO_QISKIT, IS_IO
 
@@ -156,15 +156,15 @@ class PandoraGate:
 
         if self.type in SINGLE_QUBIT_GATES:
             if self.q1 is None:
-                raise PandoraGateWrappedMissingQubits
+                raise PandoraGateMissingQubits
             return [qubit_list[self.q1]]
         if self.type in TWO_QUBIT_GATES:
             if self.q1 is None or self.q2 is None:
-                raise PandoraGateWrappedMissingQubits
+                raise PandoraGateMissingQubits
             return [qubit_list[self.q1], qubit_list[self.q2]]
         if self.type in THREE_QUBIT_GATES:
             if self.q1 is None or self.q2 is None or self.q3 is None:
-                raise PandoraGateWrappedMissingQubits
+                raise PandoraGateMissingQubits
             return [qubit_list[self.q1], qubit_list[self.q2], qubit_list[self.q3]]
 
     def to_cirq_operation(self) -> cirq.GateOperation:
@@ -263,18 +263,18 @@ def sort_pandora_by_moment(pandora_gate_id_map: dict[int, PandoraGate],
                     else:
                         all_are_marked = False
 
-    assert all([wrapped.moment != DEFAULT_MOMENT for wrapped in pandora_gate_id_map.values()])
+    assert all([gate.moment != DEFAULT_MOMENT for gate in pandora_gate_id_map.values()])
 
     if is_test:
-        return sorted(pandora_gate_id_map.values(), key=lambda wrapped: (wrapped.moment,
-                                                                         original_qubits_test[wrapped.qubit_name]
-                                                                         if wrapped.type
+        return sorted(pandora_gate_id_map.values(), key=lambda gate: (gate.moment,
+                                                                         original_qubits_test[gate.qubit_name]
+                                                                         if gate.type
                                                                             == PandoraGateTranslator.In.value
-                                                                         else wrapped.id))
-    return sorted(pandora_gate_id_map.values(), key=lambda wrapped: (wrapped.moment, wrapped.id))
+                                                                         else gate.id))
+    return sorted(pandora_gate_id_map.values(), key=lambda gate: (gate.moment, gate.id))
 
 
-def pandora_to_qiskit_circuit(wrapped_gates: list[PandoraGate],
+def pandora_to_qiskit_circuit(gates: list[PandoraGate],
                               n_qubits: int) -> qiskit.QuantumCircuit:
     """
     Take a list of PandoraGateWrapper objects and return the corresponding qiskit QuantumCircuit.
@@ -282,11 +282,12 @@ def pandora_to_qiskit_circuit(wrapped_gates: list[PandoraGate],
     circuit = qiskit.QuantumCircuit(n_qubits)
     q = list(range(n_qubits))
 
-    for wrapped in wrapped_gates:
-        if wrapped.prev_id1 is None and wrapped.next_id1 is None:
-            raise PandoraWrappedGateMissingLinks
-        qiskit_gate = wrapped.to_qiskit_gate()
-        qiskit_qubits = wrapped.get_gate_qubits_from_list(q)
+    for gate in gates:
+        if gate.prev_id1 is None and gate.next_id1 is None:
+            raise PandoraGateMissingLinks
+
+        qiskit_gate = gate.to_qiskit_gate()
+        qiskit_qubits = gate.get_gate_qubits_from_list(q)
         circuit.append(qiskit_gate, qiskit_qubits)
 
     return circuit
@@ -302,7 +303,7 @@ def pandora_to_cirq_circuit(gates: list[PandoraGate],
 
     for pandora_gate in gates:
         if pandora_gate.prev_id1 is None and pandora_gate.next_id1 is None:
-            raise PandoraWrappedGateMissingLinks
+            raise PandoraGateMissingLinks
 
         cirq_op = pandora_gate.to_cirq_operation()
         cirq_qubits = pandora_gate.get_gate_qubits_from_list(q)

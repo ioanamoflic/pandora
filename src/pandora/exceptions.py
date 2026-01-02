@@ -33,7 +33,7 @@ class PandoraGateOrderingError(PandoraException):
     """
 
 
-class PandoraWrappedGateMissingLinks(PandoraException):
+class PandoraGateMissingLinks(PandoraException):
     """
         Pandora wrapped gate has missing links for the neighbours.
     """
@@ -51,7 +51,7 @@ class TupleNotFound(PandoraException):
     """
 
 
-class PandoraGateWrappedMissingQubits(PandoraException):
+class PandoraGateMissingQubits(PandoraException):
     """
         Qubit is none.
     """
