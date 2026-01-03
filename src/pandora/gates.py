@@ -35,6 +35,7 @@ def get_gate_type(link_id):
     return link_id % 100
 
 DEFAULT_MOMENT = -1
+DEFAULT_QUBIT = None
 
 class PandoraGate:
     def __init__(self,
@@ -58,23 +59,36 @@ class PandoraGate:
 
         self.id = gate_id
 
-        self.prev_q1 = prev_q1 #self.remove_type_from_link(prev_q1)
-        self.prev_q2 = prev_q2 #self.remove_type_from_link(prev_q2)
-        self.prev_q3 = prev_q3 #self.remove_type_from_link(prev_q3)
+        self.prev_q1 = prev_q1
+        self.prev_q2 = prev_q2
+        self.prev_q3 = prev_q3
+        self.next_q1 = next_q1
+        self.next_q2 = next_q2
+        self.next_q3 = next_q3
 
-        self.next_q1 = next_q1 #self.remove_type_from_link(next_q1)
-        self.next_q2 = next_q2 #self.remove_type_from_link(next_q2)
-        self.next_q3 = next_q3 #self.remove_type_from_link(next_q3)
+        self.type = gate_code
+        self.param = gate_parameter
+        self.global_shift = global_shift
+        self.switch = switch
+
+        """
+            Other information
+        """
+        self.visited = visited
+        self.label = label
+        self.cl_ctrl = is_classically_controlled
+        self.meas_key = measurement_key
+        self.qubit_name = qubit_name
 
         """
             Information used to annotate the Pandora gates
         """
         self.moment = DEFAULT_MOMENT
-        self.q1 = None
-        self.q2 = None
-        self.q3 = None
+        self.q1 = DEFAULT_QUBIT
+        self.q2 = DEFAULT_QUBIT
+        self.q3 = DEFAULT_QUBIT
 
-        #TODO: These should be getters/setters somehow. And cached?
+        # TODO: These should be getters/setters somehow. And cached?
         # pre-compute the ids of previous gates
         self.prev_id1 = get_gate_id(self.prev_q1) if self.prev_q1 is not None else None
         self.prev_id2 = get_gate_id(self.prev_q2) if self.prev_q2 is not None else None
@@ -83,17 +97,6 @@ class PandoraGate:
         self.next_id1 = get_gate_id(self.next_q1) if self.next_q1 is not None else None
         self.next_id2 = get_gate_id(self.next_q2) if self.next_q2 is not None else None
         self.next_id3 = get_gate_id(self.next_q3) if self.next_q3 is not None else None
-
-        self.type = gate_code
-        self.param = gate_parameter
-        self.global_shift = global_shift
-        self.switch = switch
-
-        self.visited = visited
-        self.label = label
-        self.cl_ctrl = is_classically_controlled
-        self.meas_key = measurement_key
-        self.qubit_name = qubit_name
 
     def __str__(self):
         return f'1: {self.prev_q1}<---------->{self.next_q1}\n' \
@@ -111,38 +114,26 @@ class PandoraGate:
         return mogrify_arg, psql_insert
 
     def to_tuple(self, is_test=False):
-        if not is_test:
-            return (self.id,
-                    self.prev_q1,
-                    self.prev_q2,
-                    self.prev_q3,
-                    self.type,
-                    self.param,
-                    self.global_shift,
-                    self.switch,
-                    self.next_q1,
-                    self.next_q2,
-                    self.next_q3,
-                    self.visited,
-                    self.label,
-                    self.cl_ctrl,
-                    self.meas_key)
-        return (self.id,
-                self.prev_q1,
-                self.prev_q2,
-                self.prev_q3,
-                self.type,
-                self.param,
-                self.global_shift,
-                self.switch,
-                self.next_q1,
-                self.next_q2,
-                self.next_q3,
-                self.visited,
-                self.label,
-                self.cl_ctrl,
-                self.meas_key,
-                self.qubit_name)
+        ret = (self.id,
+               self.prev_q1,
+               self.prev_q2,
+               self.prev_q3,
+               self.type,
+               self.param,
+               self.global_shift,
+               self.switch,
+               self.next_q1,
+               self.next_q2,
+               self.next_q3,
+               self.visited,
+               self.label,
+               self.cl_ctrl,
+               self.meas_key)
+
+        if is_test:
+            ret = ret + (self.qubit_name,)
+
+        return ret
 
     def get_gate_qubits_from_list(self, qubit_list) -> list:
         """
@@ -204,9 +195,7 @@ class PandoraGate:
             return qiskit_gate_class
         return qiskit_gate_class()
 
-def sort_pandora_by_moment(pandora_gate_id_map: dict[int, PandoraGate],
-                           original_qubits_test: dict[str, int] = None,
-                           is_test=False):
+def annotate_gates_with_moments(id_to_gate: dict[int, PandoraGate]):
     """
     TODO: Maybe this should be performed in SQL. Directly in the tables.
 
@@ -215,63 +204,64 @@ def sort_pandora_by_moment(pandora_gate_id_map: dict[int, PandoraGate],
 
     Note that this only works for gates acting on at most two qubits.
     """
+
+    for gate in id_to_gate.values():
+        if gate.type == PandoraGateTranslator.In.value:
+            gate.moment = 0
+
     all_are_marked = False
 
-    while all_are_marked is False:
+    #TODO: This looks suspicious - it should be a BFS instead of repeated while loops
+    while not all_are_marked:
         all_are_marked = True
-        for current_gate in pandora_gate_id_map.values():
+        for current_gate in id_to_gate.values():
             # gate already has an assigned moment
             if current_gate.moment != DEFAULT_MOMENT:
                 continue
 
-            current_gate_code = current_gate.type
-
             # single qubit case
-            if current_gate_code in SINGLE_QUBIT_GATES:
-                if current_gate.prev_id1 not in pandora_gate_id_map.keys():
+            if current_gate.type in SINGLE_QUBIT_GATES:
+                if current_gate.prev_id1 not in id_to_gate.keys():
+                    print("missing", current_gate)
                     raise PandoraGateOrderingError
-                prev_wrapped_gate = pandora_gate_id_map[current_gate.prev_id1]
-                if prev_wrapped_gate.moment != DEFAULT_MOMENT:
-                    current_gate.moment = prev_wrapped_gate.moment + 1
+                prev_gate = id_to_gate[current_gate.prev_id1]
+                if prev_gate.moment != DEFAULT_MOMENT:
+                    current_gate.moment = prev_gate.moment + 1
                 else:
                     all_are_marked = False
 
             # two qubit case
-            if current_gate_code in TWO_QUBIT_GATES:
+            if current_gate.type in TWO_QUBIT_GATES:
                 # two qubit gate following two qubit gate
-                if current_gate.prev_id1 not in pandora_gate_id_map.keys():
+                if current_gate.prev_id1 not in id_to_gate.keys():
+                    print("missing", current_gate)
                     raise PandoraGateOrderingError
 
-                if current_gate.prev_id2 not in pandora_gate_id_map.keys():
+                if current_gate.prev_id2 not in id_to_gate.keys():
+                    print("missing", current_gate)
                     raise PandoraGateOrderingError
 
-                prev_wrapped_gate_q1 = pandora_gate_id_map[current_gate.prev_id1]
-                prev_wrapped_gate_q2 = pandora_gate_id_map[current_gate.prev_id2]
-                prev_q1_id = prev_wrapped_gate_q1.id
-                prev_q2_id = prev_wrapped_gate_q2.id
+                prev_gate_q1 = id_to_gate[current_gate.prev_id1]
+                prev_gate_q2 = id_to_gate[current_gate.prev_id2]
+                # prev_q1_id = prev_gate_q1.id
+                # prev_q2_id = prev_gate_q2.id
+                # if prev_q1_id == prev_q2_id:
+                #     if prev_gate_q1.moment != DEFAULT_MOMENT:
+                #         current_gate.moment = prev_gate_q1.moment + 1
+                #     else:
+                #         all_are_marked = False
+                #
+                # # two qubit gate following some other gates
+                # if prev_q1_id != prev_q2_id:
 
-                if prev_q1_id == prev_q2_id:
-                    if prev_wrapped_gate_q1.moment != DEFAULT_MOMENT:
-                        current_gate.moment = prev_wrapped_gate_q1.moment + 1
-                    else:
-                        all_are_marked = False
+                if DEFAULT_MOMENT not in [prev_gate_q1.moment, prev_gate_q2.moment]:
+                    current_gate.moment = max(prev_gate_q1.moment, prev_gate_q2.moment) + 1
+                else:
+                    all_are_marked = False
 
-                # two qubit gate following some other gates
-                if prev_q1_id != prev_q2_id:
-                    if DEFAULT_MOMENT not in [prev_wrapped_gate_q1.moment, prev_wrapped_gate_q2.moment]:
-                        current_gate.moment = max(prev_wrapped_gate_q1.moment, prev_wrapped_gate_q2.moment) + 1
-                    else:
-                        all_are_marked = False
+    assert all([gate.moment != DEFAULT_MOMENT for gate in id_to_gate.values()])
 
-    assert all([gate.moment != DEFAULT_MOMENT for gate in pandora_gate_id_map.values()])
-
-    if is_test:
-        return sorted(pandora_gate_id_map.values(), key=lambda gate: (gate.moment,
-                                                                         original_qubits_test[gate.qubit_name]
-                                                                         if gate.type
-                                                                            == PandoraGateTranslator.In.value
-                                                                         else gate.id))
-    return sorted(pandora_gate_id_map.values(), key=lambda gate: (gate.moment, gate.id))
+    
 
 
 def pandora_to_qiskit_circuit(gates: list[PandoraGate],
@@ -301,36 +291,42 @@ def pandora_to_cirq_circuit(gates: list[PandoraGate],
     circuit = cirq.Circuit()
     q = [cirq.NamedQubit(str(j)) for j in range(n_qubits)]
 
-    for pandora_gate in gates:
-        if pandora_gate.prev_id1 is None and pandora_gate.next_id1 is None:
+    for gate in gates:
+        if gate.prev_id1 is None and gate.next_id1 is None:
             raise PandoraGateMissingLinks
 
-        cirq_op = pandora_gate.to_cirq_operation()
-        cirq_qubits = pandora_gate.get_gate_qubits_from_list(q)
+        cirq_op = gate.to_cirq_operation()
+        cirq_qubits = gate.get_gate_qubits_from_list(q)
         circuit.append(cirq_op.on(*cirq_qubits))
                        #.with_tags(str(wrapped.pandora_gate.id)))
 
     return circuit
 
 
-def annotate_pandora_gates(pandora_gates: list[PandoraGate],
+def annotate_pandora_gates(gates: list[PandoraGate],
                            original_qubits_test: dict[str, int] = None,
                            is_test=False):
     """
-        Takes a list of Pandora gates (unwrapped) and returns a list of gates which include moment and qubit information
+        #TODO: This should happen in the database tables
+        Appends moment and qubit information to the list of PandoraGates
     """
 
-    # Wrap the Pandora gates
-    pandora_gate_id_map = {}
-    for gate in pandora_gates:
-        # wrapped = PandoraGateWrapper(pandora_gate=gate)
-        if gate.type == PandoraGateTranslator.In.value:
-            gate.moment = 0
-        pandora_gate_id_map[gate.id] = gate
+    # TODO: This looks like too much memory overhead!
+    # It should be something with id2idx
+    # Then resorting according to moment which reshuffles the indices and the id2idx should be updated
 
-    sorted_gates = sort_pandora_by_moment(pandora_gate_id_map, original_qubits_test, is_test)
+    pandora_gate_id_map = { gate.id : gate for gate in gates }
+    annotate_gates_with_moments(pandora_gate_id_map)
+
+    my_lambda = None
+    if is_test:
+        my_lambda = lambda g: (g.moment, original_qubits_test[g.qubit_name] if g.type == PandoraGateTranslator.In.value else g.id)
+    else:
+        my_lambda = lambda g: (g.moment, g.id)
+
+    sorted_gates = sorted(pandora_gate_id_map.values(), key= my_lambda)
+
     sorted_ids = [gate.id for gate in sorted_gates]
-
     rh = dict(zip(sorted_ids, sorted_gates))
 
     """
@@ -344,39 +340,36 @@ def annotate_pandora_gates(pandora_gates: list[PandoraGate],
             n_qubits += 1
 
     for gate in rh.values():
-        gate_id = gate.id
-
         # find q1 for single qubit gate
-        if gate.type in SINGLE_QUBIT_GATES:
-            if gate.type != PandoraGateTranslator.In.value:
-                prev_wrapped_gate = rh[gate.prev_id1]
-                if prev_wrapped_gate.next_id1 == gate_id:
-                    gate.q1 = prev_wrapped_gate.q1
-                elif prev_wrapped_gate.next_id2 == gate_id:
-                    gate.q1 = prev_wrapped_gate.q2
+        if gate.type != PandoraGateTranslator.In.value and gate.type in SINGLE_QUBIT_GATES:
+            prev_gate = rh[gate.prev_id1]
+            if prev_gate.next_id1 == gate.id:
+                gate.q1 = prev_gate.q1
+            elif prev_gate.next_id2 == gate.id:
+                gate.q1 = prev_gate.q2
 
         # find q1, q2 for two qubit gate
         if gate.type in TWO_QUBIT_GATES:
             # previous gate is two qubit gate on same q1 q2
             if gate.prev_id1 == gate.prev_id2:
-                previous_wrapped_gate = rh[gate.prev_id1]
-                if previous_wrapped_gate.switch == gate.switch:
-                    gate.q1, gate.q2 = previous_wrapped_gate.q1, previous_wrapped_gate.q2
+                previous_gate = rh[gate.prev_id1]
+                if previous_gate.switch == gate.switch:
+                    gate.q1, gate.q2 = previous_gate.q1, previous_gate.q2
                 else:
-                    gate.q1, gate.q2 = previous_wrapped_gate.q2, previous_wrapped_gate.q1
+                    gate.q1, gate.q2 = previous_gate.q2, previous_gate.q1
             else:
                 # previous gates are different for q1 q2
-                previous_wrapped_q1 = rh[gate.prev_id1]
-                previous_wrapped_q2 = rh[gate.prev_id2]
+                previous_q1 = rh[gate.prev_id1]
+                previous_q2 = rh[gate.prev_id2]
 
-                if previous_wrapped_q1.next_id1 == gate_id:
-                    gate.q1 = previous_wrapped_q1.q1
-                elif previous_wrapped_q1.next_id2 == gate_id:
-                    gate.q1 = previous_wrapped_q1.q2
+                if previous_q1.next_id1 == gate.id:
+                    gate.q1 = previous_q1.q1
+                elif previous_q1.next_id2 == gate.id:
+                    gate.q1 = previous_q1.q2
 
-                if previous_wrapped_q2.next_id1 == gate_id:
-                    gate.q2 = previous_wrapped_q2.q1
-                elif previous_wrapped_q2.next_id2 == gate_id:
-                    gate.q2 = previous_wrapped_q2.q2
+                if previous_q2.next_id1 == gate.id:
+                    gate.q2 = previous_q2.q1
+                elif previous_q2.next_id2 == gate.id:
+                    gate.q2 = previous_q2.q2
 
     return list(rh.values()), n_qubits

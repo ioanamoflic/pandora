@@ -260,7 +260,7 @@ def insert_in_batches(pandora_gates: list[PandoraGate],
 
     # mogrify_arg, insert_query = pandora_gates[0].get_insert_query(table_name=table_name)
     for i, batch in enumerate(batches):
-        # TODO fix this to avid hard coding
+        # TODO fix this to avoid hard coding
         #     args = ','.join(cursor.mogrify(mogrify_arg, pandora_gate.to_tuple()).decode('utf-8')
         #                     for pandora_gate in batch)
         #     print(args)
@@ -381,11 +381,11 @@ def extract_cirq_circuit(connection,
         return len(tuples)
 
     pandora_gates: list[PandoraGate] = [PandoraGate(*tup) for tup in tuples]
-    wrapped_gates_circ, n_qubits = annotate_pandora_gates(pandora_gates=pandora_gates,
+    gates_circ, n_qubits = annotate_pandora_gates(gates=pandora_gates,
                                                           original_qubits_test=original_qubits_test,
                                                           is_test=is_test)
 
-    final_circ = pandora_to_cirq_circuit(gates=wrapped_gates_circ, n_qubits=n_qubits)
+    final_circ = pandora_to_cirq_circuit(gates=gates_circ, n_qubits=n_qubits)
 
     return remove_io_gates_from_circuit(final_circ)
 

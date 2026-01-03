@@ -26,7 +26,7 @@ def test_random_reconstruction(n_circuits=100):
         print(f'Time for cirq_to_db: {time.time() - start_time}')
 
         start_time = time.time()
-        wrapped_gates, n_qubits = annotate_pandora_gates(pandora_gates=db_tuples)
+        wrapped_gates, n_qubits = annotate_pandora_gates(gates=db_tuples)
         reconstructed_circuit = pandora_to_cirq_circuit(gates=wrapped_gates, n_qubits=n_qubits)
 
         print(f'Time for db_to_cirq: {time.time() - start_time}')
@@ -116,7 +116,7 @@ def test_qualtran_qrom_reconstruction(connection):
 if __name__ == "__main__":
     conn = get_connection()
 
-    # test_random_reconstruction(n_circuits=10)
+    test_random_reconstruction(n_circuits=10)
     # test_qualtran_adder_reconstruction(connection=conn)
     test_qualtran_qrom_reconstruction(connection=conn)
 

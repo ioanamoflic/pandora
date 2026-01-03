@@ -23,7 +23,7 @@ def test_random_reconstruction(n_circuits=100):
         print(f'Time for qiskit_to_db: {time.time() - start_time}')
 
         start_time = time.time()
-        wrapped_gates, n_qubits = annotate_pandora_gates(pandora_gates=db_tuples)
+        wrapped_gates, n_qubits = annotate_pandora_gates(gates=db_tuples)
         circuit = pandora_to_qiskit_circuit(gates=wrapped_gates, n_qubits=n_qubits)
 
         return circuit
