@@ -161,6 +161,7 @@ def cirq_to_pandora(cirq_circuit: cirq.Circuit,
 def some_duplicate_method(current_op_qubits, current_operation, label: str | None, last_id: int | Any,
                           latest_conc_on_qubit: dict[Any, Any], meas_key_dict: dict[Any, Any],
                           pandora_gates: dict[Any, Any]) -> int | Any:
+
     current_pandora_gate = cirq_operation_to_pandora_gate(current_operation, meas_key_dict=meas_key_dict)
     current_pandora_gate.id = last_id
     current_pandora_gate.label = label
@@ -169,6 +170,7 @@ def some_duplicate_method(current_op_qubits, current_operation, label: str | Non
     previous_concatenations = [latest_conc_on_qubit[q] for q in current_op_qubits]
     while len(previous_concatenations) < MAX_QUBITS_PER_GATE:
         previous_concatenations.append(None)
+
     current_pandora_gate.prev_q1 = previous_concatenations[0]
     current_pandora_gate.prev_q2 = previous_concatenations[1]
     current_pandora_gate.prev_q3 = previous_concatenations[2]
@@ -185,6 +187,7 @@ def some_duplicate_method(current_op_qubits, current_operation, label: str | Non
         latest_conc_on_qubit[q] = n_link_id
 
     pandora_gates[last_id] = current_pandora_gate
+
     last_id += 1
     return last_id
 

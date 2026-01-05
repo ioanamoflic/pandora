@@ -368,9 +368,9 @@ def extract_cirq_circuit(connection,
     args = tuple()
     if circuit_label is not None:
         args = (circuit_label,)
-        sql = f"select * from {table_name} where label=%s"
+        sql = f"SELECT * FROM {table_name} WHERE label=%s"
     else:
-        sql = f"select * from {table_name}"
+        sql = f"SELECT * FROM {table_name}"
 
     cursor = connection.cursor()
     cursor.execute(sql, args)
@@ -381,6 +381,7 @@ def extract_cirq_circuit(connection,
         return len(tuples)
 
     pandora_gates: list[PandoraGate] = [PandoraGate(*tup) for tup in tuples]
+
     gates_circ, n_qubits = annotate_pandora_gates(gates=pandora_gates,
                                                           original_qubits_test=original_qubits_test,
                                                           is_test=is_test)
@@ -394,7 +395,7 @@ def get_edge_list(connection) -> list[tuple[int, int]]:
     """
     Returns the contents from edge_list table.
     """
-    sql = "select * from edge_list;"
+    sql = "SELECT * FROM edge_list;"
 
     cursor = connection.cursor()
     cursor.execute(sql, None)
@@ -420,7 +421,7 @@ def get_edge_list_in_batches(connection, batch_size) -> Iterator[list[tuple[int,
     Returns the contents from edge_list table in batches.
     """
     cursor = connection.cursor()
-    cursor.execute('select * from edge_list order by source, target')
+    cursor.execute('SELECT * FROM edge_list ORDER BY source, target')
 
     while True:
         records = cursor.fetchmany(size=batch_size)
@@ -446,7 +447,7 @@ def get_gates_by_id(connection, ids: list[int]) -> list[PandoraGate]:
                                              gate_code=PandoraGateTranslator.GlobalOut.value))
             continue
         args = (gid,)
-        sql = "select * from linked_circuit where id=%s;"
+        sql = "SELECT * FROM linked_circuit WHERE id=%s;"
         cursor = connection.cursor()
         cursor.execute(sql, args)
         gate_tuple = cursor.fetchone()
@@ -473,7 +474,7 @@ def get_gates_by_id_fast(connection, ids: list[int]) -> list[PandoraGate]:
     ids = [i for i in ids if i not in [GLOBAL_IN_ID, GLOBAL_OUT_ID]]
 
     cursor = connection.cursor()
-    sql_statement = (f"select * from linked_circuit where id in " + str(tuple(ids)))
+    sql_statement = (f"SELECT * FROM linked_circuit WHERE id IN " + str(tuple(ids)))
     cursor.execute(sql_statement)
     gate_tuples = cursor.fetchall()
 
@@ -498,7 +499,7 @@ def get_gate_types(connection,
     types = []
     for gate_id in gate_ids:
         args = (gate_id,)
-        sql = "select * from linked_circuit where id=%s;"
+        sql = "SELECT * FROM linked_circuit WHERE id=%s;"
         cursor = connection.cursor()
         cursor.execute(sql, args)
         gate_tuple = cursor.fetchone()
