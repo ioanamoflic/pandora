@@ -20,11 +20,13 @@ def test_random_reconstruction(n_circuits=100):
         print(f'Time for create_random_circuit: {time.time() - start_time}')
 
         start_time = time.time()
-        db_tuples, last_id = cirq_to_pandora(cirq_circuit=initial_circuit, last_id=0, label='t', add_margins=False)
+        pandora_gates, last_id = cirq_to_pandora(cirq_circuit=initial_circuit, last_id=0, label='t', add_margins=False)
+
         print(f'Time for cirq_to_db: {time.time() - start_time}')
 
         start_time = time.time()
-        wrapped_gates, n_qubits = annotate_pandora_gates(gates=db_tuples)
+        wrapped_gates, n_qubits = annotate_pandora_gates(gates=pandora_gates)
+
         reconstructed_circuit = pandora_to_cirq_circuit(gates=wrapped_gates, n_qubits=n_qubits)
 
         print(f'Time for db_to_cirq: {time.time() - start_time}')
@@ -38,6 +40,10 @@ def test_random_reconstruction(n_circuits=100):
         initial_circuit = initial_circuit.transform_qubits(qubit_map=qubit_map)
 
         start_time = time.time()
+
+        print(reconstructed_circuit)
+        print(initial_circuit)
+
         assert str(reconstructed_circuit) == str(initial_circuit)
         print(f'Time for assertion: {time.time() - start_time}')
         print('Test passed!')

@@ -89,20 +89,31 @@ class PandoraGate:
         self.q2 = DEFAULT_QUBIT
         self.q3 = DEFAULT_QUBIT
 
-        # TODO: These should be getters/setters somehow. And cached?
-        # pre-compute the ids of previous gates
-        self.prev_id1 = get_gate_id(self.prev_q1) if self.prev_q1 is not None else None
-        self.prev_id2 = get_gate_id(self.prev_q2) if self.prev_q2 is not None else None
-        self.prev_id3 = get_gate_id(self.prev_q3) if self.prev_q3 is not None else None
-        # pre-compute the ids of next gates
-        self.next_id1 = get_gate_id(self.next_q1) if self.next_q1 is not None else None
-        self.next_id2 = get_gate_id(self.next_q2) if self.next_q2 is not None else None
-        self.next_id3 = get_gate_id(self.next_q3) if self.next_q3 is not None else None
+    # TODO: These should be getters/setters somehow. And cached?
+    @property
+    def prev_id1(self):
+        return get_gate_id(self.prev_q1) if self.prev_q1 is not None else None
+    @property
+    def prev_id2(self):
+        return get_gate_id(self.prev_q2) if self.prev_q2 is not None else None
+    @property
+    def prev_id3(self):
+        return get_gate_id(self.prev_q3) if self.prev_q3 is not None else None
+
+    @property
+    def next_id1(self):
+        return get_gate_id(self.next_q1) if self.next_q1 is not None else None
+    @property
+    def next_id2(self):
+        return get_gate_id(self.next_q2) if self.next_q2 is not None else None
+    @property
+    def next_id3(self):
+        return get_gate_id(self.next_q3) if self.next_q3 is not None else None
 
     def __str__(self):
-        return f'1: {self.prev_q1}<---------->{self.next_q1}\n' \
-               f'2: {self.prev_q2}<--t-{self.type}(id-{self.id})-->{self.next_q2}\n' \
-               f'3: {self.prev_q3}<---------->{self.next_q3}'
+        return f'1: {self.prev_q1}/{self.prev_id1} <---------->{self.next_q1}/{self.next_id1}\n' \
+               f'2: {self.prev_q2}/{self.prev_id2}<--t-{self.type}(id-{self.id})-->{self.next_q2}/{self.next_id2}\n' \
+               f'3: {self.prev_q3}/{self.prev_id3}<---------->{self.next_q3}/{self.next_id3}'
 
 
     def get_insert_query(self, table_name):
@@ -141,11 +152,6 @@ class PandoraGate:
         Given a list of arbitrary cirq qubits, return the values of the qubits in that list which correspond to
         indices q1, q2, q3.
         """
-
-        print(self)
-        print("qubit1: ", self.q1)
-        print("")
-
         if self.type in SINGLE_QUBIT_GATES:
             if self.q1 is None:
                 raise PandoraGateMissingQubits
