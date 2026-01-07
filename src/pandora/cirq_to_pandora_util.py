@@ -38,12 +38,13 @@ def cirq_to_pandora(cirq_circuit: cirq.Circuit,
                     add_margins=False
                     ) -> tuple[[PandoraGate], int]:
 
-    it, _ = windowed_cirq_to_pandora(cirq_circuit, window_size=100, label=label)
+    it = windowed_cirq_to_pandora(cirq_circuit, window_size=100, label=label)
 
     ret = []
-    for l in it:
+    for l, last_id in it:
         ret.extend(l)
-    return ret
+
+    return ret, last_id
 
     """
     Fast method which converts a cirq circuit into a list of tuples which can be used as database entries.
@@ -255,10 +256,10 @@ def cirq_to_pandora_from_op_list(op_list: list[cirq.Operation] | Iterator[list[c
                                  label: int = None,
                                  ) -> list[PandoraGate]:
 
-    it, _ = windowed_cirq_to_pandora(op_list, window_size=100, label=label)
+    it = windowed_cirq_to_pandora(op_list, window_size=100, label=label)
 
     ret = []
-    for l in it:
+    for l, _ in it:
         ret.extend(l)
     return ret
 
@@ -317,7 +318,7 @@ def cirq_to_pandora_from_op_list(op_list: list[cirq.Operation] | Iterator[list[c
 
 
 def windowed_cirq_to_pandora(circuit: Any, window_size: int, label=None) \
-        -> Iterator[tuple[list[PandoraGate], float]]:
+        -> Iterator[tuple[list[PandoraGate], int]]:
     """
     This method traverses a cirq circuit in windows of arbitrary size and returns the PandoraGate operations equivalent
     to the cirq operations in the window. Especially useful for very large circuits which do not fit into memory. The
@@ -352,8 +353,8 @@ def windowed_cirq_to_pandora(circuit: Any, window_size: int, label=None) \
     """
         The Clifford+T gates are obtained here by using a decomposing generator.
     """
-    op_list_batches = generator_get_pandora_compatible_batch_via_pyliqtr(circuit=circuit,
-                                                                 window_size=window_size)
+    op_list_batches = generator_get_pandora_compatible_batch_via_pyliqtr(circuit=circuit, window_size=window_size)
+
     for (op_list, cliff_decomp_time) in op_list_batches:
 
         start_cirq_to_pandora = time.time()
@@ -384,15 +385,6 @@ def windowed_cirq_to_pandora(circuit: Any, window_size: int, label=None) \
         for cirq_op in op_list:
             curr_gate_id = cirq_op_to_pandora_gate(cirq_op, label, curr_gate_id, qubit2link, meas2intkey, id2gate)
 
-        # pandora_dictionary, latest_conc_on_qubit, last_id = windowed_cirq_to_pandora_from_op_list(
-        #     op_list=current_batch,
-        #     pandora_dictionary=pandora_dictionary,
-        #     latest_connection_on_qubit=latest_conc_on_qubit,
-        #     last_id=last_id,
-        #     label=label,
-        #     is_test=is_test
-        # )
-
         """
             In order to ensure that the buffers are inter-connected, one needs to 
             insert into Pandora only the gates for which the connections 
@@ -414,7 +406,7 @@ def windowed_cirq_to_pandora(circuit: Any, window_size: int, label=None) \
                 id2gate.pop(pandora_gate.id)
 
         if len(batch_elements) > 0:
-            yield batch_elements, time.time() - start_cirq_to_pandora + cliff_decomp_time
+            yield batch_elements, curr_gate_id# time.time() - start_cirq_to_pandora + cliff_decomp_time
 
     """
         Finally, add the Out gates
@@ -426,15 +418,6 @@ def windowed_cirq_to_pandora(circuit: Any, window_size: int, label=None) \
     for cirq_op in final_op_list:
         curr_gate_id = cirq_op_to_pandora_gate(cirq_op, label, curr_gate_id, qubit2link, meas2intkey, id2gate)
 
-    # pandora_out_gates, _, _ = windowed_cirq_to_pandora_from_op_list(
-    #     op_list=final_op_list,
-    #     pandora_dictionary=pandora_dictionary,
-    #     latest_connection_on_qubit=latest_connection_on_qubit,
-    #     last_id=last_id,
-    #     label=label,
-    #     is_test=is_test)
-    # ml = list(pandora_out_gates.values())
-
     ml = list(id2gate.values())
     if len(ml) > 0:
-        yield ml, time.time() - start_final
+        yield ml, curr_gate_id#time.time() - start_final

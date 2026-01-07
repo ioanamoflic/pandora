@@ -784,14 +784,13 @@ def check_logical_correctness_random(connection, stop_after: int):
 
             initial_circuit = benchmark_cirq.create_random_circuit(n_qubits=n_qubits, n_templates=n_templates,
                                                                    templates=[
-                                                                              'add_two_hadamards',
-                                                                              'add_two_cnots',
-                                                                              'add_base_change',
-                                                                              'add_t_t_dag',
-                                                                              'add_t_cx',
-                                                                              'add_cx_t'
-                                                                              ],
-                                                                   add_margins=False)
+                                                                       'add_two_hadamards',
+                                                                       'add_two_cnots',
+                                                                       'add_base_change',
+                                                                       'add_t_t_dag',
+                                                                       'add_t_cx',
+                                                                       'add_cx_t'
+                                                                   ])
             print('----------------------------------------------')
             print('Initial:')
             print(initial_circuit)

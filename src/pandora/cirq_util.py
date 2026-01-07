@@ -245,10 +245,7 @@ def get_gate_count(circuit):
     return counter
 
 
-def create_random_circuit(n_qubits,
-                          n_templates,
-                          templates=None,
-                          add_margins=False):
+def create_random_circuit(n_qubits, n_templates, templates=None):
     """
     Creates a Cirq circuit and adds multiple randomly chosen
     templates (left hand sides of the circuit identities) by
@@ -273,11 +270,6 @@ def create_random_circuit(n_qubits,
     circuit = cirq.Circuit()
     for n_qubits in range(n_templates):
         circuit = random.choice(function_list)(circuit, qubits)
-
-    if add_margins:
-        circuit_in = cirq.Circuit(cirq.Moment(In().on(q) for q in sorted(circuit.all_qubits())))
-        circuit_out = cirq.Circuit(cirq.Moment(Out().on(q) for q in sorted(circuit.all_qubits())))
-        circuit = circuit_in + circuit + circuit_out
 
     circuit = cirq.Circuit(circuit.all_operations(), strategy=cirq.InsertStrategy.EARLIEST)
     return circuit

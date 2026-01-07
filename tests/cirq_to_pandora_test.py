@@ -15,9 +15,7 @@ def test_random_reconstruction(n_circuits=100):
     for i in range(n_circuits):
         print(f'Random test {i}')
         start_time = time.time()
-        initial_circuit = create_random_circuit(n_qubits=3,
-                                                   n_templates=3,
-                                                   templates=templates, add_margins=True)
+        initial_circuit = create_random_circuit(n_qubits=3, n_templates=3, templates=templates)
 
         print(f'Time for create_random_circuit: {time.time() - start_time}')
 

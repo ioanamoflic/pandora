@@ -160,7 +160,7 @@ class Pandora:
         start_decomp = time.time()
         batches = windowed_cirq_to_pandora(circuit=circuit, window_size=self.decomposition_window_size)
 
-        for i, (batch, decomposition_time) in enumerate(batches):
+        for i, (batch, _) in enumerate(batches):
             insert_single_batch(connection=self.connection, batch=batch)
             ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print(f"{CRED}Done inserting batch {i} at {ts}{CEND}")
