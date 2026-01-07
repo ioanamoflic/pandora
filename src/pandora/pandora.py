@@ -158,8 +158,7 @@ class Pandora:
 
         print("Decomposing circuit for pandora...")
         start_decomp = time.time()
-        batches = windowed_cirq_to_pandora(circuit=circuit,
-                                           window_size=self.decomposition_window_size)
+        batches = windowed_cirq_to_pandora(circuit=circuit, window_size=self.decomposition_window_size)
 
         for i, (batch, decomposition_time) in enumerate(batches):
             insert_single_batch(connection=self.connection, batch=batch)

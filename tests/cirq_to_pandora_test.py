@@ -52,9 +52,7 @@ def test_reconstruction(connection, full_circuit):
     refresh_all_stored_procedures(connection=connection)
     reset_database_id(connection, table_name='linked_circuit_test', large_buffer_value=100000)
 
-    circuit_batches = windowed_cirq_to_pandora(circuit=full_circuit,
-                                               window_size=2,
-                                               is_test=True)
+    circuit_batches = windowed_cirq_to_pandora(circuit=full_circuit, window_size=2)
     qubit_dict = dict((str(qubit), i) for i, qubit in enumerate(sorted(full_circuit.all_qubits(),
                                                                        key=lambda q: str(q))))
     for (batch, _) in circuit_batches:

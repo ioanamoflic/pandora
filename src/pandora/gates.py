@@ -1,6 +1,7 @@
 import numpy as np
 import qiskit
 import cirq
+from pyzx.circuit import gate_types
 
 from pandora.exceptions import *
 from pandora.exceptions import PandoraGateOrderingError, PandoraGateMissingLinks
@@ -43,7 +44,7 @@ class PandoraGate:
                  prev_q1: int = None,
                  prev_q2: int = None,
                  prev_q3: int = None,
-                 gate_code: int = None,
+                 gate_type: int = None,
                  gate_parameter: float = 0,
                  global_shift: float = 0,
                  switch: bool = False,
@@ -66,7 +67,7 @@ class PandoraGate:
         self.next_q2 = next_q2
         self.next_q3 = next_q3
 
-        self.type = gate_code
+        self.type = gate_type
         self.param = gate_parameter
         self.global_shift = global_shift
         self.switch = switch

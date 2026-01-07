@@ -440,11 +440,11 @@ def get_gates_by_id(connection, ids: list[int]) -> list[PandoraGate]:
     for gid in ids:
         if gid == GLOBAL_IN_ID:
             pandora_gates.append(PandoraGate(gate_id=gid,
-                                             gate_code=PandoraGateTranslator.GlobalIn.value))
+                                             gate_type=PandoraGateTranslator.GlobalIn.value))
             continue
         if gid == GLOBAL_OUT_ID:
             pandora_gates.append(PandoraGate(gate_id=gid,
-                                             gate_code=PandoraGateTranslator.GlobalOut.value))
+                                             gate_type=PandoraGateTranslator.GlobalOut.value))
             continue
         args = (gid,)
         sql = "SELECT * FROM linked_circuit WHERE id=%s;"
@@ -464,11 +464,11 @@ def get_gates_by_id_fast(connection, ids: list[int]) -> list[PandoraGate]:
     for gid in ids:
         if gid == GLOBAL_IN_ID:
             pandora_gates.append(PandoraGate(gate_id=gid,
-                                             gate_code=PandoraGateTranslator.GlobalIn.value))
+                                             gate_type=PandoraGateTranslator.GlobalIn.value))
             continue
         if gid == GLOBAL_OUT_ID:
             pandora_gates.append(PandoraGate(gate_id=gid,
-                                             gate_code=PandoraGateTranslator.GlobalOut.value))
+                                             gate_type=PandoraGateTranslator.GlobalOut.value))
             continue
 
     ids = [i for i in ids if i not in [GLOBAL_IN_ID, GLOBAL_OUT_ID]]

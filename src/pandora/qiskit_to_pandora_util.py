@@ -67,7 +67,7 @@ def qiskit_operation_to_pandora_gate(instr: CircuitInstruction,
         parameter = float(op.params[0]) if op.params else 0
 
     return PandoraGate(
-        gate_code=pandora_gate_code,
+        gate_type=pandora_gate_code,
         gate_parameter=parameter,
         switch=switch,
         global_shift=global_shift,
@@ -122,7 +122,7 @@ def convert_qiskit_to_pandora(qiskit_circuit: QuantumCircuit,
             # gate_code in PandoraGate is gate_type in LinkID
             pandora_gates[last_gate_id] = PandoraGate(
                 gate_id=last_gate_id,
-                gate_code=PandoraGateTranslator.In.value,
+                gate_type=PandoraGateTranslator.In.value,
                 label=label
             )
             last_gate_id += 1
