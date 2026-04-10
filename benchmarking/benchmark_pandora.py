@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     n_rounds = 1
     nr_passes = 1
-    sample_percentage = 1
+    sample_percentage = 10
 
     pool = None
     if NPROCS > 0:
@@ -78,6 +78,15 @@ if __name__ == "__main__":
             tot_time = time.time() - start_time
             print('Time to rewrite:', tot_time)
             sum_times += tot_time
+            
+            # sanity check: count H gates
+            cursor = conn.cursor()
+            args = (PandoraGateTranslator.HPowGate.value,)
+            sql = "select count(id) from linked_circuit where type=%s;"
+            cursor.execute(sql, args)
+            h_count = cursor.fetchone()[0]
+            cursor.close()
+            assert h_count == 0
 
         with open(f'pandora_template_search_random_flip_{sample_percentage}.csv', 'a') as f:
             writer = csv.writer(f)

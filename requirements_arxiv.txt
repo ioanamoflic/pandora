@@ -1,0 +1,11 @@
+qualtran
+cirq
+psycopg2-binary
+requests
+pytest
+gmpy2
+qiskit==2.1
+mqt.qcec==3.1
+qiskit_qasm3_import
+pytket==2.8
+# pyliqtr==1.4.1 for now pyliqtr is stuck at qualtran 0.4

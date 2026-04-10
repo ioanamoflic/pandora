@@ -14,7 +14,7 @@ plt.rcParams.update({
 })
 
 
-def fig1():
+def fig2():
     df_tket = pd.read_csv(f'results/tket_bench_final.csv')
     df_qiskit = pd.read_csv(f'results/qiskit_bench_final.csv')
 
@@ -66,21 +66,34 @@ def fig1():
     plt.savefig("fig1.pdf", bbox_inches='tight', dpi=600)
 
 
-def fig1_V2():
-    df_seq = pd.read_csv('results/qiskit_pandora_tket_all.csv')
-    template_count = df_seq['n_templates']
+def fig2_V2():
+    df_pandora_01 = pd.read_csv('pandora_template_search_random_flip_0.1.csv')
+    df_pandora_1 = pd.read_csv('pandora_template_search_random_flip_1.csv')
+    df_pandora_10 = pd.read_csv('pandora_template_search_random_flip_10.csv')
 
-    pandora_times_1 = df_seq['pandora_1']
-    tket_times_1 = df_seq['tket_1']
-    qiskit_times_1 = df_seq['qiskit_1']
+    df_qiskit_01 = pd.read_csv('qiskit_template_search_random_flip_0.1.csv')
+    df_qiskit_1 = pd.read_csv('qiskit_template_search_random_flip_1.csv')
+    df_qiskit_10 = pd.read_csv('qiskit_template_search_random_flip_10.csv')
+    
+    df_tket_01 = pd.read_csv('TKET_template_search_0.1.csv')
+    df_tket_1 = pd.read_csv('TKET_template_search_1.csv')
+    df_tket_10 = pd.read_csv('TKET_template_search_10.csv')
+    
+    # first column
+    template_count = df_pandora_01.iloc[:, 0]
 
-    pandora_times_01 = df_seq['pandora_0.1']
-    tket_times_01 = df_seq['tket_0.1']
-    qiskit_times_01 = df_seq['qiskit_0.1']
+    # second column
+    pandora_times_1 = df_pandora_1.iloc[:, 1]
+    tket_times_1 = df_tket_1.iloc[:, 1]
+    qiskit_times_1 = df_qiskit_1.iloc[:, 1]
 
-    pandora_times_10 = df_seq['pandora_10']
-    tket_times_10 = df_seq['tket_10']
-    qiskit_times_10 = df_seq['qiskit_10']
+    pandora_times_01 = df_pandora_01.iloc[:, 1]
+    tket_times_01 = df_tket_01.iloc[:, 1]
+    qiskit_times_01 = df_qiskit_01.iloc[:, 1]
+
+    pandora_times_10 = df_pandora_10.iloc[:, 1]
+    tket_times_10 = df_tket_10.iloc[:, 1]
+    qiskit_times_10 = df_qiskit_10.iloc[:, 1]
 
     colors = {
         "Pandora": {"1": "navy", "10": "navy", "01": "navy"},
@@ -129,7 +142,7 @@ def fig1_V2():
                  color=colors["Qiskit"]["10"],
                  label='Qiskit 10%')
 
-    ax1.set_xlabel("Number of rewrites")
+    ax1.set_xlabel("Total gate count")
     ax1.set_ylabel("Seconds")
     ax1.legend()
 
@@ -137,7 +150,7 @@ def fig1_V2():
     plt.savefig("fig1v2.pdf", bbox_inches='tight', dpi=600)
 
 
-def fig2():
+def fig3():
     df_fh = pd.read_csv(f'results/fh50_bench_final.csv')
     df_adder = pd.read_csv(f'results/adder_improvement.csv')
     df_pandora = pd.read_csv(f'results/pandora_multithreaded_speedups.csv')
@@ -195,7 +208,7 @@ def fig2():
     plt.savefig("fig2.pdf", bbox_inches='tight', dpi=600)
 
 
-def fig3():
+def fig4():
     df_rsa = pd.read_csv(f'results/rsa_bench_final.csv')
 
     bits = df_rsa['n_bits']
@@ -246,7 +259,7 @@ def fig3():
     plt.savefig("fig3.pdf", bbox_inches='tight', dpi=600)
 
 
-def fig4():
+def fig5():
     df_decomp = pd.read_csv(f'results/decomposition_final.csv')
     df_estimates = pd.read_csv(f'results/fh_final.csv')
 
@@ -316,7 +329,7 @@ def fig4():
     plt.savefig("fig4.png", bbox_inches='tight', dpi=600)
 
 
-def fig5():
+def fig6():
     df_mqt = pd.read_csv(f'results/pandora_mqt_32_final.csv')
 
     circuits = df_mqt['circ_idx']
@@ -380,10 +393,10 @@ def fig_adders():
 
 
 if __name__ == "__main__":
-    fig1()
-    fig2()
-    fig3()
-    fig4()
-    fig5()
-    fig_adders()
-    fig1_V2()
+    # fig2()
+    # fig3()
+    # fig4()
+    # fig5()
+    # fig6()
+    # fig_adders()
+    fig2_V2()

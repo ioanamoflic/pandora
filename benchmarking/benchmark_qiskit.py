@@ -113,6 +113,6 @@ if __name__ == "__main__":
 
         print('Time to rewrite:', total_rewrite, flush=True)
 
-        with open('qiskit_template_search_random_flip.csv', 'a') as f:
+        with open(f'qiskit_template_search_random_flip_{sample_percentage}.csv', 'a') as f:
             writer = csv.writer(f)
             writer.writerow((nq, total_rewrite, sample_percentage))
