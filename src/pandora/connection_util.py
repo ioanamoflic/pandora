@@ -225,7 +225,7 @@ def get_stats_for_adder(connection,
 
     with open(f'adder_{n_bits}.csv', 'w') as out:
         csv_out = csv.writer(out)
-        csv_out.writerow(["id", "logger_id", "total_count", "t_count", "s_count", "h_count", "x_count", "cx_count"])
+        csv_out.writerow(["id", "logger_id", "total_count", "t_count", "s_count", "h_count", "cx_count", "x_count"])
         for row in tuples:
             csv_out.writerow(row)
 

@@ -33,7 +33,7 @@ begin
 
         found_match := false;
 
-        if mismatch_count >= 10000 then
+        if mismatch_count >= 100000 then
             exit;
         end if;
 

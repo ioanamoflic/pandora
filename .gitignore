@@ -10,3 +10,6 @@ venv
 /pyLIQTR/.idea/
 .idea/*
 *.json
+*.qasm
+*.pyc
+*.csv
