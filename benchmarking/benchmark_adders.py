@@ -184,7 +184,12 @@ if __name__ == "__main__":
     
     # cancelling T+T† gates
     pandora_optimizer.cancel_single_qubit_gates(gate_types=(T, T_dag), gate_params=(0, 0),
-                                                dedicated_nproc=2)
+                                                dedicated_nproc=1)
+
+    # cancelling T+T† gates
+    pandora_optimizer.cancel_single_qubit_gates(gate_types=(T_dag, T), gate_params=(0, 0),
+                                                dedicated_nproc=1)
+
     # cancelling S+S† gates
     pandora_optimizer.cancel_single_qubit_gates(gate_types=(S, S_dag), gate_params=(0, 0),
                                                 dedicated_nproc=2)

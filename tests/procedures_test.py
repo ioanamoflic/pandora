@@ -1,15 +1,20 @@
+import math
 import random
+
+import cirq
 import numpy as np
 
 from qualtran import QUInt
 from qualtran._infra.gate_with_registers import get_named_qubits
 from qualtran.bloqs.arithmetic.addition import Add
-from qualtran.bloqs.data_loading import QROM
 
 from benchmarking import benchmark_cirq
 
 from pandora.connection_util import *
-from pandora.qualtran_to_pandora_util import get_cirq_circuit_for_bloq, assert_circuit_is_pandora_ingestible
+
+TABLE_NAME = 'linked_circuit'
+LARGE_BUFFER_VALUE = 100000
+CIRCUIT_LABEL = 't'
 
 myH = PandoraGateTranslator.HPowGate.value
 myCX = PandoraGateTranslator.CXPowGate.value
@@ -22,7 +27,7 @@ nprocs = 1
 short_timeout = 1
 long_timeout = 3
 pass_count = 1
-larger_pass_count = 10
+larger_pass_count = 100
 
 pandora_ingestible_gate_set = cirq.Gateset(
     cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel,
@@ -52,35 +57,36 @@ def get_adder_as_cirq_circuit(n_bits) -> cirq.Circuit:
     return cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
 
 
-def get_qrom_as_cirq_circuit(data) -> cirq.Circuit:
-    """
-    Used of testing.
-    """
-    bloq = QROM.build_from_data(data)
-    qrom_circuit = get_cirq_circuit_for_bloq(bloq)
-    return qrom_circuit
-
-
-def test_cancel_single_qubit(connection):
-    cursor = connection.cursor()
-    drop_and_replace_tables(connection=connection, clean=True)
+def clean_pandora(connection):
+    drop_and_replace_tables(connection=connection,
+                            clean=True)
     refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
+    reset_database_id(conn, table_name=TABLE_NAME,
+                      large_buffer_value=LARGE_BUFFER_VALUE)
 
-    qubit = cirq.NamedQubit('q')
-    initial_circuit = cirq.Circuit([cirq.H.on(qubit), cirq.H.on(qubit)])
 
+def convert_and_insert(connection, initial_circuit: cirq.Circuit):
     pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
                                        last_id=0,
                                        add_margins=True,
-                                       label='t')
+                                       label=CIRCUIT_LABEL)
     insert_in_batches(pandora_gates=pandora_gates,
                       connection=connection,
-                      table_name='linked_circuit')
+                      table_name=TABLE_NAME)
+
+
+def test_cancel_single_qubit(connection):
+    qubit = cirq.NamedQubit('q')
+    initial_circuit = cirq.Circuit([cirq.H.on(qubit), cirq.H.on(qubit)])
+
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
     cursor.execute(f"call cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             table_name='linked_circuit',
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
                                              remove_io_gates=False,
                                              just_count=False,
                                              is_test=False)
@@ -91,25 +97,17 @@ def test_cancel_single_qubit(connection):
 
 
 def test_cancel_two_qubit(connection):
-    cursor = connection.cursor()
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.CX.on(q1, q2)])
 
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
     cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             table_name='linked_circuit',
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
                                              remove_io_gates=False,
                                              just_count=False,
                                              is_test=False)
@@ -117,360 +115,6 @@ def test_cancel_two_qubit(connection):
     print(extracted_circuit)
     assert len(extracted_circuit) - 2 == 0
     print('Test cancel_two_qubit passed!')
-
-
-def test_commute_single_control_right(connection):
-    cursor = connection.cursor()
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
-    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
-    initial_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.T.on(q1)])
-    final_circuit = cirq.Circuit([cirq.T.on(q1), cirq.CX.on(q1, q2)])
-
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
-    cursor.execute(
-        f"call commute_single_control_right({myZPow}, 0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             table_name='linked_circuit',
-                                             remove_io_gates=True,
-                                             just_count=False,
-                                             is_test=False)
-
-    qubit_map = dict(
-        zip(
-            sorted(final_circuit.all_qubits()),
-            sorted(extracted_circuit.all_qubits())
-        )
-    )
-    final_circuit = final_circuit.transform_qubits(qubit_map=qubit_map)
-
-    print(final_circuit)
-    print(extracted_circuit)
-
-    assert str(final_circuit) == str(extracted_circuit)
-    print('Test commute_single_control_right passed!')
-
-
-def test_commute_single_control_left(connection):
-    cursor = connection.cursor()
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
-    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
-    final_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.T.on(q1)])
-    initial_circuit = cirq.Circuit([cirq.T.on(q1), cirq.CX.on(q1, q2)])
-
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
-    cursor.execute(
-        f"call commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             table_name='linked_circuit',
-                                             remove_io_gates=True,
-                                             just_count=False,
-                                             is_test=False)
-
-    qubit_map = dict(
-        zip(
-            sorted(final_circuit.all_qubits()),
-            sorted(extracted_circuit.all_qubits())
-        )
-    )
-    final_circuit = final_circuit.transform_qubits(qubit_map=qubit_map)
-
-    print(final_circuit)
-    print(extracted_circuit)
-
-    assert str(final_circuit) == str(extracted_circuit)
-    print('Test commute_single_control_right passed!')
-
-
-def test_cx_to_hhcxhh_a(connection):
-    cursor = connection.cursor()
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=6)
-
-    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
-    initial_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.CX.on(q1, q2)])
-    final_circuit = cirq.Circuit([cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q2, q1), cirq.H.on(q1), cirq.H.on(q2),
-                                  cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q2, q1), cirq.H.on(q1), cirq.H.on(q2)])
-
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
-    cursor.execute(f"call linked_cx_to_hhcxhh({proc_id}, {nprocs}, {pass_count}, 1)")
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             table_name='linked_circuit',
-                                             remove_io_gates=False,
-                                             just_count=False,
-                                             is_test=False)
-    print(initial_circuit)
-    print(extracted_circuit)
-
-    qubit_map = dict(
-        zip(
-            sorted(final_circuit.all_qubits()),
-            sorted(extracted_circuit.all_qubits())
-        )
-    )
-    final_circuit = final_circuit.transform_qubits(qubit_map=qubit_map)
-
-    # assert str(final_circuit) == str(extracted_circuit)
-    print('Test cx_to_hhcxhh passed!')
-
-
-def test_cx_to_hhcxhh_b(connection):
-    cursor = connection.cursor()
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
-    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
-    initial_circuit = cirq.Circuit([cirq.CX.on(q2, q1)])
-    final_circuit = cirq.Circuit([cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q1, q2), cirq.H.on(q1), cirq.H.on(q2)])
-
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
-    cursor.execute(f"call linked_cx_to_hhcxhh({proc_id}, {nprocs}, {pass_count}, 1)")
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             table_name='linked_circuit',
-                                             remove_io_gates=False,
-                                             just_count=False,
-                                             is_test=False)
-    print(initial_circuit)
-    print(extracted_circuit)
-
-    qubit_map = dict(
-        zip(
-            sorted(final_circuit.all_qubits()),
-            sorted(extracted_circuit.all_qubits())
-        )
-    )
-    final_circuit = final_circuit.transform_qubits(qubit_map=qubit_map)
-
-    # assert str(final_circuit) == str(extracted_circuit)
-    print('Test cx_to_hhcxhh passed!')
-
-
-def test_hhcxhh_to_cx_a(connection):
-    cursor = connection.cursor()
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
-    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
-    initial_circuit = cirq.Circuit([cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q1, q2), cirq.H.on(q1), cirq.H.on(q2)])
-    final_circuit = cirq.Circuit([cirq.CX.on(q2, q1)])
-
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
-    cursor.execute(f"call linked_hhcxhh_to_cx({proc_id}, {nprocs}, {pass_count}, 1)")
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             table_name='linked_circuit',
-                                             remove_io_gates=True,
-                                             just_count=False,
-                                             is_test=False)
-    qubit_map = dict(
-        zip(
-            sorted(final_circuit.all_qubits()),
-            sorted(extracted_circuit.all_qubits())
-        )
-    )
-    final_circuit = final_circuit.transform_qubits(qubit_map=qubit_map)
-
-    assert str(final_circuit) == str(extracted_circuit)
-    print('Test hhcxhh_to_cx passed!')
-
-
-def test_hhcxhh_to_cx_b(connection):
-    cursor = connection.cursor()
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
-    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
-    initial_circuit = cirq.Circuit([cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q2, q1), cirq.H.on(q1), cirq.H.on(q2)])
-    final_circuit = cirq.Circuit([cirq.CX.on(q1, q2)])
-
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
-    cursor.execute(f"call linked_hhcxhh_to_cx({proc_id}, {nprocs}, {pass_count}, 1)")
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             table_name='linked_circuit',
-                                             remove_io_gates=True,
-                                             just_count=False,
-                                             is_test=False)
-
-    qubit_map = dict(
-        zip(
-            sorted(final_circuit.all_qubits()),
-            sorted(extracted_circuit.all_qubits())
-        )
-    )
-    final_circuit = final_circuit.transform_qubits(qubit_map=qubit_map)
-
-    assert str(final_circuit) == str(extracted_circuit)
-    print('Test hhcxhh_to_cx passed!')
-
-
-def test_replace_two_sq_with_one(connection):
-    cursor = connection.cursor()
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
-    q = cirq.NamedQubit('q')
-    initial_circuit = cirq.Circuit([cirq.T.on(q), cirq.T.on(q)])
-    final_circuit = cirq.Circuit([cirq.S.on(q)])
-
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
-    cursor.execute(
-        f"call fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {pass_count}, 1)")
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             table_name='linked_circuit',
-                                             remove_io_gates=True,
-                                             just_count=False,
-                                             is_test=False)
-
-    qubit_map = dict(
-        zip(
-            sorted(final_circuit.all_qubits()),
-            sorted(extracted_circuit.all_qubits())
-        )
-    )
-    final_circuit = final_circuit.transform_qubits(qubit_map=qubit_map)
-
-    assert str(final_circuit) == str(extracted_circuit)
-    print('Test replace_two_sq_with_one passed!')
-
-
-def test_commute_cx_ctrl():
-    return NotImplementedError()
-
-
-def test_commute_cx_target():
-    return NotImplementedError()
-
-
-def test_commute_cx_ctrl_target_case_1(connection):
-    cursor = connection.cursor()
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
-    q1, q2, q3 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2'), cirq.NamedQubit('q3')
-    initial_circuit = cirq.Circuit([cirq.CX.on(q2, q3), cirq.CX.on(q1, q2)])
-    final_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.CX.on(q2, q3), cirq.CX.on(q1, q3)])
-
-    print(initial_circuit)
-    print(final_circuit)
-
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
-    cursor.execute(f"call commute_cx_ctrl_target_bernoulli(10, 1)")
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             table_name='linked_circuit',
-                                             remove_io_gates=True,
-                                             is_test=False)
-
-    qubit_map = dict(
-        zip(
-            sorted(final_circuit.all_qubits()),
-            sorted(extracted_circuit.all_qubits())
-        )
-    )
-    final_circuit = final_circuit.transform_qubits(qubit_map=qubit_map)
-
-    assert str(final_circuit) == str(extracted_circuit)
-    print('Test commute_cx_ctrl_target_1 passed!')
-
-
-def test_commute_cx_ctrl_target_case_2(connection):
-    cursor = connection.cursor()
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
-    q1, q2, q3 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2'), cirq.NamedQubit('q3')
-    initial_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.CX.on(q2, q3)])
-    final_circuit = cirq.Circuit([cirq.CX.on(q2, q3), cirq.CX.on(q1, q2), cirq.CX.on(q1, q3)])
-
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0, add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
-    cursor.execute(f"call commute_cx_ctrl_target_bernoulli(10, 1)")
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             table_name='linked_circuit',
-                                             remove_io_gates=True,
-                                             is_test=False)
-
-    qubit_map = dict(
-        zip(
-            sorted(final_circuit.all_qubits()),
-            sorted(extracted_circuit.all_qubits())
-        )
-    )
-    final_circuit = final_circuit.transform_qubits(qubit_map=qubit_map)
-
-    assert str(final_circuit) == str(extracted_circuit)
-    print('Test commute_cx_ctrl_target_2 passed!')
 
 
 def test_case_1(connection):
@@ -483,26 +127,19 @@ def test_case_1(connection):
 
     Should reduce to empty.
     """
-    cursor = connection.cursor()
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.T.on(q1), cirq.CX.on(q1, q2), cirq.T.on(q1) ** -1, cirq.CX.on(q1, q2)])
-    print(initial_circuit)
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
+
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
     cursor.execute(
         f"call commute_single_control_right({myZPow}, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
     cursor.execute(
         f"call cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
     cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
                                              table_name='linked_circuit',
@@ -526,10 +163,6 @@ def test_case_1_repeated(connection, n):
 
     Should reduce to empty.
     """
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    cursor = connection.cursor()
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
 
     def template(tup):
         q1, q2 = tup
@@ -541,14 +174,10 @@ def test_case_1_repeated(connection, n):
     qubits = [cirq.NamedQubit(f'q{i}') for i in range(10)]
     initial_circuit = cirq.Circuit([template(random.sample(qubits, 2)) for _ in range(n)])
 
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
 
+    cursor = connection.cursor()
     cursor.execute(
         f"call commute_single_control_right({myZPow}, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
     cursor.execute(
@@ -556,15 +185,296 @@ def test_case_1_repeated(connection, n):
     cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             table_name='linked_circuit',
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
                                              remove_io_gates=True,
                                              just_count=False,
-                                             is_test=False
-                                             )
+                                             is_test=False)
+
     print(extracted_circuit)
     assert len(extracted_circuit) == 0
     print('Test case 1 repeated passed!')
+
+
+def test_commute_single_control_right(connection):
+    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
+    initial_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.T.on(q1)])
+    expected_circuit = cirq.Circuit([cirq.T.on(q1), cirq.CX.on(q1, q2)])
+
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
+    cursor.execute(
+        f"call commute_single_control_right({myZPow}, 0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+    extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
+                                             remove_io_gates=True,
+                                             just_count=False,
+                                             is_test=False)
+
+    qubit_map = dict(
+        zip(
+            sorted(expected_circuit.all_qubits()),
+            sorted(extracted_circuit.all_qubits())
+        )
+    )
+    expected_circuit = expected_circuit.transform_qubits(qubit_map=qubit_map)
+
+    print(expected_circuit)
+    print(extracted_circuit)
+
+    assert str(expected_circuit) == str(extracted_circuit)
+    print('Test commute_single_control_right passed!')
+
+
+def test_commute_single_control_left(connection):
+    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
+    expected_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.T.on(q1)])
+    initial_circuit = cirq.Circuit([cirq.T.on(q1), cirq.CX.on(q1, q2)])
+
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
+    cursor.execute(
+        f"call commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+    extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
+                                             remove_io_gates=True,
+                                             just_count=False,
+                                             is_test=False)
+    qubit_map = dict(
+        zip(
+            sorted(expected_circuit.all_qubits()),
+            sorted(extracted_circuit.all_qubits())
+        )
+    )
+    expected_circuit = expected_circuit.transform_qubits(qubit_map=qubit_map)
+
+    print(expected_circuit)
+    print(extracted_circuit)
+
+    assert str(expected_circuit) == str(extracted_circuit)
+    print('Test commute_single_control_left passed!')
+
+
+def test_cx_to_hhcxhh_a(connection):
+    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
+    initial_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.CX.on(q1, q2)])
+    expected_circuit = cirq.Circuit([cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q2, q1), cirq.H.on(q1), cirq.H.on(q2),
+                                     cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q2, q1), cirq.H.on(q1), cirq.H.on(q2)])
+
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
+    cursor.execute(f"call linked_cx_to_hhcxhh({proc_id}, {nprocs}, {pass_count}, 1)")
+    extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
+                                             remove_io_gates=True,
+                                             just_count=False,
+                                             is_test=False)
+    print(initial_circuit)
+    print(extracted_circuit)
+
+    qubit_map = dict(
+        zip(
+            sorted(expected_circuit.all_qubits()),
+            sorted(extracted_circuit.all_qubits())
+        )
+    )
+    expected_circuit = expected_circuit.transform_qubits(qubit_map=qubit_map)
+
+    assert str(expected_circuit) == str(extracted_circuit)
+    print('Test cx_to_hhcxhh passed!')
+
+
+def test_cx_to_hhcxhh_b(connection):
+    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
+    initial_circuit = cirq.Circuit([cirq.CX.on(q2, q1)])
+    expected_circuit = cirq.Circuit([cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q1, q2), cirq.H.on(q1), cirq.H.on(q2)])
+
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
+    cursor.execute(f"call linked_cx_to_hhcxhh({proc_id}, {nprocs}, {pass_count}, 1)")
+    extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
+                                             remove_io_gates=True,
+                                             just_count=False,
+                                             is_test=False)
+    print(initial_circuit)
+    print(extracted_circuit)
+
+    qubit_map = dict(
+        zip(
+            sorted(expected_circuit.all_qubits()),
+            sorted(extracted_circuit.all_qubits())
+        )
+    )
+    expected_circuit = expected_circuit.transform_qubits(qubit_map=qubit_map)
+
+    assert str(expected_circuit) == str(extracted_circuit)
+    print('Test cx_to_hhcxhh passed!')
+
+
+def test_hhcxhh_to_cx_a(connection):
+    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
+    initial_circuit = cirq.Circuit([cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q1, q2), cirq.H.on(q1), cirq.H.on(q2)])
+    expected_circuit = cirq.Circuit([cirq.CX.on(q2, q1)])
+
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
+    cursor.execute(f"call linked_hhcxhh_to_cx({proc_id}, {nprocs}, {pass_count}, 1)")
+    extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
+                                             remove_io_gates=True,
+                                             just_count=False,
+                                             is_test=False)
+    qubit_map = dict(
+        zip(
+            sorted(expected_circuit.all_qubits()),
+            sorted(extracted_circuit.all_qubits())
+        )
+    )
+    expected_circuit = expected_circuit.transform_qubits(qubit_map=qubit_map)
+
+    assert str(expected_circuit) == str(extracted_circuit)
+    print('Test hhcxhh_to_cx passed!')
+
+
+def test_hhcxhh_to_cx_b(connection):
+    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
+    initial_circuit = cirq.Circuit([cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q2, q1), cirq.H.on(q1), cirq.H.on(q2)])
+    expected_circuit = cirq.Circuit([cirq.CX.on(q1, q2)])
+
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
+    cursor.execute(f"call linked_hhcxhh_to_cx({proc_id}, {nprocs}, {pass_count}, 1)")
+    extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
+                                             remove_io_gates=True,
+                                             just_count=False,
+                                             is_test=False)
+
+    qubit_map = dict(
+        zip(
+            sorted(expected_circuit.all_qubits()),
+            sorted(extracted_circuit.all_qubits())
+        )
+    )
+    expected_circuit = expected_circuit.transform_qubits(qubit_map=qubit_map)
+
+    assert str(expected_circuit) == str(extracted_circuit)
+    print('Test hhcxhh_to_cx passed!')
+
+
+def test_replace_two_sq_with_one(connection):
+    q = cirq.NamedQubit('q')
+    initial_circuit = cirq.Circuit([cirq.T.on(q), cirq.T.on(q)])
+    expected_circuit = cirq.Circuit([cirq.S.on(q)])
+
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
+    cursor.execute(
+        f"call fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {pass_count}, 1)")
+    extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
+                                             remove_io_gates=True,
+                                             just_count=False,
+                                             is_test=False)
+
+    qubit_map = dict(
+        zip(
+            sorted(expected_circuit.all_qubits()),
+            sorted(extracted_circuit.all_qubits())
+        )
+    )
+    expected_circuit = expected_circuit.transform_qubits(qubit_map=qubit_map)
+
+    assert str(expected_circuit) == str(extracted_circuit)
+    print('Test replace_two_sq_with_one passed!')
+
+
+def test_commute_cx_ctrl():
+    return NotImplementedError()
+
+
+def test_commute_cx_target():
+    return NotImplementedError()
+
+
+def test_commute_cx_ctrl_target_case_1(connection):
+    q1, q2, q3 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2'), cirq.NamedQubit('q3')
+    initial_circuit = cirq.Circuit([cirq.CX.on(q2, q3), cirq.CX.on(q1, q2)])
+    expected_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.CX.on(q2, q3), cirq.CX.on(q1, q3)])
+
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
+    cursor.execute(f"call commute_cx_ctrl_target_bernoulli(10, 1)")
+    extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
+                                             remove_io_gates=True,
+                                             just_count=False,
+                                             is_test=False)
+
+    qubit_map = dict(
+        zip(
+            sorted(expected_circuit.all_qubits()),
+            sorted(extracted_circuit.all_qubits())
+        )
+    )
+    expected_circuit = expected_circuit.transform_qubits(qubit_map=qubit_map)
+
+    assert str(expected_circuit) == str(extracted_circuit)
+    print('Test commute_cx_ctrl_target_1 passed!')
+
+
+def test_commute_cx_ctrl_target_case_2(connection):
+    q1, q2, q3 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2'), cirq.NamedQubit('q3')
+    initial_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.CX.on(q2, q3)])
+    expected_circuit = cirq.Circuit([cirq.CX.on(q2, q3), cirq.CX.on(q1, q2), cirq.CX.on(q1, q3)])
+
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
+    cursor.execute(f"call commute_cx_ctrl_target_bernoulli(10, 1)")
+    extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
+                                             remove_io_gates=True,
+                                             just_count=False,
+                                             is_test=False)
+
+    qubit_map = dict(
+        zip(
+            sorted(expected_circuit.all_qubits()),
+            sorted(extracted_circuit.all_qubits())
+        )
+    )
+    expected_circuit = expected_circuit.transform_qubits(qubit_map=qubit_map)
+
+    assert str(expected_circuit) == str(extracted_circuit)
+    print('Test commute_cx_ctrl_target_2 passed!')
 
 
 def test_case_2(connection):
@@ -575,55 +485,36 @@ def test_case_2(connection):
     q2: ───────X───H──────────@───H───
     Should reduce to empty.
     """
-    cursor = connection.cursor()
-
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     initial_circuit = cirq.Circuit([cirq.T.on(q1), cirq.CX.on(q1, q2), cirq.T.on(q1) ** -1,
                                     cirq.H.on(q1), cirq.H.on(q2), cirq.CX.on(q2, q1), cirq.H.on(q1), cirq.H.on(q2),
                                     cirq.H.on(q1), cirq.H.on(q1)])
-    print(initial_circuit)
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
-                                             remove_io_gates=False,
-                                             table_name='linked_circuit',
-                                             is_test=False
-                                             )
-    print(extracted_circuit)
 
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    cursor = connection.cursor()
     cursor.execute(
         f"call commute_single_control_right({myZPow}, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
     cursor.execute(
         f"call cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
                                              remove_io_gates=False,
-                                             table_name='linked_circuit',
                                              just_count=False,
-                                             is_test=False
-                                             )
+                                             is_test=False)
     print(extracted_circuit)
 
     cursor.execute(f"call linked_hhcxhh_to_cx({proc_id}, {nprocs}, {pass_count}, {short_timeout})")
     cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1,{proc_id}, {nprocs}, {pass_count}, {short_timeout})")
     cursor.execute(f"call cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
                                              remove_io_gates=True,
-                                             table_name='linked_circuit',
                                              just_count=False,
-                                             is_test=False
-                                             )
+                                             is_test=False)
     print(extracted_circuit)
     assert len(extracted_circuit) == 0
     print('Test case 2 passed!')
@@ -641,11 +532,6 @@ def test_case_2_repeated(connection, n):
 
     Should reduce to empty.
     """
-    cursor = connection.cursor()
-
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-    reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
 
     def template(tup):
         q1, q2 = tup
@@ -661,14 +547,10 @@ def test_case_2_repeated(connection, n):
     qubits = [cirq.NamedQubit(f'q{i}') for i in range(10)]
     initial_circuit = cirq.Circuit([template(random.sample(qubits, 2)) for _ in range(n)])
 
-    pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                       last_id=0,
-                                       add_margins=True,
-                                       label='t')
-    insert_in_batches(pandora_gates=pandora_gates,
-                      connection=connection,
-                      table_name='linked_circuit')
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
 
+    cursor = connection.cursor()
     cursor.execute(f"call linked_hhcxhh_to_cx({proc_id}, {nprocs}, {pass_count}, {short_timeout})")
     cursor.execute(
         f"call commute_single_control_right({myZPow}, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
@@ -677,12 +559,11 @@ def test_case_2_repeated(connection, n):
     cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label='t',
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
                                              remove_io_gates=True,
-                                             table_name='linked_circuit',
                                              just_count=False,
-                                             is_test=False
-                                             )
+                                             is_test=False)
     assert len(extracted_circuit) == 0
     print('Test case 2 repeated passed!')
 
@@ -697,19 +578,10 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
     """
 
     for bit_size in range(2, 5):
-        drop_and_replace_tables(connection=connection, clean=True)
-        refresh_all_stored_procedures(connection=connection)
-        reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
         adder_as_cirq_circuit = get_adder_as_cirq_circuit(n_bits=bit_size)
 
-        pandora_gates, _ = cirq_to_pandora(cirq_circuit=adder_as_cirq_circuit,
-                                           last_id=0,
-                                           label='t',
-                                           add_margins=True)
-        insert_in_batches(pandora_gates=pandora_gates,
-                          connection=connection,
-                          table_name='linked_circuit')
+        clean_pandora(connection=connection)
+        convert_and_insert(connection=connection, initial_circuit=adder_as_cirq_circuit)
 
         thread_procedures = [
             (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
@@ -733,12 +605,12 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
         stop_all_lurking_procedures(connection)
         print('stopped')
 
-        extracted_circuit: cirq.Circuit = extract_cirq_circuit(connection=connection,
-                                                               circuit_label='t',
-                                                               remove_io_gates=True,
-                                                               table_name='linked_circuit',
-                                                               just_count=False,
-                                                               is_test=False)
+        extracted_circuit = extract_cirq_circuit(connection=connection,
+                                                 circuit_label=CIRCUIT_LABEL,
+                                                 table_name=TABLE_NAME,
+                                                 remove_io_gates=True,
+                                                 just_count=False,
+                                                 is_test=False)
         print('extracted')
 
         circuit = remove_measurements(remove_classically_controlled_ops(adder_as_cirq_circuit))
@@ -748,28 +620,57 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
         print(f'Passed adder({bit_size})!')
 
 
-def check_logical_correctness_random(connection, stop_after: int):
+def count_t_gates(circuit, tol=1e-8):
+    def is_t_like(op):
+        # Only care about Z rotations
+        if not isinstance(op.gate, cirq.ZPowGate):
+            return False
+
+        # Normalize exponent into [0, 1)
+        exp = op.gate.exponent % 1
+
+        # T = 1/4, T† = 3/4 (mod 1)
+        return (
+                math.isclose(exp, 0.25, abs_tol=tol) or
+                math.isclose(exp, 0.75, abs_tol=tol)
+        )
+
+    return sum(
+        1
+        for moment in circuit
+        for op in moment
+        if is_t_like(op)
+    )
+
+
+def test_logical_correctness_random(connection, stop_after: int):
     all_thread_proc = [
         (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-
-        (1, f"CALL cancel_single_qubit({myPauliZ}, {myPauliZ}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL cancel_single_qubit({myPauliZ}, {myPauliZ}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         (
             1,
             f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         (
             1,
             f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL commute_single_control_left({myZPow}, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        # (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
     ]
 
     thread_procedures = all_thread_proc
@@ -778,80 +679,185 @@ def check_logical_correctness_random(connection, stop_after: int):
         for n_templates in range(5, 30, 5):
             print(f'Testing for {n_qubits} qubits and {n_templates} templates.')
 
-            drop_and_replace_tables(connection=connection, clean=True)
-            refresh_all_stored_procedures(connection=connection)
-            reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
-
             initial_circuit = benchmark_cirq.create_random_circuit(n_qubits=n_qubits, n_templates=n_templates,
                                                                    templates=[
-                                                                              'add_two_hadamards',
-                                                                              'add_two_cnots',
-                                                                              'add_base_change',
-                                                                              'add_t_t_dag',
-                                                                              'add_t_cx',
-                                                                              'add_cx_t'
-                                                                              ],
+                                                                       'add_two_hadamards',
+                                                                       'add_two_cnots',
+                                                                       'add_base_change',
+                                                                       'add_t_t_dag',
+                                                                       'add_t_cx',
+                                                                       'add_cx_t'
+                                                                   ],
                                                                    add_margins=False)
+            clean_pandora(connection=connection)
+            convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
             print('----------------------------------------------')
             print('Initial:')
             print(initial_circuit)
 
-            pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                               last_id=0,
-                                               label='t',
-                                               add_margins=True)
-            insert_in_batches(pandora_gates=pandora_gates,
-                              connection=connection,
-                              table_name='linked_circuit')
+            t_count_before = count_t_gates(initial_circuit)
 
             db_multi_threaded(thread_proc=thread_procedures)
             stop_all_lurking_procedures(connection)
+
             extracted_circuit = extract_cirq_circuit(connection=connection,
-                                                     circuit_label='t',
+                                                     circuit_label=CIRCUIT_LABEL,
+                                                     table_name=TABLE_NAME,
                                                      remove_io_gates=False,
-                                                     table_name='linked_circuit',
-                                                     is_test=False,
-                                                     just_count=False
-                                                     )
+                                                     just_count=False,
+                                                     is_test=False)
             print('Final:')
             print(extracted_circuit)
+
+            t_count_after = count_t_gates(extracted_circuit)
+
+            print(f"T before {t_count_before}, T after {t_count_after}")
             assert np.allclose(initial_circuit.unitary(), extracted_circuit.unitary())
 
 
-def test_BVZ_optimization(connection, stop_after):
-    for n_bits in range(2, 5):
-        for secret in range(2 ** n_bits):
-            secret_bin = '{0:b}'.format(secret)
-            drop_and_replace_tables(connection=connection, clean=True)
-            refresh_all_stored_procedures(connection=connection)
-            reset_database_id(conn, table_name='linked_circuit', large_buffer_value=100000)
+def test_multithreading_performance(connection,
+                                    repeated_template: str,
+                                    same_proc_id: bool,
+                                    n_proc: int,
+                                    seed: int,
+                                    stop_after: int):
+    print(f'Testing for {repeated_template} template with {n_proc} processes (same_proc_id={same_proc_id}).')
 
-            initial_circuit = benchmark_cirq.bernstein_vazirani(nr_bits=n_bits, secret=secret_bin)
-            pandora_gates, _ = cirq_to_pandora(cirq_circuit=initial_circuit,
-                                               last_id=0,
-                                               label='t',
-                                               add_margins=True)
-            insert_in_batches(pandora_gates=pandora_gates,
-                              connection=connection,
-                              table_name='linked_circuit')
+    initial_circuit = benchmark_cirq.create_random_circuit(n_qubits=5,
+                                                           n_templates=20,
+                                                           seed=seed,
+                                                           templates=[repeated_template],
+                                                           add_margins=False)
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
 
-            thread_procedures = [
-                (3, f"CALL cancel_single_qubit_bernoulli({myH}, {myH}, 1, 1, 10, 10000000)"),
-                (1, f"CALL linked_hhcxhh_to_cx_bernoulli(10, 10000000)"),
-                (1, f"CALL linked_cx_to_hhcxhh_bernoulli(10, 10000000)"),
-                (1, f"CALL stopper({stop_after})")
-            ]
+    def get_thread_proc():
+        match repeated_template:
+            case 'add_two_hadamards':
+                if same_proc_id:
+                    return [(1,
+                             f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
+                return [(1,
+                         f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
+                        for my_proc_id in range(n_proc)]
+            case 'add_two_cnots':
+                if same_proc_id:
+                    return [(1,
+                             f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
+                return [(1,
+                         f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
+                        for my_proc_id in range(n_proc)]
+            case 'add_base_change':
+                if same_proc_id:
+                    return [(1,
+                             f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
+                return [(1, f"CALL linked_hhcxhh_to_cx({my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
+                        for my_proc_id in range(n_proc)]
+            case 'add_t_t_dag':
+                if same_proc_id:
+                    return [(1,
+                             f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
+                return [(1,
+                         f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
+                        for my_proc_id in range(n_proc)]
+            case 'add_t_cx':
+                if same_proc_id:
+                    return [(1,
+                             f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
+                return [(1,
+                         f"CALL commute_single_control_left({myZPow}, 0.25, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
+                        for my_proc_id in range(n_proc)]
+            case 'add_cx_t':
+                if same_proc_id:
+                    return [(1,
+                             f"CALL commute_single_control_right({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
+                return [(1,
+                         f"CALL commute_single_control_right({myZPow}, 0.25, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
+                        for my_proc_id in range(n_proc)]
+            case _:
+                raise f"Template {repeated_template} does not exist"
 
-            db_multi_threaded(thread_proc=thread_procedures)
-            stop_all_lurking_procedures(connection)
-            extracted_circuit = extract_cirq_circuit(connection=connection,
-                                                     circuit_label='t',
-                                                     remove_io_gates=False,
-                                                     table_name='linked_circuit',
-                                                     is_test=False
-                                                     )
-            assert np.allclose(initial_circuit.unitary(), extracted_circuit.unitary())
-            print(f'Passed bvz({n_bits}, secret={secret})')
+    all_thread_proc = get_thread_proc()
+
+    db_multi_threaded(thread_proc=all_thread_proc)
+    stop_all_lurking_procedures(connection)
+
+    extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
+                                             remove_io_gates=False,
+                                             just_count=False,
+                                             is_test=False)
+    print(initial_circuit)
+    print(extracted_circuit)
+
+    assert np.allclose(initial_circuit.unitary(), extracted_circuit.unitary())
+
+
+def test_commute_T_leftmost_location(connection,
+                                     same_proc_id: bool,
+                                     n_proc: int,
+                                     stop_after: int):
+    print(f'Testing leftmost T commutation template with {n_proc} processes (same_proc_id={same_proc_id}).')
+
+    pass_count = 100
+    cx_count = 20
+    initial_circuit = cirq.Circuit()
+    qubits = cirq.LineQubit.range(3)
+    initial_circuit.append(cirq.T(qubits[1]))
+    for _ in range(0, cx_count, 2):
+        initial_circuit.append(cirq.CX(qubits[1], qubits[0]))
+        initial_circuit.append(cirq.CX(qubits[1], qubits[2]))
+    initial_circuit.append(cirq.T(qubits[1])**-1)
+
+    clean_pandora(connection=connection)
+    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+
+    def get_thread_proc():
+        if same_proc_id:
+            return_list = [(1,
+                            f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {pass_count}, {stop_after})")] * n_proc
+            return_list.append((1,
+                                f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {pass_count}, {stop_after})"))
+            return return_list
+        return_list = [
+            (1, f"CALL commute_single_control_left({myZPow}, 0.25, {my_proc_id}, {nprocs}, {pass_count}, {stop_after})")
+            for my_proc_id in range(n_proc)]
+        return_list.append((1,
+                            f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {n_proc}, {nprocs}, {pass_count}, {stop_after})"))
+        return return_list
+
+    all_thread_proc = get_thread_proc()
+
+    db_multi_threaded(thread_proc=all_thread_proc)
+    stop_all_lurking_procedures(connection)
+
+    print("Before:")
+    print(initial_circuit)
+
+    extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
+                                             remove_io_gates=True,
+                                             just_count=False,
+                                             is_test=False)
+
+    print("After commute:")
+    print(extracted_circuit)
+
+    cursor = connection.cursor()
+    cursor.execute(f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, 1, 1)")
+
+    print("After cancel:")
+    extracted_circuit = extract_cirq_circuit(connection=connection,
+                                             circuit_label=CIRCUIT_LABEL,
+                                             table_name=TABLE_NAME,
+                                             remove_io_gates=True,
+                                             just_count=False,
+                                             is_test=False)
+    print(extracted_circuit)
+    assert np.allclose(initial_circuit.unitary(), extracted_circuit.unitary())
 
 
 if __name__ == "__main__":
@@ -860,29 +866,42 @@ if __name__ == "__main__":
     # test_commute_cx_ctrl_target_case_1(conn)
     # test_commute_cx_ctrl_target_case_2(conn)
 
-    test_cancel_single_qubit(conn)
-    test_cancel_two_qubit(conn)
-    test_commute_single_control_right(conn)
-    test_commute_single_control_left(conn)
-    test_cx_to_hhcxhh_a(conn)
-    test_cx_to_hhcxhh_b(conn)
-    test_hhcxhh_to_cx_a(conn)
-    test_hhcxhh_to_cx_b(conn)
-    test_replace_two_sq_with_one(conn)
-    test_case_1(conn)
-    test_case_2(conn)
-    test_case_1_repeated(conn, n=10)
-    test_case_2_repeated(conn, n=10)
+    # test_cancel_single_qubit(conn)
+    # test_cancel_two_qubit(conn)
+    # test_commute_single_control_right(conn)
+    # test_commute_single_control_left(conn)
+    # test_cx_to_hhcxhh_a(conn)
+    # test_cx_to_hhcxhh_b(conn)
+    # test_hhcxhh_to_cx_a(conn)
+    # test_hhcxhh_to_cx_b(conn)
+    # test_replace_two_sq_with_one(conn)
+    # test_case_1(conn)
+    # test_case_2(conn)
+    # test_case_1_repeated(conn, n=10)
+    # test_case_2_repeated(conn, n=10)
     # test_qualtran_adder_opt_reconstruction(conn, stop_after=5)
-    check_logical_correctness_random(conn, stop_after=5)
-    # test_BVZ_optimization(conn, stop_after=3)
+    # test_logical_correctness_random(conn, stop_after=5)
+
+    for n_procs in [1, 2, 4, 8]:
+        for same_proc_id in [True, False]:
+            test_commute_T_leftmost_location(connection=conn, same_proc_id=same_proc_id, n_proc=n_procs, stop_after=10)
+
+    # experiment_seed = random.randint(1, 100)
+    # print(f"Running experiment with seed {experiment_seed} ")
+    # for repeated_template in ['add_two_hadamards',
+    #                           'add_two_cnots',
+    #                           'add_base_change',
+    #                           'add_t_t_dag',
+    #                           'add_t_cx',
+    #                           # 'add_cx_t' # this one is buggy
+    #                           ]:
+    #     for same_proc_id in [True, False]:
+    #         for n_procs in [1, 2, 4, 8]:
+    #             test_multithreading_performance(conn,
+    #                                             repeated_template=repeated_template,
+    #                                             same_proc_id=same_proc_id,
+    #                                             n_proc=n_procs,
+    #                                             seed=experiment_seed,
+    #                                             stop_after=3)
+
     conn.close()
-    # extracted_circuit = extract_cirq_circuit(connection=conn,
-    #                                          circuit_label='t',
-    #                                          remove_io_gates=False,
-    #                                          table_name='linked_circuit',
-    #                                          is_test=False,
-    #                                          just_count=False
-    #                                          )
-    # print('Final:')
-    # print(extracted_circuit)
