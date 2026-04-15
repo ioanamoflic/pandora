@@ -122,7 +122,7 @@ begin
             commit; -- release locks
 
             -- this procedure is too fast
---             perform pg_sleep(0.1);
+            perform pg_sleep(0.1);
 
         end loop; -- end gate loop
 

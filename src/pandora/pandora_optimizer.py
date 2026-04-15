@@ -246,7 +246,7 @@ class PandoraOptimizer(Pandora):
         """
 
         for _ in range(dedicated_nproc):
-            stored_procedure = f"call commute_single_control_right({gate_type},{gate_param}," \
+            stored_procedure = f"call commute_single_control_left({gate_type},{gate_param}," \
                                f"{self._nproc}, {self.proc_count}, {self.pass_count}, {self.timeout})"
             self._call_thread_proc(stored_procedure)
 
@@ -266,7 +266,7 @@ class PandoraOptimizer(Pandora):
         """
 
         for _ in range(dedicated_nproc):
-            stored_procedure = f"call commute_single_control_left({gate_type},{gate_param}," \
+            stored_procedure = f"call commute_single_control_right({gate_type},{gate_param}," \
                                f"{self._nproc}, {self.proc_count}, {self.pass_count}, {self.timeout})"
             self._call_thread_proc(stored_procedure)
 
