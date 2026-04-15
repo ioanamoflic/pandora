@@ -24,8 +24,9 @@ begin
 	 while pass_count > 0 loop
         for gate in
             select * from linked_circuit
-            where id % nprocs = my_proc_id
-            and type=type_1
+            where
+--                 id % nprocs = my_proc_id and
+            type=type_1
             and mod(next_q1, 100) = type_2
             and param=param1
         loop

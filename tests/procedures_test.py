@@ -27,7 +27,7 @@ nprocs = 1
 short_timeout = 1
 long_timeout = 3
 pass_count = 1
-larger_pass_count = 100
+larger_pass_count = 1000000000
 
 pandora_ingestible_gate_set = cirq.Gateset(
     cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel,
@@ -584,22 +584,22 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
         convert_and_insert(connection=connection, initial_circuit=adder_as_cirq_circuit)
 
         thread_procedures = [
-            (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
+            (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
             (1,
-             f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
+             f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
             (1,
-             f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
-            (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
+             f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
             (1,
-             f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
+             f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
             (1,
-             f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
-            (1, f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
-            (1, f"CALL commute_single_control_left({myZPow}, -0.25, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
-            (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
-            (1, f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {pass_count}, {stop_after})"),
-            (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {pass_count}, {stop_after})"),
-            (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {pass_count}, {stop_after})"),
+             f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL commute_single_control_left({myZPow}, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         ]
         db_multi_threaded(thread_proc=thread_procedures)
         stop_all_lurking_procedures(connection)
@@ -670,7 +670,6 @@ def test_logical_correctness_random(connection, stop_after: int):
         (1,
          f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
         (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        # (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
     ]
 
     thread_procedures = all_thread_proc
@@ -796,36 +795,30 @@ def test_multithreading_performance(connection,
 
 
 def test_commute_T_leftmost_location(connection,
-                                     same_proc_id: bool,
                                      n_proc: int,
                                      stop_after: int):
-    print(f'Testing leftmost T commutation template with {n_proc} processes (same_proc_id={same_proc_id}).')
+    print(f'Testing leftmost T commutation template with {n_proc} processes.')
 
-    pass_count = 100
     cx_count = 20
     initial_circuit = cirq.Circuit()
     qubits = cirq.LineQubit.range(3)
-    initial_circuit.append(cirq.T(qubits[1]))
+    for i in range(cx_count):
+        initial_circuit.append(cirq.T(qubits[1]))
     for _ in range(0, cx_count, 2):
         initial_circuit.append(cirq.CX(qubits[1], qubits[0]))
         initial_circuit.append(cirq.CX(qubits[1], qubits[2]))
-    initial_circuit.append(cirq.T(qubits[1])**-1)
+    for i in range(cx_count):
+        initial_circuit.append(cirq.T(qubits[1])**-1)
 
     clean_pandora(connection=connection)
     convert_and_insert(connection=connection, initial_circuit=initial_circuit)
 
     def get_thread_proc():
-        if same_proc_id:
-            return_list = [(1,
-                            f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {pass_count}, {stop_after})")] * n_proc
-            return_list.append((1,
-                                f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {pass_count}, {stop_after})"))
-            return return_list
-        return_list = [
-            (1, f"CALL commute_single_control_left({myZPow}, 0.25, {my_proc_id}, {nprocs}, {pass_count}, {stop_after})")
-            for my_proc_id in range(n_proc)]
-        return_list.append((1,
-                            f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {n_proc}, {nprocs}, {pass_count}, {stop_after})"))
+        return_list = []
+        for proc_id in range(n_proc - 1):
+            return_list.append((1, f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {n_proc}, {larger_pass_count}, {stop_after})"))
+        return_list.append((1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {n_proc-1}, {n_proc}, {larger_pass_count}, {stop_after})"))
+
         return return_list
 
     all_thread_proc = get_thread_proc()
@@ -843,7 +836,7 @@ def test_commute_T_leftmost_location(connection,
                                              just_count=False,
                                              is_test=False)
 
-    print("After commute:")
+    print("After commute and cancel:")
     print(extracted_circuit)
 
     cursor = connection.cursor()
@@ -863,45 +856,41 @@ def test_commute_T_leftmost_location(connection,
 if __name__ == "__main__":
     conn = get_connection()
 
-    # test_commute_cx_ctrl_target_case_1(conn)
-    # test_commute_cx_ctrl_target_case_2(conn)
-
-    # test_cancel_single_qubit(conn)
-    # test_cancel_two_qubit(conn)
-    # test_commute_single_control_right(conn)
-    # test_commute_single_control_left(conn)
-    # test_cx_to_hhcxhh_a(conn)
-    # test_cx_to_hhcxhh_b(conn)
-    # test_hhcxhh_to_cx_a(conn)
-    # test_hhcxhh_to_cx_b(conn)
-    # test_replace_two_sq_with_one(conn)
-    # test_case_1(conn)
-    # test_case_2(conn)
-    # test_case_1_repeated(conn, n=10)
-    # test_case_2_repeated(conn, n=10)
-    # test_qualtran_adder_opt_reconstruction(conn, stop_after=5)
-    # test_logical_correctness_random(conn, stop_after=5)
+    test_cancel_single_qubit(conn)
+    test_cancel_two_qubit(conn)
+    test_commute_single_control_right(conn)
+    test_commute_single_control_left(conn)
+    test_cx_to_hhcxhh_a(conn)
+    test_cx_to_hhcxhh_b(conn)
+    test_hhcxhh_to_cx_a(conn)
+    test_hhcxhh_to_cx_b(conn)
+    test_replace_two_sq_with_one(conn)
+    test_case_1(conn)
+    test_case_2(conn)
+    test_case_1_repeated(conn, n=10)
+    test_case_2_repeated(conn, n=10)
+    test_qualtran_adder_opt_reconstruction(conn, stop_after=5)
+    test_logical_correctness_random(conn, stop_after=5)
 
     for n_procs in [1, 2, 4, 8]:
-        for same_proc_id in [True, False]:
-            test_commute_T_leftmost_location(connection=conn, same_proc_id=same_proc_id, n_proc=n_procs, stop_after=10)
+        test_commute_T_leftmost_location(connection=conn, n_proc=n_procs, stop_after=10)
 
-    # experiment_seed = random.randint(1, 100)
-    # print(f"Running experiment with seed {experiment_seed} ")
-    # for repeated_template in ['add_two_hadamards',
-    #                           'add_two_cnots',
-    #                           'add_base_change',
-    #                           'add_t_t_dag',
-    #                           'add_t_cx',
-    #                           # 'add_cx_t' # this one is buggy
-    #                           ]:
-    #     for same_proc_id in [True, False]:
-    #         for n_procs in [1, 2, 4, 8]:
-    #             test_multithreading_performance(conn,
-    #                                             repeated_template=repeated_template,
-    #                                             same_proc_id=same_proc_id,
-    #                                             n_proc=n_procs,
-    #                                             seed=experiment_seed,
-    #                                             stop_after=3)
+    experiment_seed = random.randint(1, 100)
+    print(f"Running experiment with seed {experiment_seed} ")
+    for repeated_template in ['add_two_hadamards',
+                              'add_two_cnots',
+                              'add_base_change',
+                              'add_t_t_dag',
+                              'add_t_cx',
+                              # 'add_cx_t' # this one is buggy
+                              ]:
+        for same_proc_id in [True, False]:
+            for n_procs in [1, 2, 4, 8]:
+                test_multithreading_performance(conn,
+                                                repeated_template=repeated_template,
+                                                same_proc_id=same_proc_id,
+                                                n_proc=n_procs,
+                                                seed=experiment_seed,
+                                                stop_after=3)
 
     conn.close()

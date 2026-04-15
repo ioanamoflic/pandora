@@ -44,8 +44,9 @@ begin
     while pass_count > 0 loop
         for gate in
             select id from linked_circuit
-                     where id % nprocs = my_proc_id
-                     and type in (15, 18)
+                     where
+--                      id % nprocs = my_proc_id and
+                     type in (15, 18)
         loop
             select * into cx from linked_circuit where id = gate.id for update skip locked;
 

@@ -39,7 +39,7 @@ begin
         for gate in
             select * from linked_circuit
                      where
-                         id % nprocs = my_proc_id and
+--                          id % nprocs = my_proc_id and
                          type = 18
                        and prev_q1 % 100 = 8 and prev_q2 % 100 = 8
                        and next_q1 % 100 = 8 and next_q2 % 100 = 8

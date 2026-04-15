@@ -24,12 +24,12 @@ declare
 begin
     start_time := clock_timestamp();
 
-	while pass_count > 0 loop
+	 while pass_count > 0 loop
         for gate in
             select * from linked_circuit
                      where
-                     id % nprocs = my_proc_id
-                     and type=type_1
+--                      id % nprocs = my_proc_id and
+                     type=type_1
                      and param = param_1
                      and div(next_q1, 1000) = div(next_q2, 1000)
                      and mod(next_q1, 100) = type_2

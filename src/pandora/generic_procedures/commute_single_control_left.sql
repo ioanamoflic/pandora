@@ -27,8 +27,8 @@ begin
         for gate in
             select * from linked_circuit
                      where
-                     id % nprocs = my_proc_id
-                     and type in (15, 16, 17, 18)
+--                      id % nprocs = my_proc_id and
+                     type in (15, 16, 17, 18)
                      and mod(prev_q1, 100) = single_type
         loop
             select * into second from linked_circuit where id = gate.id for update skip locked;
