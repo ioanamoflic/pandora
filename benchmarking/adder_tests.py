@@ -206,8 +206,8 @@ def extract():
     extracted_circuit = pandora_to_circuit(pandora_gates=pandora_gates,
                                            circuit_type='qiskit')
     extracted_circuit = remove_io_gates(extracted_circuit)
-    print("After: ")
-    print(extracted_circuit)
+    
+    return extracted_circuit
     
 
 
@@ -220,7 +220,9 @@ if __name__ == "__main__":
     print('Before:')
     print(adder_circuit)
     run_optimiser(FILEPATH)
-    extract()
+    extracted_circuit = extract()
+    print("After: ")
+    print(extracted_circuit)
     
     ## CASE 1    
     adder_circuit = get_adder(n_bits=1)
@@ -228,4 +230,8 @@ if __name__ == "__main__":
     print('Before:')
     print(adder_circuit)
     run_optimiser(FILEPATH)
-    extract()
+    extracted_circuit = extract()
+    print("After: ")
+    print(extracted_circuit)
+    
+    assert len(extracted_circuit.data) == 0
