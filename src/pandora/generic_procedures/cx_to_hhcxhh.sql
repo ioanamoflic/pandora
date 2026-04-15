@@ -121,9 +121,6 @@ begin
 
             commit; -- release locks
 
-            -- this procedure is too fast
-            perform pg_sleep(0.1);
-
         end loop; -- end gate loop
 
 	    if extract(epoch from (clock_timestamp() - start_time)) > timeout then
