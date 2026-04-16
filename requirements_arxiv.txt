@@ -1,10 +1,10 @@
-qualtran==0.6.1
+qualtran
 psycopg2-binary
 requests
 pytest
 gmpy2
-qiskit==2.1
-#mqt.qcec==3.2
+qiskit
+mqt.qcec
 qiskit_qasm3_import
 pytket
 # pyliqtr==1.4.1 for now pyliqtr is stuck at qualtran 0.4

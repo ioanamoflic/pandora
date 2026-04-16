@@ -128,14 +128,14 @@ if __name__ == "__main__":
     else:
         FILEPATH = sys.argv[1]        
     
-    for N_BITS in [8, 16, 32, 64, 128, 512, 1024, 2048]:
+    for N_BITS in [16, 32, 64, 128, 256, 512, 1024, 2048]:
         adder_circuit = get_adder(n_bits=N_BITS)
         adder_circuit = replace_all_toffolis_qiskit(adder_circuit)
 
         pandora_optimizer = PandoraOptimizer(pass_count=int(2e9),
                                             timeout=600,
                                             logger_id=N_BITS,
-                                            proc_count=20)
+                                            proc_count=19)
 
         conn = get_connection(config_file_path=FILEPATH)
         reset_pandora(connection=conn, quantum_circuit=adder_circuit)
@@ -222,7 +222,7 @@ if __name__ == "__main__":
             Reversing CNOTs
         """
 
-        pandora_optimizer.cx_to_hhcxhh(dedicated_nproc=1)
+        # pandora_optimizer.cx_to_hhcxhh(dedicated_nproc=1)
         pandora_optimizer.hhcxhh_to_cx(dedicated_nproc=1)
 
         """
