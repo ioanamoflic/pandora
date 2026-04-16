@@ -853,6 +853,122 @@ def test_commute_T_leftmost_location(connection,
     assert np.allclose(initial_circuit.unitary(), extracted_circuit.unitary())
 
 
+def stress_test(connection, stop_after: int):
+    q0, q1 = cirq.LineQubit.range(2)
+
+    initial_circuit = cirq.Circuit()
+
+    initial_circuit.append([
+        cirq.CNOT(q0, q1),
+        cirq.CNOT(q0, q1),
+        cirq.T(q0),
+        cirq.CNOT(q0, q1),
+        cirq.CNOT(q1, q0),
+        cirq.CNOT(q1, q0),
+        cirq.T(q1),
+        cirq.T(q1) ** -1,
+        cirq.CNOT(q0, q1),
+        cirq.CNOT(q0, q1),
+        cirq.H(q0),
+        cirq.H(q0),
+        cirq.CNOT(q1, q0),
+        cirq.T(q1),
+        cirq.CNOT(q1, q0),
+        cirq.CNOT(q1, q0),
+        cirq.CNOT(q1, q0),
+        cirq.T(q1),
+        cirq.CNOT(q0, q1),
+        cirq.T(q0),
+        cirq.CNOT(q1, q0),
+        cirq.H(q0),
+        cirq.H(q0),
+        cirq.T(q1),
+        cirq.T(q1),
+        cirq.T(q1) ** -1,
+        cirq.T(q1),
+        cirq.T(q1) ** -1,
+        cirq.CNOT(q0, q1),
+        cirq.CNOT(q0, q1),
+        cirq.CNOT(q1, q0),
+        cirq.T(q1),
+        cirq.H(q1),
+        cirq.H(q1),
+        cirq.T(q1),
+        cirq.T(q1) ** -1,
+        cirq.CNOT(q0, q1),
+        cirq.CNOT(q0, q1),
+        cirq.H(q0),
+        cirq.H(q0),
+        cirq.H(q0),
+        cirq.H(q1),
+        cirq.H(q1),
+        cirq.H(q1),
+        cirq.CNOT(q0, q1),
+        cirq.H(q0),
+        cirq.H(q0),
+        cirq.H(q0),
+        cirq.H(q1),
+        cirq.T(q1),
+        cirq.T(q1) ** -1,
+        cirq.CNOT(q1, q0),
+        cirq.CNOT(q1, q0)
+    ])
+
+    print(initial_circuit)
+
+    all_thread_proc = [
+        (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL cancel_single_qubit({myPauliZ}, {myPauliZ}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (
+            1,
+            f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (
+            1,
+            f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL commute_single_control_left({myZPow}, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1,
+         f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+    ]
+
+    thread_procedures = all_thread_proc
+
+    passed_count = 0
+    for i in range(10):
+        print(f'Stress testing nr {i}.')
+
+        clean_pandora(connection=connection)
+        convert_and_insert(connection=connection, initial_circuit=initial_circuit)
+        db_multi_threaded(thread_proc=thread_procedures)
+        stop_all_lurking_procedures(connection)
+
+        extracted_circuit = extract_cirq_circuit(connection=connection,
+                                                 circuit_label=CIRCUIT_LABEL,
+                                                 table_name=TABLE_NAME,
+                                                 remove_io_gates=False,
+                                                 just_count=False,
+                                                 is_test=False)
+
+        passed = np.allclose(initial_circuit.unitary(), extracted_circuit.unitary())
+        if passed:
+            passed_count += 1
+
+    print(f'Passed {passed_count}/10 stress tests.')
+
+
 if __name__ == "__main__":
     conn = get_connection()
 
@@ -892,5 +1008,7 @@ if __name__ == "__main__":
                                                 n_proc=n_procs,
                                                 seed=experiment_seed,
                                                 stop_after=3)
+
+    stress_test(conn, stop_after=5)
 
     conn.close()
