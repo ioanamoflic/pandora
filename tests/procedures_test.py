@@ -853,7 +853,7 @@ def test_commute_T_leftmost_location(connection,
     assert np.allclose(initial_circuit.unitary(), extracted_circuit.unitary())
 
 
-def stress_test(connection, stop_after: int):
+def test_race_condition(connection, stop_after: int):
     q0, q1 = cirq.LineQubit.range(2)
 
     initial_circuit = cirq.Circuit()
@@ -948,7 +948,7 @@ def stress_test(connection, stop_after: int):
 
     passed_count = 0
     for i in range(10):
-        print(f'Stress testing nr {i}.')
+        print(f'Test nr {i}.')
 
         clean_pandora(connection=connection)
         convert_and_insert(connection=connection, initial_circuit=initial_circuit)
@@ -966,7 +966,7 @@ def stress_test(connection, stop_after: int):
         if passed:
             passed_count += 1
 
-    print(f'Passed {passed_count}/10 stress tests.')
+    print(f'Passed {passed_count}/10 tests.')
 
 
 if __name__ == "__main__":
@@ -1009,6 +1009,6 @@ if __name__ == "__main__":
                                                 seed=experiment_seed,
                                                 stop_after=3)
 
-    stress_test(conn, stop_after=5)
+    test_race_condition(conn, stop_after=5)
 
     conn.close()
