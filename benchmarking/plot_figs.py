@@ -359,7 +359,7 @@ def fig6():
 
 
 def fig_adders():
-    bit_widths = [16, 32, 64, 128, 256, 512, 1024, 2048]
+    bit_widths = [16, 32, 64, 128, 512, 1024, 2048]
 
     fig, axes = plt.subplots(nrows=2, ncols=4, figsize=(8, 4), dpi=300, constrained_layout=True)
     axes = axes.flatten()
@@ -368,12 +368,12 @@ def fig_adders():
         't_count': ('m-', 'T count'),
         's_count': ('y-', 'S count'),
         'h_count': ('b-', 'H count'),
-        # 'x_count': ('c-', 'X count'),
+        'x_count': ('c-', 'X count'),
         'cx_count': ('r-', 'CX count'),
     }
 
     for i, n_bits in enumerate(bit_widths):
-        df = pd.read_csv(f'results/adders_60min/adder_{n_bits}.csv')
+        df = pd.read_csv(f'adder_{n_bits}.csv')
         ax = axes[i]
 
         for col, (style, label) in plot_columns.items():
@@ -392,6 +392,49 @@ def fig_adders():
     plt.close()
 
 
+def fig_adder_reduction():
+    bits = [16, 32, 64, 128, 256, 512, 1024, 2048]
+    labels = [f'Adder_{nbit}' for nbit in bits]
+    files = [f"adder_{nbit}.csv" for nbit in bits]
+
+    reductions_pct = []
+
+    for file in files:
+        df = pd.read_csv(file)
+
+        if df.empty:
+            continue
+
+        t_start = df.iloc[0]["t_count"]
+        t_end = df.iloc[-1]["t_count"]
+
+        # Avoid division by zero
+        if t_start == 0:
+            reduction_pct = 0
+        else:
+            reduction_pct = ((t_start - t_end) / t_start) * 100
+
+        reductions_pct.append(reduction_pct)
+    
+    print(reductions_pct)
+
+    # --- Styling to match your example ---
+    plt.figure(figsize=(8, 4.5))
+    ax = plt.gca()
+
+    bars = plt.bar(labels, reductions_pct, color='lightsteelblue')
+
+    ax.grid(True, which='both', axis='both', linestyle='--', linewidth=0.8, alpha=0.5)
+    ax.set_axisbelow(True)
+
+    plt.ylabel("T-count reduced (%)")
+
+    plt.xticks(rotation=30, ha="right")
+
+    plt.tight_layout()
+    plt.savefig("fig_adder_reduction.png", bbox_inches='tight', dpi=600)
+    
+    
 if __name__ == "__main__":
     # fig2()
     # fig3()
@@ -399,4 +442,5 @@ if __name__ == "__main__":
     # fig5()
     # fig6()
     # fig_adders()
-    fig2_V2()
+    fig_adder_reduction()
+    # fig2_V2()
