@@ -57,8 +57,11 @@ begin
                 continue;
             end if;
 
-            select * into a from linked_circuit where id = div(first.prev_q1, 1000) for update skip locked;
-            select * into b from linked_circuit where id = div(second.next_q1, 1000) for update skip locked;
+            first_prev_id := div(first.prev_q1, 1000);
+            second_next_id := div(second.next_q1, 1000);
+
+            select * into a from linked_circuit where id = first_prev_id for update skip locked;
+            select * into b from linked_circuit where id = second_next_id for update skip locked;
 
             if a.id is null
                 or b.id is null
@@ -66,9 +69,6 @@ begin
                 commit;
                 continue;
             end if;
-
-            first_prev_id := div(first.prev_q1, 1000);
-            second_next_id := div(second.next_q1, 1000);
 
             new_next := (first.id * 10) * 100 + type_replace;
             new_prev := (first.id * 10) * 100 + type_replace;

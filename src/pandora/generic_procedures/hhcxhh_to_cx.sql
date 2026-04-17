@@ -44,10 +44,11 @@ begin
                        and prev_q1 % 100 = 8 and prev_q2 % 100 = 8
                        and next_q1 % 100 = 8 and next_q2 % 100 = 8
         loop
-
             select * into cx from linked_circuit where id = gate.id for update skip locked;
 
-            if cx.id is null then
+            if cx.id is null
+                or cx.type != 18
+            then
                 commit;
                 continue;
             end if;
@@ -64,12 +65,20 @@ begin
             select * into right_q1 from linked_circuit where id=cx_next_q1_id for update skip locked;
             select * into right_q2 from linked_circuit where id=cx_next_q2_id for update skip locked;
 
-            if left_q1.id is null or left_q2.id is null or right_q1.id is null or right_q2.id is null then
+            if left_q1.id is null
+                or left_q2.id is null
+                or right_q1.id is null
+                or right_q2.id is null
+            then
                 commit;
                 continue;
             end if;
 
-            if left_q1.type != h_type or left_q2.type != h_type or right_q1.type != h_type or right_q2.type != h_type then
+            if left_q1.type != h_type
+               or left_q2.type != h_type
+               or right_q1.type != h_type
+               or right_q2.type != h_type
+            then
                 commit;
                 continue;
             end if;
@@ -85,7 +94,11 @@ begin
             select * into c from linked_circuit where id=right_q1_id for update skip locked;
             select * into d from linked_circuit where id=right_q2_id for update skip locked;
 
-            if a.id is null or b.id is null or c.id is null or d.id is null then
+            if a.id is null
+                or b.id is null
+                or c.id is null
+                or d.id is null
+            then
                 commit;
                 continue;
             end if;

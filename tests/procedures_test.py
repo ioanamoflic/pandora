@@ -995,6 +995,6 @@ if __name__ == "__main__":
     #                                             seed=experiment_seed,
     #                                             stop_after=3)
 
-    test_race_condition(conn, stop_after=3)
+    test_race_condition(conn, stop_after=1)
 
     conn.close()

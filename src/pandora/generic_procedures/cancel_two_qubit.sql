@@ -37,12 +37,17 @@ begin
             select * into first from linked_circuit where id = gate.id for update skip locked;
             select * into second from linked_circuit where id = div(first.next_q1, 1000) for update skip locked;
 
-            if first.id is null or second.id is null then
+            if first.id is null
+                or second.id is null then
                 commit;
                 continue;
             end if;
 
-            if second.param != param_2 or second.type != type_2 then
+            if second.param != param_2
+                or second.type != type_2
+                or first.param != param_1
+                or first.type != type_1
+            then
                 commit;
                 continue;
             end if;
@@ -50,7 +55,9 @@ begin
             first_id_plus_one := (first.id * 10 + 1) * 100 + first.type;
             first_id_plus_zero := (first.id * 10) * 100 + first.type;
 
-            if second.prev_q1 != first_id_plus_zero or second.prev_q2 != first_id_plus_one then
+            if second.prev_q1 != first_id_plus_zero
+                or second.prev_q2 != first_id_plus_one
+            then
                 commit;
                 continue;
             end if;
@@ -66,7 +73,11 @@ begin
             select * into d from linked_circuit where id = second_next_q2_id for update skip locked;
 
             -- Lock the 4 neighbours
-            if a.id is null or b.id is null or c.id is null or d.id is null then
+            if a.id is null
+                or b.id is null
+                or c.id is null
+                or d.id is null
+            then
                 commit;
                 continue;
             end if;

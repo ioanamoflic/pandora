@@ -50,7 +50,9 @@ begin
         loop
             select * into cx from linked_circuit where id = gate.id for update skip locked;
 
-            if cx.id is null then
+            if cx.id is null
+                or cx.type not in (15, 18)
+            then
                 commit;
                 continue;
             end if;

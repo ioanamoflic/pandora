@@ -34,13 +34,19 @@ begin
             select * into second from linked_circuit where id = gate.id for update skip locked;
             select * into first from linked_circuit where id = div(second.prev_q1, 1000) for update skip locked;
 
-            if first.id is null or second.id is null then
+            if first.id is null
+                or second.id is null
+            then
                 commit;
                 continue;
             end if;
 
-            if first.param != parameter or first.type != single_type
-                or div(first.next_q1, 1000) != second.id then
+            if second.type not in (15, 16, 17, 18)
+                or first.param != parameter
+                or first.type != single_type
+                or div(first.next_q1, 1000) != second.id
+                or div(second.prev_q1, 1000) != first.id
+            then
                 commit;
                 continue;
             end if;
@@ -74,7 +80,7 @@ begin
                 update linked_circuit set prev_q2 = new_prev_for_sq where id = cx_next_q1_id;
             end if;
 
-            update linked_circuit set (next_q1, prev_q1, visited) = (new_prev_for_sq, first.prev_q1, my_proc_id) where id = second.id;
+            update linked_circuit set (next_q1, prev_q1) = (new_prev_for_sq, first.prev_q1) where id = second.id;
             update linked_circuit set (next_q1, prev_q1) = (cx_next_q1, new_next_for_sq) where id = first.id;
 
             commit; -- release locks
