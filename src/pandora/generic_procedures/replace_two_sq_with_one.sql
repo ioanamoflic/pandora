@@ -15,6 +15,7 @@ declare
     b record;
 
     new_next bigint;
+    new_prev bigint;
 
     start_time timestamp;
 
@@ -33,28 +34,44 @@ begin
             select * into first from linked_circuit where id = gate.id for update skip locked;
             select * into second from linked_circuit where id = div(first.next_q1, 1000) for update skip locked;
 
-            if first.id is null or second.id is null then
+            if first.id is null
+                or second.id is null
+            then
                 commit;
                 continue;
             end if;
 
-			if second.param != param2 or second.type != type_2 or div(second.prev_q1, 1000) != first.id then
-			    commit;
-			    continue;
-			end if;
+            if second.param != param2
+                or first.param != param1
+                or first.type != type_1
+                or second.type != type_2
+            then
+                commit;
+                continue;
+            end if;
+
+            if div(second.prev_q1, 1000) != first.id
+			    or div(first.next_q1, 1000) != second.id
+            then
+                commit;
+                continue;
+            end if;
+
+            select * into a from linked_circuit where id = div(first.prev_q1, 1000) for update skip locked;
+            select * into b from linked_circuit where id = div(second.next_q1, 1000) for update skip locked;
+
+            if a.id is null
+                or b.id is null
+            then
+                commit;
+                continue;
+            end if;
 
             first_prev_id := div(first.prev_q1, 1000);
             second_next_id := div(second.next_q1, 1000);
 
-            select * into a from linked_circuit where id = first_prev_id for update skip locked;
-            select * into b from linked_circuit where id = second_next_id for update skip locked;
-
-            if a.id is null or b.id is null then
-                commit;
-                continue;
-            end if;
-
             new_next := (first.id * 10) * 100 + type_replace;
+            new_prev := (first.id * 10) * 100 + type_replace;
 
             update linked_circuit set (type, next_q1, param) = (type_replace, second.next_q1, param_replace) where id = first.id;
 
@@ -62,6 +79,12 @@ begin
                 update linked_circuit set prev_q1 = new_next where id = second_next_id;
             else
                 update linked_circuit set prev_q2 = new_next where id = second_next_id;
+            end if;
+
+            if mod(div(first.prev_q1, 100), 10) = 0 then
+                update linked_circuit set next_q1 = new_prev where id = first_prev_id;
+            else
+                update linked_circuit set next_q2 = new_prev where id = first_prev_id;
             end if;
 
             delete from linked_circuit where id = second.id;

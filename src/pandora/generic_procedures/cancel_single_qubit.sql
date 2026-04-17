@@ -30,26 +30,39 @@ begin
             select * into first from linked_circuit where id = gate.id for update skip locked;
             select * into second from linked_circuit where id = div(first.next_q1, 1000) for update skip locked;
 
-            if first.id is null or second.id is null then
+            if first.id is null
+                or second.id is null
+            then
                 commit;
                 continue;
             end if;
 
-            if second.param != param_2 or second.type != type_2 then
+            if first.param != param_1
+                or second.param != param_2
+                or first.type != type_1
+                or second.type != type_2
+            then
+                commit;
+                continue;
+            end if;
+
+            if div(second.prev_q1, 1000) != first.id
+			    or div(first.next_q1, 1000) != second.id
+            then
+                commit;
+                continue;
+            end if;
+
+            select * into a from linked_circuit where id = div(first.prev_q1, 1000) for update skip locked;
+            select * into b from linked_circuit where id = div(second.next_q1, 1000) for update skip locked;
+
+            if a.id is null or b.id is null then
                 commit;
                 continue;
             end if;
 
             first_prev_id := div(first.prev_q1, 1000);
             second_next_id := div(second.next_q1, 1000);
-
-            select * into a from linked_circuit where id = first_prev_id for update skip locked;
-            select * into b from linked_circuit where id = second_next_id for update skip locked;
-
-            if a.id is null or b.id is null then
-                commit;
-                continue;
-            end if;
 
             if mod(div(first.prev_q1, 100), 10) = 0 then
                 update linked_circuit set next_q1 = second.next_q1 where id = first_prev_id;
