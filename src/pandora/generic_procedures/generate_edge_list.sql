@@ -24,13 +24,13 @@ begin
         end if;
         --- single qubit gate
         if t_row.next_q1 is not null and t_row.next_q2 is null then
-            target_q1_id := div(t_row.next_q1, 1000);
+            target_q1_id := get_id_from_link(t_row.next_q1);
             insert into edge_list values (source_id, target_q1_id);
         else
             --- two qubit gate
             if t_row.next_q1 is not null and t_row.next_q2 is not null and t_row.next_q3 is null then
-                target_q1_id := div(t_row.next_q1, 1000);
-                target_q2_id := div(t_row.next_q2, 1000);
+                target_q1_id := get_id_from_link(t_row.next_q1);
+                target_q2_id := get_id_from_link(t_row.next_q2);
                 insert into edge_list values (source_id, target_q1_id);
                 insert into edge_list values (source_id, target_q2_id);
             end if;

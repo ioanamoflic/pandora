@@ -30,11 +30,11 @@ begin
                      where
                      type=type_1
                      and param = param_1
-                     and div(next_q1, 1000) = div(next_q2, 1000)
-                     and mod(next_q1, 100) = type_2
+                     and get_id_from_link(next_q1) = get_id_from_link(next_q2)
+                     and get_type_from_link(next_q1) = type_2
         loop
             select * into first from linked_circuit where id = gate.id for update skip locked;
-            select * into second from linked_circuit where id = div(first.next_q1, 1000) for update skip locked;
+            select * into second from linked_circuit where id = get_id_from_link(first.next_q1) for update skip locked;
 
             if first.id is null
                 or second.id is null then
@@ -51,8 +51,8 @@ begin
                 continue;
             end if;
 
-            first_id_plus_one := (first.id * 10 + 1) * 100 + first.type;
-            first_id_plus_zero := (first.id * 10) * 100 + first.type;
+            first_id_plus_one := create_link(first.id, 1, first.type);
+            first_id_plus_zero := create_link(first.id, 0, first.type);
 
             if second.prev_q1 != first_id_plus_zero
                 or second.prev_q2 != first_id_plus_one
@@ -61,10 +61,10 @@ begin
                 continue;
             end if;
 
-            first_prev_q1_id := div(first.prev_q1, 1000);
-            first_prev_q2_id := div(first.prev_q2, 1000);
-            second_next_q1_id := div(second.next_q1, 1000);
-            second_next_q2_id := div(second.next_q2, 1000);
+            first_prev_q1_id := get_id_from_link(first.prev_q1);
+            first_prev_q2_id := get_id_from_link(first.prev_q2);
+            second_next_q1_id := get_id_from_link(second.next_q1);
+            second_next_q2_id := get_id_from_link(second.next_q2);
 
             select * into a from linked_circuit where id = first_prev_q1_id for update skip locked;
             select * into b from linked_circuit where id = first_prev_q2_id for update skip locked;
@@ -81,25 +81,25 @@ begin
                 continue;
             end if;
 
-            if mod(div(first.prev_q1, 100), 10) = 0 then
+            if get_port_from_link(first.prev_q1) = 0 then
                 update linked_circuit set next_q1 = second.next_q1 where id = first_prev_q1_id;
             else
                 update linked_circuit set next_q2 = second.next_q1 where id = first_prev_q1_id;
             end if;
 
-            if mod(div(first.prev_q2, 100), 10) = 0 then
+            if get_port_from_link(first.prev_q2) = 0 then
                 update linked_circuit set next_q1 = second.next_q2 where id = first_prev_q2_id;
             else
                 update linked_circuit set next_q2 = second.next_q2 where id = first_prev_q2_id;
             end if;
 
-            if mod(div(second.next_q1, 100), 10) = 0 then
+            if get_port_from_link(second.next_q1) = 0 then
                 update linked_circuit set prev_q1 = first.prev_q1 where id = second_next_q1_id;
             else
                 update linked_circuit set prev_q2 = first.prev_q1 where id = second_next_q1_id;
             end if;
 
-            if mod(div(second.next_q2, 100), 10) = 0 then
+            if get_port_from_link(second.next_q2) = 0 then
                 update linked_circuit set prev_q1 = first.prev_q2 where id = second_next_q2_id;
             else
                 update linked_circuit set prev_q2 = first.prev_q2 where id = second_next_q2_id;

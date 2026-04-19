@@ -20,18 +20,18 @@ declare
     start_time timestamp;
 
 begin
-    start_time := CLOCK_TIMESTAMP();
+    start_time := clock_timestamp();
 
 	 while pass_count > 0 loop
         for gate in
             select * from linked_circuit
             where
             type=type_1
-            and mod(next_q1, 100) = type_2
+            and get_type_from_link(next_q1) = type_2
             and param=param1
         loop
             select * into first from linked_circuit where id = gate.id for update skip locked;
-            select * into second from linked_circuit where id = div(first.next_q1, 1000) for update skip locked;
+            select * into second from linked_circuit where id = get_id_from_link(first.next_q1) for update skip locked;
 
             if first.id is null
                 or second.id is null
@@ -49,15 +49,15 @@ begin
                 continue;
             end if;
 
-            if div(second.prev_q1, 1000) != first.id
-			    or div(first.next_q1, 1000) != second.id
+            if get_id_from_link(second.prev_q1) != first.id
+			    or get_id_from_link(first.next_q1) != second.id
             then
                 commit;
                 continue;
             end if;
 
-            first_prev_id := div(first.prev_q1, 1000);
-            second_next_id := div(second.next_q1, 1000);
+            first_prev_id := get_id_from_link(first.prev_q1);
+            second_next_id := get_id_from_link(second.next_q1);
 
             select * into a from linked_circuit where id = first_prev_id for update skip locked;
             select * into b from linked_circuit where id = second_next_id for update skip locked;
@@ -69,18 +69,18 @@ begin
                 continue;
             end if;
 
-            new_next := (first.id * 10) * 100 + type_replace;
-            new_prev := (first.id * 10) * 100 + type_replace;
+            new_next := create_link(first.id, 0, type_replace::smallint);
+            new_prev := create_link(first.id, 0, type_replace::smallint);
 
             update linked_circuit set (type, next_q1, param) = (type_replace, second.next_q1, param_replace) where id = first.id;
 
-            if mod(div(second.next_q1, 100), 10) = 0 then
+            if get_port_from_link(second.next_q1) = 0 then
                 update linked_circuit set prev_q1 = new_next where id = second_next_id;
             else
                 update linked_circuit set prev_q2 = new_next where id = second_next_id;
             end if;
 
-            if mod(div(first.prev_q1, 100), 10) = 0 then
+            if get_port_from_link(first.prev_q1) = 0 then
                 update linked_circuit set next_q1 = new_prev where id = first_prev_id;
             else
                 update linked_circuit set next_q2 = new_prev where id = first_prev_id;

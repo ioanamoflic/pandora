@@ -33,16 +33,16 @@ begin
     while run_nr > 0 loop
         for cx in
             select * from linked_circuit where type = any(cx_types)
-            and prev_q1 % 100 = h_type and prev_q2 % 100 = h_type
-            and next_q1 % 100 = h_type and next_q2 % 100 = h_type
+            and get_type_from_link(prev_q1) = h_type and get_type_from_link(prev_q2) = h_type
+            and get_type_from_link(next_q1) = h_type and get_type_from_link(next_q2) = h_type
         loop
             if cx.id is not null
             then
                 -- left gates on qubits 1,2
-                cx_prev_q1_id := div(cx.prev_q1, 1000);
-                cx_prev_q2_id := div(cx.prev_q2, 1000);
-                cx_next_q1_id := div(cx.next_q1, 1000);
-                cx_next_q2_id := div(cx.next_q2, 1000);
+                cx_prev_q1_id := get_id_from_link(cx.prev_q1);
+                cx_prev_q2_id := get_id_from_link(cx.prev_q2);
+                cx_next_q1_id := get_id_from_link(cx.next_q1);
+                cx_next_q2_id := get_id_from_link(cx.next_q2);
 
                 select * into left_q1 from linked_circuit where id=cx_prev_q1_id;
                 select * into left_q2 from linked_circuit where id=cx_prev_q2_id;
@@ -55,34 +55,34 @@ begin
                    and right_q2.type = h_type
                 then
 
-                    left_q1_id := div(left_q1.prev_q1, 1000);
-                    left_q2_id := div(left_q2.prev_q1, 1000);
-                    right_q1_id := div(right_q1.next_q1, 1000);
-                    right_q2_id := div(right_q2.next_q1, 1000);
+                    left_q1_id := get_id_from_link(left_q1.prev_q1);
+                    left_q2_id := get_id_from_link(left_q2.prev_q1);
+                    right_q1_id := get_id_from_link(right_q1.next_q1);
+                    right_q2_id := get_id_from_link(right_q2.next_q1);
 
                     -- compute new link_ids for neighbouring gates
-                    cx_id_ctrl := (cx.id * 10 + 0) * 100 + cx.type;
-                    cx_id_tgt  := (cx.id * 10 + 1) * 100 + cx.type;
+                    cx_id_ctrl := create_link(cx.id, 0, cx.type);
+                    cx_id_tgt  := create_link(cx.id, 1, cx.type);
 
-                    if mod(div(left_q1.prev_q1, 100), 10) = 0 then
+                    if get_port_from_link(left_q1.prev_q1) = 0 then
                         update linked_circuit set next_q1 = cx_id_tgt where id = left_q1_id;
                     else
                         update linked_circuit set next_q2 = cx_id_tgt where id = left_q1_id;
                     end if;
 
-                    if mod(div(left_q2.prev_q1, 100), 10) = 0 then
+                    if get_port_from_link(left_q2.prev_q1) = 0 then
                         update linked_circuit set next_q1 = cx_id_ctrl where id = left_q2_id;
                     else
                         update linked_circuit set next_q2 = cx_id_ctrl where id = left_q2_id;
                     end if;
 
-                    if mod(div(right_q1.next_q1, 100), 10) = 0 then
+                    if get_port_from_link(right_q1.next_q1) = 0 then
                         update linked_circuit set prev_q1 = cx_id_tgt where id = right_q1_id;
                     else
                         update linked_circuit set prev_q2 = cx_id_tgt where id = right_q1_id;
                     end if;
 
-                    if mod(div(right_q2.next_q1, 100), 10) = 0 then
+                    if get_port_from_link(right_q2.next_q1) = 0 then
                         update linked_circuit set prev_q1 = cx_id_ctrl where id = right_q2_id;
                     else
                         update linked_circuit set prev_q2 = cx_id_ctrl where id = right_q2_id;

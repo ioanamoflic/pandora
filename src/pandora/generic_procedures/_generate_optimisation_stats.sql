@@ -21,7 +21,7 @@ declare
     rz_type smallint;
 
 begin
-    start_time := CLOCK_TIMESTAMP();
+    start_time := clock_timestamp();
 
     select id into h_type from gate_types where name = 'h';
     select id into paulix_type from gate_types where name = 'paulix';

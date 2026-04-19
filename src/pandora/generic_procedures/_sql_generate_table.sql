@@ -1,3 +1,35 @@
+CREATE OR REPLACE FUNCTION get_port_from_link(link bigint)
+RETURNS bigint
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT mod(div(link, 100), 10);
+$$;
+
+CREATE OR REPLACE FUNCTION get_type_from_link(link bigint)
+RETURNS bigint
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT mod(link, 100);
+$$;
+
+CREATE OR REPLACE FUNCTION get_id_from_link(link bigint)
+RETURNS bigint
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT div(link, 1000);
+$$;
+
+CREATE OR REPLACE FUNCTION create_link(id bigint, port int, type smallint)
+RETURNS bigint
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT id * 1000 + port * 100 + type;
+$$;
+
 create table IF NOT EXISTS public.linked_circuit
 (
     id      bigserial primary key,

@@ -35,10 +35,10 @@ begin
             select * from linked_circuit
                      where
                      type = any(controlled_types)
-                     and mod(prev_q1, 100) = single_type
+                     and get_type_from_link(prev_q1) = single_type
         loop
             select * into second from linked_circuit where id = gate.id for update skip locked;
-            select * into first from linked_circuit where id = div(second.prev_q1, 1000) for update skip locked;
+            select * into first from linked_circuit where id = get_id_from_link(second.prev_q1) for update skip locked;
 
             if first.id is null
                 or second.id is null
@@ -50,15 +50,15 @@ begin
             if second.type != all(controlled_types)
                 or first.param != parameter
                 or first.type != single_type
-                or div(first.next_q1, 1000) != second.id
-                or div(second.prev_q1, 1000) != first.id
+                or get_id_from_link(first.next_q1) != second.id
+                or get_id_from_link(second.prev_q1) != first.id
             then
                 commit;
                 continue;
             end if;
 
-            sg_prev_id := div(first.prev_q1, 1000);
-            cx_next_q1_id := div(second.next_q1, 1000);
+            sg_prev_id := get_id_from_link(first.prev_q1);
+            cx_next_q1_id := get_id_from_link(second.next_q1);
 
             select * into a from linked_circuit where id = sg_prev_id for update skip locked;
             select * into b from linked_circuit where id = cx_next_q1_id for update skip locked;
@@ -71,16 +71,16 @@ begin
             cx_next_q1 = second.next_q1;
             cx_prev_q1 = second.prev_q1;
 
-            new_next_for_sq := (second.id * 10) * 100 + second.type;
-            new_prev_for_sq := (first.id * 10) * 100 + first.type;
+            new_next_for_sq := create_link(second.id, 0, second.type);
+            new_prev_for_sq := create_link(first.id, 0, first.type);
 
-            if mod(div(first.prev_q1, 100), 10) = 0 then
+            if get_port_from_link(first.prev_q1) = 0 then
                 update linked_circuit set next_q1 = new_next_for_sq where id = sg_prev_id;
             else
                 update linked_circuit set next_q2 = new_next_for_sq where id = sg_prev_id;
             end if;
 
-            if mod(div(second.next_q1, 100), 10) = 0 then
+            if get_port_from_link(second.next_q1) = 0 then
                 update linked_circuit set prev_q1 = new_prev_for_sq where id = cx_next_q1_id;
             else
                 update linked_circuit set prev_q2 = new_prev_for_sq where id = cx_next_q1_id;

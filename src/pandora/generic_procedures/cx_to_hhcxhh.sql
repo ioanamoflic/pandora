@@ -16,7 +16,7 @@ declare
 	right_h_q2_id bigint;
 
     -- used for computing the links
-    port_nr bigint;
+    port_nr int;
 
     -- the links to the right and left
     left_q1_link bigint;
@@ -43,7 +43,7 @@ begin
     select id into h_type from gate_types where name = 'h';
     select array_agg(id) into cx_types from gate_types where name in ('cx', 'cxpow');
 
-    start_time := CLOCK_TIMESTAMP();
+    start_time := clock_timestamp();
 
     while pass_count > 0 loop
         for gate in
@@ -60,10 +60,10 @@ begin
                 continue;
             end if;
 
-            cx_prev_q1_id := div(cx.prev_q1, 1000);
-            cx_prev_q2_id := div(cx.prev_q2, 1000);
-            cx_next_q1_id := div(cx.next_q1, 1000);
-            cx_next_q2_id := div(cx.next_q2, 1000);
+            cx_prev_q1_id := get_id_from_link(cx.prev_q1);
+            cx_prev_q2_id := get_id_from_link(cx.prev_q2);
+            cx_next_q1_id := get_id_from_link(cx.next_q1);
+            cx_next_q2_id := get_id_from_link(cx.next_q2);
 
             select * into a from linked_circuit where id = cx_prev_q1_id for update skip locked;
             select * into b from linked_circuit where id = cx_prev_q2_id for update skip locked;
@@ -76,8 +76,8 @@ begin
                 continue;
             end if;
 
-            cx_id_ctrl := (cx.id * 10 + 0) * 100 + cx.type;
-            cx_id_tgt  := (cx.id * 10 + 1) * 100 + cx.type;
+            cx_id_ctrl := create_link(cx.id, 0, cx.type);
+            cx_id_tgt  := create_link(cx.id, 1, cx.type);
 
             insert into linked_circuit(prev_q1, type, param, next_q1, label) values (cx.prev_q1, h_type, 1, cx_id_tgt, cx.label)
                                                           returning id into left_h_q1_id;
@@ -92,33 +92,33 @@ begin
                                                           returning id into right_h_q2_id;
 
             -- These are the links that the margins and CNOT should use
-            left_q1_link := left_h_q1_id * 1000 + port_nr * 100 + h_type;
-            left_q2_link := left_h_q2_id * 1000 + port_nr * 100 + h_type;
-            right_q1_link := right_h_q1_id * 1000 + port_nr * 100 + h_type;
-            right_q2_link := right_h_q2_id * 1000 + port_nr * 100 + h_type;
+            left_q1_link := create_link(left_h_q1_id, port_nr, h_type);
+            left_q2_link := create_link(left_h_q2_id, port_nr, h_type);
+            right_q1_link := create_link(right_h_q1_id, port_nr, h_type);
+            right_q2_link := create_link(right_h_q2_id, port_nr, h_type);
 
             -- Update the CNOT: flip the switch value and set visited
             update linked_circuit set (prev_q1, prev_q2, next_q1, next_q2, switch) = (left_q2_link, left_q1_link, right_q2_link, right_q1_link, not cx.switch) where id = cx.id;
 
-            if mod(div(cx.prev_q1, 100), 10) = 0 then
+            if get_port_from_link(cx.prev_q1) = 0 then
                 update linked_circuit set next_q1 = left_q1_link where id = cx_prev_q1_id;
             else
                 update linked_circuit set next_q2 = left_q1_link where id = cx_prev_q1_id;
             end if;
 
-            if mod(div(cx.prev_q2, 100), 10) = 0 then
+            if get_port_from_link(cx.prev_q2) = 0 then
                 update linked_circuit set next_q1 = left_q2_link where id = cx_prev_q2_id;
             else
                 update linked_circuit set next_q2 = left_q2_link where id = cx_prev_q2_id;
             end if;
 
-            if mod(div(cx.next_q1, 100), 10) = 0 then
+            if get_port_from_link(cx.next_q1) = 0 then
                 update linked_circuit set prev_q1 = right_q1_link where id = cx_next_q1_id;
             else
                 update linked_circuit set prev_q2 = right_q1_link where id = cx_next_q1_id;
             end if;
 
-            if mod(div(cx.next_q2, 100), 10) = 0 then
+            if get_port_from_link(cx.next_q2) = 0 then
                 update linked_circuit set prev_q1 = right_q2_link where id = cx_next_q2_id;
             else
                 update linked_circuit set prev_q2 = right_q2_link where id = cx_next_q2_id;
