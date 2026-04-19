@@ -19,7 +19,14 @@ declare
     b record;
 
     start_time timestamp with time zone;
+
+    h_type smallint;
+    controlled_types smallint[];
+
 begin
+
+    select id into h_type from gate_types where name = 'h';
+    select array_agg(id) into controlled_types from gate_types where name in ('cx', 'cxpow', 'cz', 'czpow');
 
     start_time := clock_timestamp();
 
@@ -27,8 +34,7 @@ begin
         for gate in
             select * from linked_circuit
                      where
---                      id % nprocs = my_proc_id and
-                     type in (15, 16, 17, 18)
+                     type = any(controlled_types)
                      and mod(prev_q1, 100) = single_type
         loop
             select * into second from linked_circuit where id = gate.id for update skip locked;
@@ -41,7 +47,7 @@ begin
                 continue;
             end if;
 
-            if second.type not in (15, 16, 17, 18)
+            if second.type != all(controlled_types)
                 or first.param != parameter
                 or first.type != single_type
                 or div(first.next_q1, 1000) != second.id

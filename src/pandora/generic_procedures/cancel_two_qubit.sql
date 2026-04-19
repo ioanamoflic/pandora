@@ -28,7 +28,6 @@ begin
         for gate in
             select * from linked_circuit
                      where
---                      id % nprocs = my_proc_id and
                      type=type_1
                      and param = param_1
                      and div(next_q1, 1000) = div(next_q2, 1000)

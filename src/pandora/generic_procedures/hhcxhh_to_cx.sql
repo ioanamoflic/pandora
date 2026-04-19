@@ -22,8 +22,6 @@ declare
 	right_q1_id bigint;
 	right_q2_id bigint;
 
-    h_type int;
-
     a record;
     b record;
     c record;
@@ -31,23 +29,27 @@ declare
 
 	start_time timestamp;
 
+    h_type smallint;
+    cx_types smallint[];
+
 begin
     start_time := CLOCK_TIMESTAMP();
-    h_type := 8;
+
+    select id into h_type from gate_types where name = 'h';
+    select array_agg(id) into cx_types from gate_types where name in ('cx', 'cxpow');
 
     while pass_count > 0 loop
         for gate in
             select * from linked_circuit
                      where
---                          id % nprocs = my_proc_id and
-                         type = 18
-                       and prev_q1 % 100 = 8 and prev_q2 % 100 = 8
-                       and next_q1 % 100 = 8 and next_q2 % 100 = 8
+                       type = any(cx_types)
+                       and prev_q1 % 100 = h_type and prev_q2 % 100 = h_type
+                       and next_q1 % 100 = h_type and next_q2 % 100 = h_type
         loop
             select * into cx from linked_circuit where id = gate.id for update skip locked;
 
             if cx.id is null
-                or cx.type != 18
+                or cx.type != all(cx_types)
             then
                 commit;
                 continue;
@@ -134,8 +136,8 @@ begin
             end if;
 
             -- make sure to update the links for the cx
-            update linked_circuit set (switch, prev_q1, prev_q2, next_q1, next_q2, visited)
-                        = (not cx.switch, left_q2.prev_q1, left_q1.prev_q1, right_q2.next_q1, right_q1.next_q1, my_proc_id) where id = cx.id;
+            update linked_circuit set (switch, prev_q1, prev_q2, next_q1, next_q2)
+                        = (not cx.switch, left_q2.prev_q1, left_q1.prev_q1, right_q2.next_q1, right_q1.next_q1) where id = cx.id;
 
             delete from linked_circuit where id in (left_q1.id, left_q2.id, right_q1.id, right_q2.id);
 

@@ -19,14 +19,47 @@ create table IF NOT EXISTS public.linked_circuit
 ) WITH (FILLFACTOR = 50);
 
 CREATE INDEX ON linked_circuit (type);
--- CREATE INDEX idx_linked_circuit_id_mod_2 ON linked_circuit (id) WHERE id % 2 = 1;
 
 CREATE INDEX idx_linked_circuit_prev1_mod_100 ON linked_circuit (next_q1, next_q2) WHERE div(next_q1, 1000) = div(next_q2, 1000);
--- CREATE INDEX idx_linked_circuit_prev2_mod_100 ON linked_circuit (prev_q1) WHERE prev_q1 % 100 = 8;
--- CREATE INDEX idx_linked_circuit_prev2_mod_100 ON linked_circuit (prev_q2) WHERE prev_q2 % 100 = 8;
--- CREATE INDEX idx_linked_circuit_next1_mod_100 ON linked_circuit (next_q1) WHERE next_q1 % 100 = 8;
--- CREATE INDEX idx_linked_circuit_next2_mod_100 ON linked_circuit (next_q2) WHERE next_q2 % 100 = 8;
 
+CREATE TABLE IF NOT EXISTS gate_types (
+    id smallint unique not null,
+    name text unique not null
+);
+
+INSERT INTO gate_types (id, name) VALUES
+(0, 'in'),
+(1, 'out'),
+(2, 'rx'),
+(3, 'ry'),
+(4, 'rz'),
+(5, 'xpow'),
+(6, 'ypow'),
+(7, 'zpow'),
+(8, 'h'),
+(9, 'paulix'),
+(10, 'pauliy'),
+(11, 'pauliz'),
+(12, 'globalphase'),
+(13, 'reset'),
+(14, 'meas'),
+(15, 'cx'),
+(16, 'cz'),
+(17, 'czpow'),
+(18, 'cxpow'),
+(19, 'xxpow'),
+(20, 'zzpow'),
+(21, 'toffoli'),
+(22, 'and'),
+(23, 'ccx'),
+(24, 'cswap'),
+(25, 'globalin'),
+(26, 'globalout'),
+(27, 's'),
+(28, 'sdag'),
+(29, 't'),
+(30, 'tdag'),
+(31, 'swap');
 
 create table IF NOT EXISTS public.optimization_results
 (
@@ -59,7 +92,6 @@ create table IF NOT EXISTS public.batched_circuit
     meas_key smallint
 );
 
--- table only used for testing purposes
 create table IF NOT EXISTS public.linked_circuit_test
 (
     id      bigserial primary key,

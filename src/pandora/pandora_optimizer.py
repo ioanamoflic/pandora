@@ -9,38 +9,9 @@ from pandora.gate_translator import PandoraGateTranslator
 class PandoraOptimizer(Pandora):
     """
     The optimizer of Pandora. This class is used to control the types of rewrite rules that run in parallel in Pandora.
-
-    There are two types of stored procedures used for the optimisation, used depending on the context:
-        I. when the stored circuit is smaller (for ex. <= 1e6 gates):
-            * we care about a more precise sampling method, where we trade sampling accuracy for speed
-            * it is advised to use utilize_bernoulli = True. This is a row-level sampling method used in
-              the stored procedures. The optimisations are performed, if applicable, on the sampled rows.
-            * bernoulli_proba (0-100) is the percentage of rows (out of the total row count) on which the optimisations
-              are applied at a time.
-
-        II. when the stored circuit is larger (for ex. > 1e6 gates):
-            * we trade speed for the sampling accuracy
-            * it is advised to use utilize_bernoulli = False. This performs block-level sampling and returns a
-             set of approx. block_size rows
-            * the sample is not completely random but works well enough for large tables
-
-        For parallel optimisation:
-            * It is most useful to use multiple optimisations running in parallel. The number of parallel processes is
-            controlled by nproc. The method dedicated_nproc can overwrite the class nproc if the user prefers a more
-            fine-grained control over a specific optimisation type.
-
-        For running a fixed number of optimisations:
-            * set pass_count to control the number of times a certain rewrite rule will be applied.
-              This is most likely used for testing purposes.
-            * e.g. for pass_count = 1000, the optimisation will run until it applies its rewrite rule exactly 1000 times. If
-              the optimisation is not applicable, the optimisation will run infinitely (or until timeout).
-
-        For running optimisations in a simulated annealing-like way:
-            *  pass_count defaults to math.inf, therefore the optimisations run infinitely or until timeout (given in sec)
-               time has passed
     """
 
-    LARGE_RUN_NR = int(1e6)
+    LARGE_RUN_NR = int(1e9)
     RESET_ID = int(5e6)
     LOG_SLEEP_FOR = 1  # sleep for 1 seconds when logging optimisations
 
@@ -247,26 +218,6 @@ class PandoraOptimizer(Pandora):
 
         for _ in range(dedicated_nproc):
             stored_procedure = f"call commute_single_control_left({gate_type},{gate_param}," \
-                               f"{self._nproc}, {self.proc_count}, {self.pass_count}, {self.timeout})"
-            self._call_thread_proc(stored_procedure)
-
-    def commute_rotation_with_control_right(self,
-                                            gate_type: PandoraGateTranslator,
-                                            gate_param: float = 1.0,
-                                            dedicated_nproc: int = None) -> None:
-        # TODO update this stored procedure
-        """
-        Applies rewrite rule
-
-             ─R───@─────         ──────@───R─
-                  │                    │
-             ─────X─────         ──────X─────
-
-        where applicable on the linked_list Pandora table.
-        """
-
-        for _ in range(dedicated_nproc):
-            stored_procedure = f"call commute_single_control_right({gate_type},{gate_param}," \
                                f"{self._nproc}, {self.proc_count}, {self.pass_count}, {self.timeout})"
             self._call_thread_proc(stored_procedure)
 

@@ -48,19 +48,16 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
         'generic_procedures/cancel_two_qubit.sql',
         'generic_procedures/commute_single_control_left.sql',
         'generic_procedures/commute_single_control_right.sql',
-        'generic_procedures/insert_two_qubit.sql',
         'generic_procedures/replace_two_sq_with_one.sql',
         'generic_procedures/toffoli_decomposition.sql',
         'generic_procedures/cx_to_hhcxhh.sql',
         'generic_procedures/hhcxhh_to_cx.sql',
 
         # worker procedures
-        'generic_procedures/stopper.sql',
         'generic_procedures/generate_edge_list.sql',
 
         # benchmarking only procedures
         'generic_procedures/hhcxhh_to_cx_seq.sql',
-        'generic_procedures/hhcxhh_to_cx_parallel.sql',
         'generic_procedures/_generate_optimisation_stats.sql',
 
         # ls style procedures
@@ -93,7 +90,9 @@ def drop_and_replace_tables(connection,
                                     'rewrite_count',
                                     'max_missed_rounds',
                                     'benchmark_results',
-                                    'optimization_results'),
+                                    'optimization_results',
+                                    'gate_types'
+                            ),
                             verbose=False) -> None:
     """
     This method drops all tables of Pandora and rebuilds them according to the configuration in

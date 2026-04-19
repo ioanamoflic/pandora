@@ -57,7 +57,6 @@ class Out(cirq.Gate, ABC):
         return self.gate
 
 
-# each gate will have a different code used as a fast(er) comparison key in the database
 class PandoraGateTranslator(Enum):
     In = 0
     Out = 1
