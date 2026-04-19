@@ -723,45 +723,21 @@ def test_multithreading_performance(connection,
     def get_thread_proc():
         match repeated_template:
             case 'add_two_hadamards':
-                if same_proc_id:
-                    return [(1,
-                             f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
-                return [(1,
-                         f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
-                        for my_proc_id in range(n_proc)]
+                return [(1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
             case 'add_two_cnots':
-                if same_proc_id:
-                    return [(1,
-                             f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
                 return [(1,
                          f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
                         for my_proc_id in range(n_proc)]
             case 'add_base_change':
-                if same_proc_id:
-                    return [(1,
-                             f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
                 return [(1, f"CALL linked_hhcxhh_to_cx({my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
                         for my_proc_id in range(n_proc)]
             case 'add_t_t_dag':
-                if same_proc_id:
-                    return [(1,
-                             f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
                 return [(1,
                          f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
                         for my_proc_id in range(n_proc)]
             case 'add_t_cx':
-                if same_proc_id:
-                    return [(1,
-                             f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
                 return [(1,
                          f"CALL commute_single_control_left({myZPow}, 0.25, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
-                        for my_proc_id in range(n_proc)]
-            case 'add_cx_t':
-                if same_proc_id:
-                    return [(1,
-                             f"CALL commute_single_control_right({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
-                return [(1,
-                         f"CALL commute_single_control_right({myZPow}, 0.25, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
                         for my_proc_id in range(n_proc)]
             case _:
                 raise f"Template {repeated_template} does not exist"
@@ -839,6 +815,9 @@ def test_commute_T_leftmost_location(connection,
                                              just_count=False,
                                              is_test=False)
     print(extracted_circuit)
+    t_count = count_t_gates(circuit=extracted_circuit)
+
+    assert t_count == 0
     assert np.allclose(initial_circuit.unitary(), extracted_circuit.unitary())
 
 
@@ -928,7 +907,7 @@ def test_race_condition(connection, stop_after: int):
     thread_procedures = all_thread_proc
 
     passed_count = 0
-    test_count = 100
+    test_count = 1000
     for i in range(test_count):
         print(f'Test nr {i}.')
 
@@ -958,42 +937,41 @@ def test_race_condition(connection, stop_after: int):
 if __name__ == "__main__":
     conn = get_connection()
 
-    # test_cancel_single_qubit(conn)
-    # test_cancel_two_qubit(conn)
-    # test_commute_single_control_right(conn)
-    # test_commute_single_control_left(conn)
-    # test_cx_to_hhcxhh_a(conn)
-    # test_cx_to_hhcxhh_b(conn)
-    # test_hhcxhh_to_cx_a(conn)
-    # test_hhcxhh_to_cx_b(conn)
-    # test_replace_two_sq_with_one(conn)
-    # test_case_1(conn)
-    # test_case_2(conn)
-    # test_case_1_repeated(conn, n=10)
-    # test_case_2_repeated(conn, n=10)
-    # test_qualtran_adder_opt_reconstruction(conn, stop_after=5)
-    # test_logical_correctness_random(conn, stop_after=5)
-    #
-    # for n_procs in [1, 2, 4, 8]:
-    #     test_commute_T_leftmost_location(connection=conn, n_proc=n_procs, stop_after=10)
-    #
-    # experiment_seed = random.randint(1, 100)
-    # print(f"Running experiment with seed {experiment_seed} ")
-    # for repeated_template in ['add_two_hadamards',
-    #                           'add_two_cnots',
-    #                           # 'add_base_change',
-    #                           'add_t_t_dag',
-    #                           # 'add_t_cx',
-    #                           # 'add_cx_t' # this one is buggy
-    #                           ]:
-    #     for same_proc_id in [True, False]:
-    #         for n_procs in [1, 2, 4, 8]:
-    #             test_multithreading_performance(conn,
-    #                                             repeated_template=repeated_template,
-    #                                             same_proc_id=same_proc_id,
-    #                                             n_proc=n_procs,
-    #                                             seed=experiment_seed,
-    #                                             stop_after=3)
+    test_cancel_single_qubit(conn)
+    test_cancel_two_qubit(conn)
+    test_commute_single_control_right(conn)
+    test_commute_single_control_left(conn)
+    test_cx_to_hhcxhh_a(conn)
+    test_cx_to_hhcxhh_b(conn)
+    test_hhcxhh_to_cx_a(conn)
+    test_hhcxhh_to_cx_b(conn)
+    test_replace_two_sq_with_one(conn)
+    test_case_1(conn)
+    test_case_2(conn)
+    test_case_1_repeated(conn, n=10)
+    test_case_2_repeated(conn, n=10)
+    test_qualtran_adder_opt_reconstruction(conn, stop_after=5)
+    test_logical_correctness_random(conn, stop_after=5)
+
+    for n_procs in [2, 4, 8]:
+        test_commute_T_leftmost_location(connection=conn, n_proc=n_procs, stop_after=10)
+
+    experiment_seed = random.randint(1, 100)
+    print(f"Running experiment with seed {experiment_seed} ")
+    for repeated_template in ['add_two_hadamards',
+                              'add_two_cnots',
+                              'add_base_change',
+                              'add_t_t_dag',
+                              'add_t_cx',
+                              ]:
+        for same_proc_id in [True, False]:
+            for n_procs in [1, 2, 4, 8]:
+                test_multithreading_performance(conn,
+                                                repeated_template=repeated_template,
+                                                same_proc_id=same_proc_id,
+                                                n_proc=n_procs,
+                                                seed=experiment_seed,
+                                                stop_after=3)
 
     test_race_condition(conn, stop_after=1)
 
