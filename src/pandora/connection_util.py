@@ -47,7 +47,6 @@ def refresh_all_stored_procedures(connection, verbose=False) -> None:
         'generic_procedures/cancel_single_qubit.sql',
         'generic_procedures/cancel_two_qubit.sql',
         'generic_procedures/commute_single_control_left.sql',
-        'generic_procedures/commute_single_control_right.sql',
         'generic_procedures/replace_two_sq_with_one.sql',
         'generic_procedures/toffoli_decomposition.sql',
         'generic_procedures/cx_to_hhcxhh.sql',

@@ -1,4 +1,4 @@
-create or replace procedure cancel_two_qubit_equiv(type_1 int, type_2 int, my_proc_id int, proc_count int, qubit_count int, timeout int)
+create or replace procedure cancel_two_qubit_equiv(type_1 int, type_2 int, qubit_count int, timeout int)
     language plpgsql
 as
 $$
@@ -39,7 +39,7 @@ begin
             exit;
         end if;
 
-for gate in
+        for gate in
             select * from linked_circuit
                      where
                      type=type_1

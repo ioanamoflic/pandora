@@ -1,4 +1,4 @@
-create or replace procedure commute_single_control_left(single_type int, parameter float, my_proc_id int, nprocs int, pass_count int, timeout int)
+create or replace procedure commute_single_control_left(single_type int, parameter float, pass_count int, timeout int)
    language plpgsql
 as
 $$

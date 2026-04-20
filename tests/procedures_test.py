@@ -83,7 +83,7 @@ def test_cancel_single_qubit(connection):
     convert_and_insert(connection=connection, initial_circuit=initial_circuit)
 
     cursor = connection.cursor()
-    cursor.execute(f"call cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+    cursor.execute(f"call cancel_single_qubit({myH}, {myH}, 1, 1, {pass_count}, {short_timeout})")
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label=CIRCUIT_LABEL,
                                              table_name=TABLE_NAME,
@@ -104,7 +104,7 @@ def test_cancel_two_qubit(connection):
     convert_and_insert(connection=connection, initial_circuit=initial_circuit)
 
     cursor = connection.cursor()
-    cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+    cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {pass_count}, {short_timeout})")
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label=CIRCUIT_LABEL,
                                              table_name=TABLE_NAME,
@@ -135,10 +135,10 @@ def test_case_1(connection):
 
     cursor = connection.cursor()
     cursor.execute(
-        f"call commute_single_control_right({myZPow}, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+        f"call commute_single_control_left({myZPow}, 0.25, {pass_count}, {short_timeout})")
     cursor.execute(
-        f"call cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
-    cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+        f"call cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {pass_count}, {short_timeout})")
+    cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {pass_count}, {short_timeout})")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label='t',
@@ -179,10 +179,10 @@ def test_case_1_repeated(connection, n):
 
     cursor = connection.cursor()
     cursor.execute(
-        f"call commute_single_control_right({myZPow}, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+        f"call commute_single_control_left({myZPow}, 0.25, {pass_count}, {short_timeout})")
     cursor.execute(
-        f"call cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
-    cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+        f"call cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {pass_count}, {short_timeout})")
+    cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {pass_count}, {short_timeout})")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label=CIRCUIT_LABEL,
@@ -196,39 +196,6 @@ def test_case_1_repeated(connection, n):
     print('Test case 1 repeated passed!')
 
 
-def test_commute_single_control_right(connection):
-    q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
-    initial_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.T.on(q1)])
-    expected_circuit = cirq.Circuit([cirq.T.on(q1), cirq.CX.on(q1, q2)])
-
-    clean_pandora(connection=connection)
-    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
-
-    cursor = connection.cursor()
-    cursor.execute(
-        f"call commute_single_control_right({myZPow}, 0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label=CIRCUIT_LABEL,
-                                             table_name=TABLE_NAME,
-                                             remove_io_gates=True,
-                                             just_count=False,
-                                             is_test=False)
-
-    qubit_map = dict(
-        zip(
-            sorted(expected_circuit.all_qubits()),
-            sorted(extracted_circuit.all_qubits())
-        )
-    )
-    expected_circuit = expected_circuit.transform_qubits(qubit_map=qubit_map)
-
-    print(expected_circuit)
-    print(extracted_circuit)
-
-    assert str(expected_circuit) == str(extracted_circuit)
-    print('Test commute_single_control_right passed!')
-
-
 def test_commute_single_control_left(connection):
     q1, q2 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2')
     expected_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.T.on(q1)])
@@ -239,7 +206,7 @@ def test_commute_single_control_left(connection):
 
     cursor = connection.cursor()
     cursor.execute(
-        f"call commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+        f"call commute_single_control_left({myZPow}, 0.25, {pass_count}, {short_timeout})")
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label=CIRCUIT_LABEL,
                                              table_name=TABLE_NAME,
@@ -271,7 +238,7 @@ def test_cx_to_hhcxhh_a(connection):
     convert_and_insert(connection=connection, initial_circuit=initial_circuit)
 
     cursor = connection.cursor()
-    cursor.execute(f"call linked_cx_to_hhcxhh({proc_id}, {nprocs}, {pass_count}, 1)")
+    cursor.execute(f"call linked_cx_to_hhcxhh({pass_count}, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label=CIRCUIT_LABEL,
                                              table_name=TABLE_NAME,
@@ -302,7 +269,7 @@ def test_cx_to_hhcxhh_b(connection):
     convert_and_insert(connection=connection, initial_circuit=initial_circuit)
 
     cursor = connection.cursor()
-    cursor.execute(f"call linked_cx_to_hhcxhh({proc_id}, {nprocs}, {pass_count}, 1)")
+    cursor.execute(f"call linked_cx_to_hhcxhh({pass_count}, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label=CIRCUIT_LABEL,
                                              table_name=TABLE_NAME,
@@ -333,7 +300,7 @@ def test_hhcxhh_to_cx_a(connection):
     convert_and_insert(connection=connection, initial_circuit=initial_circuit)
 
     cursor = connection.cursor()
-    cursor.execute(f"call linked_hhcxhh_to_cx({proc_id}, {nprocs}, {pass_count}, 1)")
+    cursor.execute(f"call linked_hhcxhh_to_cx({pass_count}, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label=CIRCUIT_LABEL,
                                              table_name=TABLE_NAME,
@@ -361,7 +328,7 @@ def test_hhcxhh_to_cx_b(connection):
     convert_and_insert(connection=connection, initial_circuit=initial_circuit)
 
     cursor = connection.cursor()
-    cursor.execute(f"call linked_hhcxhh_to_cx({proc_id}, {nprocs}, {pass_count}, 1)")
+    cursor.execute(f"call linked_hhcxhh_to_cx({pass_count}, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label=CIRCUIT_LABEL,
                                              table_name=TABLE_NAME,
@@ -391,7 +358,7 @@ def test_replace_two_sq_with_one(connection):
 
     cursor = connection.cursor()
     cursor.execute(
-        f"call fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {pass_count}, 1)")
+        f"call fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {pass_count}, 1)")
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label=CIRCUIT_LABEL,
                                              table_name=TABLE_NAME,
@@ -419,64 +386,6 @@ def test_commute_cx_target():
     return NotImplementedError()
 
 
-def test_commute_cx_ctrl_target_case_1(connection):
-    q1, q2, q3 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2'), cirq.NamedQubit('q3')
-    initial_circuit = cirq.Circuit([cirq.CX.on(q2, q3), cirq.CX.on(q1, q2)])
-    expected_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.CX.on(q2, q3), cirq.CX.on(q1, q3)])
-
-    clean_pandora(connection=connection)
-    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
-
-    cursor = connection.cursor()
-    cursor.execute(f"call commute_cx_ctrl_target_bernoulli(10, 1)")
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label=CIRCUIT_LABEL,
-                                             table_name=TABLE_NAME,
-                                             remove_io_gates=True,
-                                             just_count=False,
-                                             is_test=False)
-
-    qubit_map = dict(
-        zip(
-            sorted(expected_circuit.all_qubits()),
-            sorted(extracted_circuit.all_qubits())
-        )
-    )
-    expected_circuit = expected_circuit.transform_qubits(qubit_map=qubit_map)
-
-    assert str(expected_circuit) == str(extracted_circuit)
-    print('Test commute_cx_ctrl_target_1 passed!')
-
-
-def test_commute_cx_ctrl_target_case_2(connection):
-    q1, q2, q3 = cirq.NamedQubit('q1'), cirq.NamedQubit('q2'), cirq.NamedQubit('q3')
-    initial_circuit = cirq.Circuit([cirq.CX.on(q1, q2), cirq.CX.on(q2, q3)])
-    expected_circuit = cirq.Circuit([cirq.CX.on(q2, q3), cirq.CX.on(q1, q2), cirq.CX.on(q1, q3)])
-
-    clean_pandora(connection=connection)
-    convert_and_insert(connection=connection, initial_circuit=initial_circuit)
-
-    cursor = connection.cursor()
-    cursor.execute(f"call commute_cx_ctrl_target_bernoulli(10, 1)")
-    extracted_circuit = extract_cirq_circuit(connection=connection,
-                                             circuit_label=CIRCUIT_LABEL,
-                                             table_name=TABLE_NAME,
-                                             remove_io_gates=True,
-                                             just_count=False,
-                                             is_test=False)
-
-    qubit_map = dict(
-        zip(
-            sorted(expected_circuit.all_qubits()),
-            sorted(extracted_circuit.all_qubits())
-        )
-    )
-    expected_circuit = expected_circuit.transform_qubits(qubit_map=qubit_map)
-
-    assert str(expected_circuit) == str(extracted_circuit)
-    print('Test commute_cx_ctrl_target_2 passed!')
-
-
 def test_case_2(connection):
     """
     Testing circuit
@@ -495,9 +404,9 @@ def test_case_2(connection):
 
     cursor = connection.cursor()
     cursor.execute(
-        f"call commute_single_control_right({myZPow}, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+        f"call commute_single_control_left({myZPow}, 0.25, {pass_count}, {short_timeout})")
     cursor.execute(
-        f"call cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+        f"call cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {pass_count}, {short_timeout})")
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label=CIRCUIT_LABEL,
                                              table_name=TABLE_NAME,
@@ -506,9 +415,9 @@ def test_case_2(connection):
                                              is_test=False)
     print(extracted_circuit)
 
-    cursor.execute(f"call linked_hhcxhh_to_cx({proc_id}, {nprocs}, {pass_count}, {short_timeout})")
-    cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1,{proc_id}, {nprocs}, {pass_count}, {short_timeout})")
-    cursor.execute(f"call cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+    cursor.execute(f"call linked_hhcxhh_to_cx({pass_count}, {short_timeout})")
+    cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {pass_count}, {short_timeout})")
+    cursor.execute(f"call cancel_single_qubit({myH}, {myH}, 1, 1, {pass_count}, {short_timeout})")
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label=CIRCUIT_LABEL,
                                              table_name=TABLE_NAME,
@@ -551,12 +460,12 @@ def test_case_2_repeated(connection, n):
     convert_and_insert(connection=connection, initial_circuit=initial_circuit)
 
     cursor = connection.cursor()
-    cursor.execute(f"call linked_hhcxhh_to_cx({proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+    cursor.execute(f"call linked_hhcxhh_to_cx({pass_count}, {short_timeout})")
     cursor.execute(
-        f"call commute_single_control_right({myZPow}, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+        f"call commute_single_control_left({myZPow}, 0.25, {pass_count}, {short_timeout})")
     cursor.execute(
-        f"call cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
-    cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {pass_count}, {short_timeout})")
+        f"call cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {pass_count}, {short_timeout})")
+    cursor.execute(f"call cancel_two_qubit({myCX}, {myCX}, 1, 1, {pass_count}, {short_timeout})")
 
     extracted_circuit = extract_cirq_circuit(connection=connection,
                                              circuit_label=CIRCUIT_LABEL,
@@ -584,22 +493,22 @@ def test_qualtran_adder_opt_reconstruction(connection, stop_after=15):
         convert_and_insert(connection=connection, initial_circuit=adder_as_cirq_circuit)
 
         thread_procedures = [
-            (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {larger_pass_count}, {stop_after})"),
             (1,
-             f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+             f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {larger_pass_count}, {stop_after})"),
             (1,
-             f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-            (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+             f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {larger_pass_count}, {stop_after})"),
             (1,
-             f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+             f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {larger_pass_count}, {stop_after})"),
             (1,
-             f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-            (1, f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-            (1, f"CALL commute_single_control_left({myZPow}, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-            (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-            (1, f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-            (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-            (1, f"CALL linked_cx_to_hhcxhh({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+             f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL commute_single_control_left({myZPow}, 0.25, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL commute_single_control_left({myZPow}, -0.25, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL commute_single_control_left({myZPow}, 0.5, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL commute_single_control_left({myZPow}, -0.5, {larger_pass_count}, {stop_after})"),
+            (1, f"CALL linked_hhcxhh_to_cx({larger_pass_count}, {stop_after})"),
+            (1, f"CALL linked_cx_to_hhcxhh({larger_pass_count}, {stop_after})"),
         ]
         db_multi_threaded(thread_proc=thread_procedures)
         stop_all_lurking_procedures(connection)
@@ -645,20 +554,20 @@ def count_t_gates(circuit, tol=1e-8):
 
 def test_logical_correctness_random(connection, stop_after: int):
     all_thread_proc = [
-        (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_single_qubit({myPauliZ}, {myPauliZ}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, -0.25, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {nprocs}, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myPauliZ}, {myPauliZ}, 1, 1, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL commute_single_control_left({myZPow}, 0.25, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL commute_single_control_left({myZPow}, -0.25, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL commute_single_control_left({myZPow}, 0.5, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL commute_single_control_left({myZPow}, -0.5, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL linked_hhcxhh_to_cx({larger_pass_count}, {stop_after})"),
     ]
 
     thread_procedures = all_thread_proc
@@ -723,22 +632,15 @@ def test_multithreading_performance(connection,
     def get_thread_proc():
         match repeated_template:
             case 'add_two_hadamards':
-                return [(1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")] * n_proc
+                return [(1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {larger_pass_count}, {stop_after})")] * n_proc
             case 'add_two_cnots':
-                return [(1,
-                         f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
-                        for my_proc_id in range(n_proc)]
+                return [(1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {larger_pass_count}, {stop_after})")] * n_proc
             case 'add_base_change':
-                return [(1, f"CALL linked_hhcxhh_to_cx({my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
-                        for my_proc_id in range(n_proc)]
+                return [(1, f"CALL linked_hhcxhh_to_cx({larger_pass_count}, {stop_after})")] * n_proc
             case 'add_t_t_dag':
-                return [(1,
-                         f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
-                        for my_proc_id in range(n_proc)]
+                return [(1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {larger_pass_count}, {stop_after})")] * n_proc
             case 'add_t_cx':
-                return [(1,
-                         f"CALL commute_single_control_left({myZPow}, 0.25, {my_proc_id}, {nprocs}, {larger_pass_count}, {stop_after})")
-                        for my_proc_id in range(n_proc)]
+                return [(1, f"CALL commute_single_control_left({myZPow}, 0.25, {larger_pass_count}, {stop_after})")] * n_proc
             case _:
                 raise f"Template {repeated_template} does not exist"
 
@@ -781,8 +683,8 @@ def test_commute_T_leftmost_location(connection,
     def get_thread_proc():
         return_list = []
         for proc_id in range(n_proc - 1):
-            return_list.append((1, f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {n_proc}, {larger_pass_count}, {stop_after})"))
-        return_list.append((1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {n_proc-1}, {n_proc}, {larger_pass_count}, {stop_after})"))
+            return_list.append((1, f"CALL commute_single_control_left({myZPow}, 0.25, {larger_pass_count}, {stop_after})"))
+        return_list.append((1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {larger_pass_count}, {stop_after})"))
 
         return return_list
 
@@ -805,7 +707,7 @@ def test_commute_T_leftmost_location(connection,
     print(extracted_circuit)
 
     cursor = connection.cursor()
-    cursor.execute(f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {nprocs}, 1, 1)")
+    cursor.execute(f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, 1, 1)")
 
     print("After cancel:")
     extracted_circuit = extract_cirq_circuit(connection=connection,
@@ -884,24 +786,22 @@ def test_race_condition(connection, stop_after: int):
 
     print(initial_circuit)
 
-    local_nprocs = 1
-
     all_thread_proc = [
-        (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_single_qubit({myPauliZ}, {myPauliZ}, 1, 1, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, -0.25, 0.25, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, 0.25, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, -0.25, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, 0.5, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL commute_single_control_left({myZPow}, -0.5, {proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
-        (1, f"CALL linked_hhcxhh_to_cx({proc_id}, {local_nprocs}, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myH}, {myH}, 1, 1, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myPauliZ}, {myPauliZ}, 1, 1, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, 0.25, -0.25, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myZPow}, {myZPow}, -0.25, 0.25, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_single_qubit({myPauliX}, {myPauliX}, 1, 1, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL cancel_two_qubit({myCX}, {myCX}, 1, 1, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, 0.25, 0.25, 0.5, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myPauliZ}, -0.5, -0.5, -1.0, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL fuse_single_qubit({myZPow}, {myZPow}, {myZPow}, -0.25, -0.25, -0.5, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL commute_single_control_left({myZPow}, 0.25, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL commute_single_control_left({myZPow}, -0.25, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL commute_single_control_left({myZPow}, 0.5, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL commute_single_control_left({myZPow}, -0.5, {larger_pass_count}, {stop_after})"),
+        (1, f"CALL linked_hhcxhh_to_cx({larger_pass_count}, {stop_after})"),
     ]
 
     thread_procedures = all_thread_proc
@@ -939,7 +839,6 @@ if __name__ == "__main__":
 
     test_cancel_single_qubit(conn)
     test_cancel_two_qubit(conn)
-    test_commute_single_control_right(conn)
     test_commute_single_control_left(conn)
     test_cx_to_hhcxhh_a(conn)
     test_cx_to_hhcxhh_b(conn)

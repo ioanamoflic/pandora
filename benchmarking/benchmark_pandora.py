@@ -62,7 +62,7 @@ if __name__ == "__main__":
             proc_calls = []
             for proc_id in range(NPROCS):
                 proc_calls.append(
-                    f"call linked_hhcxhh_to_cx({proc_id}, {NPROCS}, {nr_passes}, 100)")
+                    f"call linked_hhcxhh_to_cx({nr_passes}, 100)")
 
             reset_pandora(connection=conn, quantum_circuit=qc)
 

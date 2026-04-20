@@ -1,5 +1,5 @@
 -- does not include the replacement of global_phase
-create or replace procedure fuse_single_qubit(type_1 int, type_2 int, type_replace int, param1 float, param2 float, param_replace float, my_proc_id int, nprocs int, pass_count int, timeout int)
+create or replace procedure fuse_single_qubit(type_1 int, type_2 int, type_replace int, param1 float, param2 float, param_replace float, pass_count int, timeout int)
     language plpgsql
 as
 $$

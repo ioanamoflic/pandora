@@ -1,4 +1,3 @@
-import sys
 from multiprocessing import Pool
 
 import qiskit.qasm3
@@ -82,7 +81,7 @@ def pandora_verify(connection,
     proc_calls = []
     for proc_id in range(nprocs):
         proc_calls.append(
-            f"call cancel_two_qubit_equiv({CX}, {CX}, {proc_id}, {nprocs}, {concatenated.num_qubits}, {timeout_sec})")
+            f"call cancel_two_qubit_equiv({CX}, {CX}, {concatenated.num_qubits}, {timeout_sec})")
 
     process_pool.map(map_procedure_call, proc_calls)
 

@@ -1,13 +1,6 @@
-import sys
-
-import cirq
-import re
-
 from benchmarking.benchmark_pandora import reset_pandora
 from pandora import PandoraOptimizer
-from pandora.gate_translator import PandoraGateTranslator
 from pandora.connection_util import *
-from pandora.qiskit_to_pandora_util import convert_qiskit_to_pandora, remove_io_gates
 
 import re
 from qiskit import QuantumCircuit
@@ -126,16 +119,15 @@ if __name__ == "__main__":
         print("Exiting...")
         sys.exit(0)
     else:
-        FILEPATH = sys.argv[1]        
-    
+        FILEPATH = sys.argv[1]
+
     for N_BITS in [16, 32, 64, 128, 256, 512, 1024, 2048]:
         adder_circuit = get_adder(n_bits=N_BITS)
         adder_circuit = replace_all_toffolis_qiskit(adder_circuit)
 
         pandora_optimizer = PandoraOptimizer(pass_count=int(2e9),
-                                            timeout=600,
-                                            logger_id=N_BITS,
-                                            proc_count=19)
+                                             timeout=600,
+                                             logger_id=N_BITS)
 
         conn = get_connection(config_file_path=FILEPATH)
         reset_pandora(connection=conn, quantum_circuit=adder_circuit)
@@ -189,16 +181,16 @@ if __name__ == "__main__":
 
         # TT = S
         pandora_optimizer.fuse_single_qubit_gates(gate_types=(T, T, S), gate_params=(0, 0, 0),
-                                                dedicated_nproc=1)
+                                                  dedicated_nproc=1)
         # T†T† = S†
         pandora_optimizer.fuse_single_qubit_gates(gate_types=(T_dag, T_dag, S_dag), gate_params=(0, 0, 0),
-                                                dedicated_nproc=1)
+                                                  dedicated_nproc=1)
         # SS = Z
         pandora_optimizer.fuse_single_qubit_gates(gate_types=(S, S, Z), gate_params=(0, 0, 0),
-                                                dedicated_nproc=1)
+                                                  dedicated_nproc=1)
         # S†S† = Z
         pandora_optimizer.fuse_single_qubit_gates(gate_types=(S_dag, S_dag, Z), gate_params=(0, 0, 0),
-                                                dedicated_nproc=1)
+                                                  dedicated_nproc=1)
         """
             Commuting Z-rotations to the left
         """

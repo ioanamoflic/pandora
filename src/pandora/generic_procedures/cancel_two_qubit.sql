@@ -1,4 +1,4 @@
-create or replace procedure cancel_two_qubit(type_1 int, type_2 int, param_1 float, param_2 float, my_proc_id int, nprocs int, pass_count int, timeout int)
+create or replace procedure cancel_two_qubit(type_1 int, type_2 int, param_1 float, param_2 float, pass_count int, timeout int)
     language plpgsql
 as
 $$

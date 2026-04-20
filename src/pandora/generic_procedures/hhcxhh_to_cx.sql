@@ -1,4 +1,4 @@
-create or replace procedure linked_hhcxhh_to_cx(my_proc_id int, nprocs int, pass_count int, timeout int)
+create or replace procedure linked_hhcxhh_to_cx(pass_count int, timeout int)
     language plpgsql
 as
 $$
