@@ -16,7 +16,7 @@ from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
 from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
 from pyLIQTR.utils.circuit_decomposition import generator_decompose
 
-from pandora.gate_translator import KEEP_RZ
+from pandora.translation.translator import KEEP_RZ
 
 sys.setrecursionlimit(10000000)
 # Increase recursion limit from default since adder bloq has a recursive implementation.
@@ -28,16 +28,18 @@ cirq_and_bloq_gate_set = cirq.Gateset(
     cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
     cirq.CZPowGate, cirq.CXPowGate,
     cirq.ZZPowGate, cirq.XXPowGate,
-    cirq.CCXPowGate, cirq.CCZPowGate, cirq.TOFFOLI,
+    # cirq.CCXPowGate, cirq.CCZPowGate, cirq.TOFFOLI,
     cirq.X, cirq.Y, cirq.Z,
-    And,
-    BloqAsCirqGate,
-    cirq.CSwapGate)
+    # And,
+    # BloqAsCirqGate,
+    # cirq.CSwapGate
+)
 
 pandora_ingestible_gate_set = cirq.Gateset(
     cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel,
     cirq.GlobalPhaseGate, cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
-    cirq.CZPowGate, cirq.CXPowGate, cirq.ZZPowGate, cirq.XXPowGate, cirq.CCXPowGate,
+    cirq.CZPowGate, cirq.CXPowGate, cirq.ZZPowGate, cirq.XXPowGate,
+    cirq.CCXPowGate,
     And,
     cirq.CSwapGate,
     cirq.X, cirq.Y, cirq.Z,
@@ -302,7 +304,7 @@ def get_RSA(n):
                     "6373289912154831438167899885040445364023527381951378636564391212010397122822"
                     "120720357")
     else:
-        raise "Requested n not here."
+        raise Exception("Requested n not here.")
 
     rsa_pe_small = RSAPhaseEstimate.make_for_shor(big_n=big_n, g=9)
     circuit = rsa_pe_small.as_composite_bloq() \

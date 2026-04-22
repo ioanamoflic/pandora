@@ -1,11 +1,13 @@
 import json
+import sys
 from enum import Enum
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
+from pandora.translation.gates import PandoraGate
+from pandora.translation.translator import PANDORA_TO_READABLE, PandoraGateTranslator
 from pandora.widgetization.widget import Widget
-from pandora.connection_util import *
 
 sys.setrecursionlimit(1000000)
 

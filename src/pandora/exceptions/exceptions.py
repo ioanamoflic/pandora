@@ -61,3 +61,9 @@ class WindowSizeError(PandoraException):
     """
         Window size has to be >= 2.
     """
+
+
+class WrongPandoraBuilderInput(PandoraException):
+    """
+        Only Cirq and Qiskit circuits are supported for now.
+    """

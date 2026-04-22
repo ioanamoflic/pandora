@@ -1,4 +1,4 @@
-from pandora.gates import PandoraGate
+from pandora.translation.gates import PandoraGate
 
 
 class PandoraEdge:

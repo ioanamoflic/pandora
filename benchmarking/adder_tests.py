@@ -1,18 +1,15 @@
-import sys
+import asyncio
 
-import cirq
-import re
-
-from benchmarking.benchmark_pandora import reset_pandora
-from pandora import PandoraOptimizer
-from pandora.gate_translator import PandoraGateTranslator
-from pandora.connection_util import *
-from pandora.qiskit_to_pandora_util import convert_qiskit_to_pandora, remove_io_gates
-
-import re
 from qiskit import QuantumCircuit
 
 from benchmarking.benchmark_adders import get_adder, decompose_toffoli_qiskit
+from pandora.db.core import PandoraDB
+from pandora.db.repository import GateRepository
+from pandora.db.service import PandoraService
+from pandora.optimisation.multithreaded_optimiser import PandoraOptimiser
+from pandora.translation.translator import PandoraGateTranslator
+
+DSN = "postgresql://moflici1:1234@localhost:5432/postgres"
 
 
 def decompose_toffoli_qiskit_reverse(qc, c0, c1, t):
@@ -93,145 +90,155 @@ def replace_all_toffolis_qiskit(qc, case: int):
     return new_qc
 
 
-def run_optimiser(FILEPATH):
-    pandora_optimizer = PandoraOptimizer(pass_count=int(2e9),
-                                         timeout=2,
-                                         logger_id=1,
-                                         proc_count=18)
+async def run_optimiser(adder_circuit):
+    db = PandoraDB(DSN)
+    await db.connect()
 
-    conn = get_connection(config_file_path=FILEPATH)
-    reset_pandora(connection=conn, quantum_circuit=adder_circuit)
+    try:
+        pandora_optimizer = PandoraOptimiser(
+            db=db,
+            pass_count=int(2e9),
+            timeout=1,
+            logger_id=1,
+        )
 
-    """
-        Single-qubit gate cancellations
-    """
+        repo = GateRepository(db)
+        service = PandoraService(db=db,
+                                 repo=repo)
 
-    H = PandoraGateTranslator.HPowGate.value
-    Z = PandoraGateTranslator._PauliZ.value
-    X = PandoraGateTranslator._PauliX.value
-    CX = PandoraGateTranslator.CXPowGate.value
-    T = PandoraGateTranslator.T.value
-    T_dag = PandoraGateTranslator.T_dag.value
-    S = PandoraGateTranslator.S.value
-    S_dag = PandoraGateTranslator.S_dag.value
-    Z_rot = PandoraGateTranslator.ZPowGate.value
+        await service.build_circuit(
+            circuit=adder_circuit
+        )
 
-    # cancelling Hadamards
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(H, H), gate_params=(0, 0), dedicated_nproc=1)
+        H = PandoraGateTranslator.HPowGate
+        Z = PandoraGateTranslator._PauliZ
+        X = PandoraGateTranslator._PauliX
+        CX = PandoraGateTranslator.CXPowGate
+        T = PandoraGateTranslator.T
+        T_dag = PandoraGateTranslator.T_dag
+        S = PandoraGateTranslator.S
+        S_dag = PandoraGateTranslator.S_dag
 
-    # cancelling Z gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(Z, Z), gate_params=(0, 0), dedicated_nproc=1)
+        pandora_optimizer.cancel_single_qubit_gates(
+            gate_types=(H, H),
+            gate_params=(0, 0),
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.cancel_single_qubit_gates(
+            gate_types=(Z, Z),
+            gate_params=(0, 0),
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.cancel_single_qubit_gates(
+            gate_types=(T, T_dag),
+            gate_params=(0, 0),
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.cancel_single_qubit_gates(
+            gate_types=(T_dag, T),
+            gate_params=(0, 0),
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.cancel_single_qubit_gates(
+            gate_types=(S, S_dag),
+            gate_params=(0, 0),
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.cancel_single_qubit_gates(
+            gate_types=(S_dag, S),
+            gate_params=(0, 0),
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.cancel_single_qubit_gates(
+            gate_types=(X, X),
+            gate_params=(0, 0),
+            dedicated_nproc=1,
+        )
 
-    # cancelling T+T† gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(T, T_dag), gate_params=(0, 0),
-                                                dedicated_nproc=1)
-    # cancelling T†+T gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(T_dag, T), gate_params=(0, 0),
-                                                dedicated_nproc=1)
+        pandora_optimizer.cancel_two_qubit_gates(
+            gate_types=(CX, CX),
+            gate_param=0,
+            dedicated_nproc=1,
+        )
 
-    # cancelling S+S† gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(S, S_dag), gate_params=(0, 0),
-                                                dedicated_nproc=1)
-    # cancelling S†+S gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(S_dag, S), gate_params=(0, 0),
-                                                dedicated_nproc=1)
+        pandora_optimizer.fuse_single_qubit_gates(
+            gate_types=(T, T, S),
+            gate_params=(0, 0, 0),
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.fuse_single_qubit_gates(
+            gate_types=(T_dag, T_dag, S_dag),
+            gate_params=(0, 0, 0),
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.fuse_single_qubit_gates(
+            gate_types=(S, S, Z),
+            gate_params=(0, 0, 0),
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.fuse_single_qubit_gates(
+            gate_types=(S_dag, S_dag, Z),
+            gate_params=(0, 0, 0),
+            dedicated_nproc=1,
+        )
 
-    # cancelling X gates
-    pandora_optimizer.cancel_single_qubit_gates(gate_types=(X, X), gate_params=(0, 0), dedicated_nproc=1)
+        pandora_optimizer.commute_rotation_with_control_left(
+            gate_type=Z,
+            gate_param=0,
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.commute_rotation_with_control_left(
+            gate_type=S,
+            gate_param=0,
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.commute_rotation_with_control_left(
+            gate_type=S_dag,
+            gate_param=0,
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.commute_rotation_with_control_left(
+            gate_type=T,
+            gate_param=0,
+            dedicated_nproc=1,
+        )
+        pandora_optimizer.commute_rotation_with_control_left(
+            gate_type=T_dag,
+            gate_param=0,
+            dedicated_nproc=1,
+        )
 
-    """
-        Two-qubit gate cancellations
-    """
+        pandora_optimizer.hhcxhh_to_cx(dedicated_nproc=1)
+        pandora_optimizer.log()
 
-    # cancelling CX gates
-    pandora_optimizer.cancel_two_qubit_gates(gate_types=(CX, CX), gate_param=0, dedicated_nproc=1)
+        await pandora_optimizer.start()
+        await pandora_optimizer.generate_csv(logger_id=1)
 
-    """
-        Fusing gates
-    """
+        return await service.load_circuit(circuit_type='qiskit')
 
-    # TT = S
-    pandora_optimizer.fuse_single_qubit_gates(gate_types=(T, T, S), gate_params=(0, 0, 0),
-                                              dedicated_nproc=1)
-    # T†T† = S†
-    pandora_optimizer.fuse_single_qubit_gates(gate_types=(T_dag, T_dag, S_dag), gate_params=(0, 0, 0),
-                                              dedicated_nproc=1)
-    # SS = Z
-    pandora_optimizer.fuse_single_qubit_gates(gate_types=(S, S, Z), gate_params=(0, 0, 0),
-                                              dedicated_nproc=1)
-    # S†S† = Z
-    pandora_optimizer.fuse_single_qubit_gates(gate_types=(S_dag, S_dag, Z), gate_params=(0, 0, 0),
-                                              dedicated_nproc=1)
-    """
-        Commuting Z-rotations to the left
-    """
-
-    # commute Z to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=Z, gate_param=0, dedicated_nproc=1)
-
-    # commute S to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=S, gate_param=0, dedicated_nproc=1)
-
-    # # commute S† to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=S_dag, gate_param=0, dedicated_nproc=1)
-
-    # commute T to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=T, gate_param=0, dedicated_nproc=1)
-
-    # # commute T† to the left
-    pandora_optimizer.commute_rotation_with_control_left(gate_type=T_dag, gate_param=0, dedicated_nproc=1)
-
-    """
-        Reversing CNOTs
-    """
-    pandora_optimizer.hhcxhh_to_cx(dedicated_nproc=1)
-
-    """
-        Start
-    """
-    pandora_optimizer.start(config_file_path=FILEPATH)
+    finally:
+        await db.close()
 
 
+async def main():
+    adder_circuit = get_adder(n_bits=1)
+    adder_circuit = replace_all_toffolis_qiskit(adder_circuit, case=0)
+    print("Before:")
+    print(adder_circuit)
+    extracted_circuit = await run_optimiser(adder_circuit)
+    print("After:")
+    print(extracted_circuit)
 
-def extract():
-    connection = get_connection()
+    adder_circuit = get_adder(n_bits=1)
+    adder_circuit = replace_all_toffolis_qiskit(adder_circuit, case=1)
+    print("Before:")
+    print(adder_circuit)
+    extracted_circuit = await run_optimiser(adder_circuit)
+    print("After:")
+    print(extracted_circuit)
 
-    sql = f"select * from linked_circuit where label='q'"
-
-    cursor = connection.cursor()
-    cursor.execute(sql, )
-    tuples: list[tuple] = cursor.fetchall()
-    pandora_gates: list[PandoraGate] = [PandoraGate(*tup) for tup in tuples]
-
-    extracted_circuit = pandora_to_circuit(pandora_gates=pandora_gates,
-                                           circuit_type='qiskit')
-    extracted_circuit = remove_io_gates(extracted_circuit)
-    
-    return extracted_circuit
-    
+    assert len(extracted_circuit.data) == 6  # I/O gates
 
 
 if __name__ == "__main__":
-    FILEPATH = sys.argv[1]
-
-    ## CASE 0
-    adder_circuit = get_adder(n_bits=1)
-    adder_circuit = replace_all_toffolis_qiskit(adder_circuit, case=0)
-    print('Before:')
-    print(adder_circuit)
-    run_optimiser(FILEPATH)
-    extracted_circuit = extract()
-    print("After: ")
-    print(extracted_circuit)
-    
-    ## CASE 1    
-    adder_circuit = get_adder(n_bits=1)
-    adder_circuit = replace_all_toffolis_qiskit(adder_circuit, case=1)    
-    print('Before:')
-    print(adder_circuit)
-    run_optimiser(FILEPATH)
-    extracted_circuit = extract()
-    print("After: ")
-    print(extracted_circuit)
-    
-    assert len(extracted_circuit.data) == 0
+    asyncio.run(main())

@@ -1,48 +1,88 @@
+import asyncio
+import logging
 import sys
-import os
 
-from pandora import PandoraConfig, Pandora
+from pandora.db.core import PandoraDB
+from pandora.db.repository import GateRepository
+from pandora.db.service import PandoraService
 
-if __name__ == "__main__":
+DSN = "postgresql://moflici1:1234@localhost:5432/postgres"
+
+
+async def run_fh(N: int, nproc: int, CONTAINER_ID):
+    print(f"Starting FH {N}x{N} with {nproc} processes.")
+
+    # async DB setup (schema only)
+    db = PandoraDB(DSN)
+    await db.connect()
+
+    repo = GateRepository(db)
+    service = PandoraService(db=db, repo=repo)
+
+    await service.build_pandora()
+
+    service.parallel_decompose(
+        nprocs=nproc,
+        container_id=CONTAINER_ID,
+        n_containers=1,
+        N=N,
+        window_size=10000,
+    )
+
+    await db.close()
+
+
+async def run_rsa(BIG_N: int, nproc: int, container_id: int):
+    print(f"Starting RSA with {nproc} processes.")
+
+    db = PandoraDB(DSN)
+    await db.connect()
+
+    repo = GateRepository(db)
+    service = PandoraService(db=db, repo=repo)
+
+    await service.build_pandora()
+
+    await db.close()
+
+    service.parallel_decompose(
+        nprocs=nproc,
+        N=BIG_N,
+        container_id=container_id,
+        n_containers=1,
+        window_size=10000,
+    )
+
+
+async def main():
+    logging.basicConfig()
+    logger = logging.getLogger("pandora")
+    logger.setLevel(logging.INFO)
 
     if len(sys.argv) == 1:
-        sys.exit(0)
+        return
 
     next_arg = 1
 
-    config = PandoraConfig()
-    if len(sys.argv) > 1:
-        if sys.argv[1].endswith(".json"):
-            config.update_from_file(sys.argv[1])
-            next_arg = 2
+    cmd = sys.argv[next_arg]
 
-    pandora = Pandora(pandora_config=config,
-                      max_time=3600,
-                      decomposition_window_size=1000000)
-
-    hrl_data_path = os.path.abspath(".")
-
-    # only FH for now
-    if sys.argv[next_arg] == "fh":
+    if cmd == "fh":
         N = int(sys.argv[next_arg + 1])
         NPROC = int(sys.argv[next_arg + 2])
-        print(f"Starting FH {N}x{N} with {NPROC} processes.")
-        abs_path = os.path.abspath(sys.argv[1])
-        pandora.build_circuit_in_parallel(nprocs=NPROC,
-                                          N=N,
-                                          config_file_path=abs_path,
-                                          window_size=10000)
-    elif sys.argv[next_arg] == 'rsa':
+        CONTAINER_ID = int(sys.argv[next_arg + 3])
+
+        await run_fh(N, NPROC, CONTAINER_ID)
+
+    elif cmd == "rsa":
         BIG_N = int(sys.argv[next_arg + 1])
         NPROC = int(sys.argv[next_arg + 2])
         CONTAINER_ID = int(sys.argv[next_arg + 3])
-        print(f"Starting RSA with {NPROC} processes.")
-        # abs_path = os.path.abspath(sys.argv[1])
-        abs_path = None
-        n_containers = 1
-        pandora.build_circuit_in_parallel(nprocs=NPROC,
-                                          container_id=CONTAINER_ID,
-                                          n_containers=n_containers,
-                                          N=BIG_N,
-                                          config_file_path=abs_path,
-                                          window_size=10000)
+
+        await run_rsa(BIG_N, NPROC, CONTAINER_ID)
+
+    else:
+        raise ValueError(f"Unknown mode: {cmd}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

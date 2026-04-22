@@ -1,3 +1,4 @@
+asyncpg
 qualtran==0.6.1
 psycopg2-binary
 requests
