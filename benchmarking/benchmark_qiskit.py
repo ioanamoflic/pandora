@@ -1,118 +1,185 @@
 import csv
+import random
 import sys
 import time
-import random
 
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import CXGate, HGate
 from qiskit.converters import circuit_to_dag
-from qiskit.dagcircuit import DAGInNode, DAGOpNode
+from qiskit.dagcircuit import DAGOpNode
 
-from benchmark_tket import generate_random_CX_circuit, get_replacement_hhcxhh, \
-    generate_random_HHCXHH_circuit_occasionally_flipped
-
-
-def get_replacement_cx():
-    replacement = QuantumCircuit(2)
-
-    replacement.cx(1, 0)
-
-    dag = circuit_to_dag(replacement)
-
-    return dag
+from benchmark_tket import (
+    generate_random_CX_circuit,
+    generate_random_HHCXHH_circuit_occasionally_flipped,
+    get_replacement_hhcxhh,
+)
 
 
-def get_random_seq_gates_from_circuit(op_nodes, percentage, visited):
+def get_cx_replacement_dag():
+    circuit = QuantumCircuit(2)
+    circuit.cx(1, 0)
+    return circuit_to_dag(circuit)
+
+
+def sample_cx_nodes_in_order(op_nodes, percentage, visited):
     """
-        Assume that the search criteria is randomly true in sample_size of the circuit
-        Get the nodes in sequential order
+    Sample a percentage of CX nodes and yield them in circuit order.
     """
     sample_size = int(len(op_nodes) * (percentage / 100))
-    sample_ind = random.sample(range(len(op_nodes)), k=sample_size)
-    sample_ind.sort()
+    if sample_size == 0:
+        return
 
-    for node_ind in sample_ind:
-        node = op_nodes[node_ind]
-        if node in visited.keys() and visited[node] is False and isinstance(node.op, CXGate):
-            visited[node] = True
-            yield node
+    sampled_indices = sorted(random.sample(range(len(op_nodes)), k=sample_size))
+
+    for idx in sampled_indices:
+        node = op_nodes[idx]
+        if isinstance(node, DAGOpNode) and isinstance(node.op, CXGate):
+            if visited.get(node) is False:
+                visited[node] = True
+                yield node
 
 
-def is_hhcxhh_template(possibly_cx_node, circuit_dag):
-    if isinstance(possibly_cx_node, DAGOpNode) and isinstance(possibly_cx_node.op, CXGate):
-        pred = list(circuit_dag.predecessors(possibly_cx_node))
-        succ = list(circuit_dag.successors(possibly_cx_node))
+def match_hhcxhh_template(cx_node, dag):
+    """
+    Check whether a CX node is surrounded by four H gates in the HH-CX-HH pattern.
+    Returns the matching predecessor/successor H nodes if found.
+    """
+    if not isinstance(cx_node, DAGOpNode) or not isinstance(cx_node.op, CXGate):
+        return None
 
-        if len(pred) < 2 or len(succ) < 2:
-            return None
+    preds = list(dag.predecessors(cx_node))
+    succs = list(dag.successors(cx_node))
 
-        if isinstance(pred[0], DAGOpNode) and isinstance(pred[1], DAGOpNode) \
-                and isinstance(succ[0], DAGOpNode) and isinstance(succ[1], DAGOpNode) \
-                and isinstance(pred[0].op, HGate) and isinstance(pred[1].op, HGate) \
-                and isinstance(succ[0].op, HGate) and isinstance(succ[1].op, HGate):
-            return pred[0], pred[1], succ[0], succ[1]
+    if len(preds) < 2 or len(succs) < 2:
+        return None
+
+    if all(isinstance(n, DAGOpNode) for n in preds[:2] + succs[:2]) and \
+       all(isinstance(n.op, HGate) for n in preds[:2] + succs[:2]):
+        return preds[0], preds[1], succs[0], succs[1]
 
     return None
 
 
-def rewrite_hhcxhh(qc_dag, predecessors, replacement):
-    (h1, h2, h3, h4) = predecessors
-    qc_dag.remove_op_node(h1)
-    qc_dag.remove_op_node(h2)
-    qc_dag.remove_op_node(h3)
-    qc_dag.remove_op_node(h4)
+def rewrite_hhcxhh_to_cx(dag, cx_node, h_nodes, replacement_dag):
+    """
+    Remove the four surrounding H gates and replace the CX node with the replacement DAG.
+    """
+    h1, h2, h3, h4 = h_nodes
+    dag.remove_op_node(h1)
+    dag.remove_op_node(h2)
+    dag.remove_op_node(h3)
+    dag.remove_op_node(h4)
+    dag.substitute_node_with_dag(cx_node, replacement_dag)
 
-    qc_dag.substitute_node_with_dag(node, replacement)
+
+def run_cx_to_hhcxhh_pass(dag, sample_percentage):
+    """
+    Randomly replace a sample of CX gates with HH-CX-HH.
+    """
+    op_nodes = dag.op_nodes()
+    visited = {node: False for node in op_nodes}
+    replacement_dag = get_replacement_hhcxhh()
+
+    for node in sample_cx_nodes_in_order(op_nodes, sample_percentage, visited):
+        dag.substitute_node_with_dag(node, replacement_dag)
 
 
-"""
-  Benchmarking Qiskit
-"""
+def run_hhcxhh_to_cx_pass(dag):
+    """
+    Replace every HH-CX-HH template with a reversed CX.
+    """
+    replacement_dag = get_cx_replacement_dag()
 
-if __name__ == "__main__":
-    DIR = int(sys.argv[1])
+    for node in list(dag.op_nodes()):
+        match = match_hhcxhh_template(node, dag)
+        if match is not None:
+            rewrite_hhcxhh_to_cx(dag, node, match, replacement_dag)
+
+
+def generate_benchmark_circuit(direction, n_templates, n_qubits, sample_percentage):
+    """
+    direction == 0: start from CX-only circuit
+    direction != 0: start from HH-CX-HH circuit with occasional flips
+    """
+    if direction == 0:
+        _, circuit = generate_random_CX_circuit(
+            n_templates=n_templates,
+            n_qubits=n_qubits,
+        )
+    else:
+        _, circuit = generate_random_HHCXHH_circuit_occasionally_flipped(
+            n_templates=n_templates,
+            n_qubits=n_qubits,
+            proba=sample_percentage / 100,
+        )
+
+    return circuit
+
+
+def benchmark_rewrite(direction, n_templates, n_qubits, nr_passes, sample_percentage):
+    circuit = generate_benchmark_circuit(
+        direction=direction,
+        n_templates=n_templates,
+        n_qubits=n_qubits,
+        sample_percentage=sample_percentage,
+    )
+
+    dag = circuit_to_dag(circuit)
+    rewrite_times = []
+
+    for _ in range(nr_passes):
+        start = time.time()
+
+        if direction == 0:
+            run_cx_to_hhcxhh_pass(dag, sample_percentage)
+        else:
+            run_hhcxhh_to_cx_pass(dag)
+
+        rewrite_times.append(time.time() - start)
+
+    return sum(rewrite_times)
+
+
+def append_result(csv_path, n_templates, total_time, sample_percentage):
+    with open(csv_path, "a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow((n_templates, total_time, sample_percentage))
+
+
+def main():
+    if len(sys.argv) != 2:
+        sys.exit(0)
+
+    direction = int(sys.argv[1])
 
     nr_passes = 1
-    sample_percentage = 10
+    sample_percentage = 0.1
+    n_qubits = 50
+    out_file = f"qiskit_template_search_random_flip_{sample_percentage}.csv"
 
-    for nq in range(10000, 100001, 10000):
-        print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
+    for n_templates in range(10_000, 100_001, 10_000):
+        print(
+            f"Number of templates: {n_templates} "
+            f"for {nr_passes} passes and {sample_percentage} probability"
+        )
 
-        if DIR == 0:
-            _, qc = generate_random_CX_circuit(n_templates=nq, n_qubits=50)
-        else:
-            _, qc = generate_random_HHCXHH_circuit_occasionally_flipped(n_templates=nq,
-                                                                        n_qubits=50,
-                                                                        proba=sample_percentage / 100)
+        total_rewrite_time = benchmark_rewrite(
+            direction=direction,
+            n_templates=n_templates,
+            n_qubits=n_qubits,
+            nr_passes=nr_passes,
+            sample_percentage=sample_percentage,
+        )
 
-        qc_dag = circuit_to_dag(qc)
-        op_nodes = qc_dag.op_nodes()
-        op_nodes_length = len(op_nodes)
+        print("Time to rewrite:", total_rewrite_time, flush=True)
 
-        rewrite_times = []
-        for pass_i in range(nr_passes):
-            t1 = time.time()
+        append_result(
+            csv_path=out_file,
+            n_templates=n_templates,
+            total_time=total_rewrite_time,
+            sample_percentage=sample_percentage,
+        )
 
-            if DIR == 0:
-                visit_dict = dict(zip(op_nodes, [False] * len(op_nodes)))
-                replacement = get_replacement_hhcxhh()
-                for node in get_random_seq_gates_from_circuit(qc_dag.op_nodes(), sample_percentage, visit_dict):
-                    qc_dag.substitute_node_with_dag(node, replacement)
-            else:
-                replacement_2 = get_replacement_cx()
-                for node in op_nodes:
-                    ret = is_hhcxhh_template(node, qc_dag)
-                    if ret:
-                        rewrite_hhcxhh(qc_dag, ret, replacement_2)
 
-            t2 = time.time()
-
-            rewrite_times.append(t2 - t1)
-
-        total_rewrite = sum(rewrite_times)
-
-        print('Time to rewrite:', total_rewrite, flush=True)
-
-        with open(f'qiskit_template_search_random_flip_{sample_percentage}.csv', 'a') as f:
-            writer = csv.writer(f)
-            writer.writerow((nq, total_rewrite, sample_percentage))
+if __name__ == "__main__":
+    main()

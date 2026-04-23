@@ -1,215 +1,227 @@
-from multiprocessing import Pool
+import asyncio
+import csv
+import random
+import sys
+import time
 
 import qiskit.qasm3
 from mqt.qcec import verify
-
+from mqt.qcec.pyqcec import EquivalenceCriterion
 from qiskit import QuantumCircuit
 
-from pandora.connection_pool_util import init_worker, map_procedure_call
-from pandora.connection_util import *
+from pandora.db.core import PandoraDB
+from pandora.db.repository import GateRepository
+from pandora.db.service import PandoraService
+from pandora.optimisation.optimiser import PandoraOptimiser
+from pandora.translation.translator import PandoraGateTranslator
 
-import random
-
-from pandora.qiskit_to_pandora_util import convert_qiskit_to_pandora
-
-
-def reset_pandora(connection, quantum_circuit):
-    drop_and_replace_tables(connection=connection, clean=True)
-    refresh_all_stored_procedures(connection=connection)
-
-    db_tuples, _ = convert_qiskit_to_pandora(qiskit_circuit=quantum_circuit,
-                                             add_margins=True,
-                                             label='q')
-
-    insert_in_batches(pandora_gates=db_tuples,
-                      connection=connection,
-                      table_name='linked_circuit',
-                      reset_id=False)
-
-    reset_database_id(connection=connection,
-                      table_name='linked_circuit',
-                      large_buffer_value=10000000)
+DSN = "postgresql://moflici1:1234@localhost:5432/postgres"
 
 
-def generate_random_cnot_circuit(num_qubits=2, num_gates=8):
+def generate_random_cnot_circuit(num_qubits: int = 2, num_gates: int = 8) -> QuantumCircuit:
     if num_qubits < 2:
-        print("Warning: num_qubits must be at least 2 for a CNOT gate. Setting to 2.")
         num_qubits = 2
 
-    qc = QuantumCircuit(num_qubits, num_qubits)
+    circuit = QuantumCircuit(num_qubits, num_qubits)
 
     for _ in range(num_gates):
-        control_qubit = random.randint(0, num_qubits - 1)
-        target_qubit = control_qubit
-        while target_qubit == control_qubit:
-            target_qubit = random.randint(0, num_qubits - 1)
+        control = random.randint(0, num_qubits - 1)
+        target = control
+        while target == control:
+            target = random.randint(0, num_qubits - 1)
 
-        qc.cx(control_qubit, target_qubit)
+        circuit.cx(control, target)
 
-    return qc
+    return circuit
 
 
 def remove_random_gate(circuit: QuantumCircuit) -> QuantumCircuit:
     if not circuit.data:
-        print("Circuit has no gates to remove.")
-        return circuit
+        return circuit.copy()
 
-    gate_index_to_remove = random.randint(0, len(circuit.data) - 1)
-    new_qc = QuantumCircuit(circuit.num_qubits, circuit.num_clbits)
+    remove_index = random.randint(0, len(circuit.data) - 1)
+    new_circuit = QuantumCircuit(circuit.num_qubits, circuit.num_clbits)
 
     for i, instruction in enumerate(circuit.data):
-        if i != gate_index_to_remove:
-            new_qc.append(instruction.operation, instruction.qubits, instruction.clbits)
+        if i == remove_index:
+            continue
+        new_circuit.append(instruction.operation, instruction.qubits, instruction.clbits)
 
-    return new_qc
+    return new_circuit
 
 
-def pandora_verify(connection,
-                   process_pool,
-                   nprocs,
-                   circ1: QuantumCircuit,
-                   circ2: QuantumCircuit,
-                   timeout_sec):
+def save_qasm(circuit: QuantumCircuit, path: str) -> None:
+    with open(path, "w") as f:
+        qiskit.qasm3.dump(circuit, f)
+
+
+def load_benchmark_circuits(num_qubits: int, run_idx: int, is_equiv: int) -> tuple[QuantumCircuit, QuantumCircuit]:
+    circ1 = qiskit.qasm3.load(f"circ1_{num_qubits}_{run_idx}_{is_equiv}.qasm")
+    if is_equiv == 0:
+        circ2 = circ1.copy()
+    else:
+        circ2 = qiskit.qasm3.load(f"circ2_{num_qubits}_{run_idx}_{is_equiv}.qasm")
+    return circ1, circ2
+
+
+def build_benchmark_circuits(num_qubits: int, run_idx: int, is_equiv: int) -> tuple[QuantumCircuit, QuantumCircuit]:
+    circ1 = generate_random_cnot_circuit(num_qubits, num_qubits ** 3)
+    save_qasm(circ1, f"circ1_{num_qubits}_{run_idx}_{is_equiv}.qasm")
+
+    if is_equiv == 0:
+        circ2 = circ1.copy()
+    else:
+        circ2 = remove_random_gate(circ1)
+        save_qasm(circ2, f"circ2_{num_qubits}_{run_idx}_{is_equiv}.qasm")
+
+    return circ1, circ2
+
+
+async def pandora_verify(
+        config_file_path: str,
+        nprocs: int,
+        circ1: QuantumCircuit,
+        circ2: QuantumCircuit,
+        timeout_sec: int,
+) -> bool:
     concatenated = circ1.compose(circ2.inverse())
-    nr_cnots = concatenated.count_ops()['cx'] // 2
-    print(nr_cnots)
+    cx_gate = PandoraGateTranslator.CXPowGate
 
-    reset_pandora(connection=conn, quantum_circuit=concatenated)
+    db = PandoraDB(config_file_path)
+    await db.connect()
 
-    CX = PandoraGateTranslator.CXPowGate.value
+    try:
+        repo = GateRepository(db)
+        service = PandoraService(db=db,
+                                 repo=repo)
 
-    proc_calls = []
-    for proc_id in range(nprocs):
-        proc_calls.append(
-            f"call cancel_two_qubit_equiv({CX}, {CX}, {concatenated.num_qubits}, {timeout_sec})")
+        optimiser = PandoraOptimiser(
+            db=db,
+            pass_count=int(2e9),
+            timeout=timeout_sec,
+            logger_id=1,
+        )
 
-    process_pool.map(map_procedure_call, proc_calls)
+        await service.build_circuit(circuit=concatenated)
 
-    # for now ignore this! have to deal with the links separately
-    gate_count = extract_cirq_circuit(connection=connection,
-                                      table_name='linked_circuit',
-                                      circuit_label=None,
-                                      is_test=False,
-                                      remove_io_gates=True,
-                                      just_count=True)
-    is_equivalent = False
-    if gate_count == 2 * concatenated.num_qubits:
-        is_equivalent = True
+        optimiser.cancel_two_qubit_gates_equiv(
+            gate_types=(cx_gate, cx_gate),
+            num_qubits=concatenated.num_qubits,
+            dedicated_nproc=nprocs,
+        )
 
-    return is_equivalent
+        await optimiser.start()
+
+        reduced_circuit = await service.load_circuit(circuit_type="qiskit")
+        gate_count = len(reduced_circuit.data)
+
+        return gate_count == 2 * concatenated.num_qubits
+
+    finally:
+        await db.close()
 
 
-def create_pool(n_workers, config_file_path):
-    return Pool(processes=n_workers, initializer=init_worker, initargs=(config_file_path,))
+def mqt_verify(circ1: QuantumCircuit, circ2: QuantumCircuit, timeout_sec: int) -> tuple[
+    EquivalenceCriterion, float, float]:
+    start = time.time()
+    result = verify(
+        circ1,
+        circ2,
+        timeout=timeout_sec,
+        run_simulation_checker=False,
+        run_alternating_checker=False,
+    )
+    wall_time = time.time() - start
+    return result.equivalence, wall_time, result.check_time
 
 
-def close_pool(proc_pool):
-    proc_pool.close()
-    proc_pool.join()
+async def run_pandora_benchmark(
+        config_file_path: str,
+        num_qubits: int,
+        run_idx: int,
+        is_equiv: int,
+        nprocs: int,
+        timeout_sec: int,
+) -> tuple[bool, float, float]:
+    circ1, circ2 = build_benchmark_circuits(num_qubits, run_idx, is_equiv)
+
+    start = time.time()
+    equiv = await pandora_verify(
+        nprocs=nprocs,
+        circ1=circ1,
+        circ2=circ2,
+        timeout_sec=timeout_sec,
+        config_file_path=config_file_path
+    )
+    wall_time = time.time() - start
+
+    return equiv, wall_time, 0.0
+
+
+def run_mqt_benchmark(
+        num_qubits: int,
+        run_idx: int,
+        is_equiv: int,
+        timeout_sec: int,
+) -> tuple[EquivalenceCriterion, float, float]:
+    circ1, circ2 = load_benchmark_circuits(num_qubits, run_idx, is_equiv)
+    return mqt_verify(circ1, circ2, timeout_sec)
+
+
+async def main():
+    if len(sys.argv) != 4:
+        sys.exit(0)
+
+    config_file_path = sys.argv[1]
+    is_equiv = int(sys.argv[2])
+    backend = sys.argv[3]
+
+    timeout_sec = 1000
+    nprocs = 24
+    nr_runs = 10
+    results = []
+
+    for num_qubits in range(32, 33, 2):
+        total_time = 0.0
+
+        for run_idx in range(nr_runs):
+            correctness = "correct" if is_equiv == 0 else "incorrect"
+            print(num_qubits, run_idx, correctness)
+
+            if backend == "pandora":
+                equiv, wall_time, backend_check_time = await run_pandora_benchmark(
+                    num_qubits=num_qubits,
+                    run_idx=run_idx,
+                    is_equiv=is_equiv,
+                    nprocs=nprocs,
+                    timeout_sec=timeout_sec,
+                    config_file_path=config_file_path,
+                )
+                print("Pandora time:", wall_time)
+                print("Equiv:", equiv)
+
+            else:
+                equiv, wall_time, backend_check_time = run_mqt_benchmark(
+                    num_qubits=num_qubits,
+                    run_idx=run_idx,
+                    is_equiv=is_equiv,
+                    timeout_sec=timeout_sec,
+                )
+                print("MQT time:", wall_time)
+                print("Equiv:", equiv)
+
+            total_time += wall_time
+            results.append(
+                (num_qubits, run_idx, equiv, wall_time, backend_check_time, backend)
+            )
+
+        print("-----", total_time / nr_runs)
+
+    out_path = f"{backend}_{is_equiv}_verification.csv"
+    with open(out_path, "a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerows(results)
 
 
 if __name__ == "__main__":
-    # watch "psql -p 5432 postgres -c \"select count(*) from linked_circuit;\""
-
-    # set timeout for MQT/Pandora
-    timeout = 1000
-    NPROCS = 24
-    FILENAME = None
-    EQUIV = 0
-    BENCH = None
-    conn = None
-    pool = None
-
-    if len(sys.argv) != 4:
-        sys.exit(0)
-    elif len(sys.argv) == 4:
-        FILENAME = sys.argv[1]
-        EQUIV = int(sys.argv[2])
-        BENCH = sys.argv[3]
-
-    if BENCH == 'pandora':
-        conn = get_connection(config_file_path=FILENAME)
-        print(f"Running config file {FILENAME}")
-
-    times = []
-
-    if BENCH == 'pandora':
-        pool = create_pool(n_workers=NPROCS, config_file_path=FILENAME)
-        # Warmup
-        pool.map(print, ".")
-
-    for q in range(32, 33, 2):
-        total = 0
-        nr_runs = 10
-
-        for i in range(nr_runs):
-            if EQUIV == 0:
-                print(q, i, "correct")
-            else:
-                print(q, i, "incorrect")
-
-            mqt_check_time = 0
-
-            if BENCH == 'pandora':
-                circ1 = generate_random_cnot_circuit(q, q ** 3)
-                with open(f"circ1_{q}_{i}_{EQUIV}.qasm", "w") as f:
-                    qiskit.qasm3.dump(circ1, f)
-
-                if EQUIV == 0:
-                    circ2 = circ1.copy()
-                else:
-                    circ2 = remove_random_gate(circ1)
-                    with open(f"circ2_{q}_{i}_{EQUIV}.qasm", "w") as f:
-                        qiskit.qasm3.dump(circ2, f)
-
-                start_time_pandora = time.time()
-                equiv = pandora_verify(connection=conn,
-                                       circ1=circ1,
-                                       circ2=circ2,
-                                       process_pool=pool,
-                                       nprocs=NPROCS,
-                                       timeout_sec=timeout)
-                check_time = time.time() - start_time_pandora
-                print('Pandora time: ', check_time)
-                print('Equiv: ', equiv)
-
-            else:
-                circ1 = qiskit.qasm3.load(f"circ1_{q}_{i}_{EQUIV}.qasm")
-                if EQUIV == 0:
-                    circ2 = circ1.copy()
-                else:
-                    circ2 = qiskit.qasm3.load(f"circ2_{q}_{i}_{EQUIV}.qasm")
-
-                # benchmark ZX
-                # run_simulation_checker = False
-                # run_alternating_checker = False
-
-                # benchmark DD
-                # run_simulation_checker=False
-                # run_zx_checker=False
-
-                st_time_mqt = time.time()
-                result = verify(circ1, circ2,
-                                timeout=timeout,
-                                run_simulation_checker=False,
-                                run_alternating_checker=False)
-
-                check_time = time.time() - st_time_mqt
-                mqt_check_time = result.check_time
-                equiv = result.equivalence
-                print('MQT time: ', check_time)
-                print(result.equivalence)
-
-            total = total + check_time
-            times.append((q, i, equiv, check_time, mqt_check_time, BENCH))
-
-        print("----- ", total / nr_runs)
-
-    with open(f'{BENCH}_{EQUIV}_verification.csv', 'a') as f:
-        writer = csv.writer(f)
-        for row in times:
-            writer.writerow(row)
-
-    if BENCH == 'pandora':
-        close_pool(pool)
-        conn.close()
+    asyncio.run(main())

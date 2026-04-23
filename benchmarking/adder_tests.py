@@ -5,8 +5,7 @@ from qiskit import QuantumCircuit
 from benchmarking.benchmark_adders import get_adder, decompose_toffoli_qiskit
 from pandora.db.core import PandoraDB
 from pandora.db.repository import GateRepository
-from pandora.db.service import PandoraService
-from pandora.optimisation.multithreaded_optimiser import PandoraOptimiser
+from pandora import PandoraOptimiser, PandoraService
 from pandora.translation.translator import PandoraGateTranslator
 
 DSN = "postgresql://moflici1:1234@localhost:5432/postgres"

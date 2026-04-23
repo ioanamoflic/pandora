@@ -2,57 +2,29 @@ import pytest
 import cirq
 import itertools
 
-from qualtran.bloqs.arithmetic.addition import Add
-from qualtran.bloqs.data_loading import QROM
-from qualtran import QUInt
-
 from benchmarking import cirq_util
-from pandora.translation.circuit_to_dag import (
-    PandoraWindowedBuilder,
-    remove_classically_controlled_ops,
-    remove_measurements
-)
+from pandora.translation.circuit_to_dag import PandoraWindowedBuilder
 from pandora.db.core import PandoraDB
 from pandora.db.repository import GateRepository
 from pandora.db.service import PandoraService
 
-from pandora.translation.translator import In, Out
 from pandora.translation.dag_to_circuit import pandora_to_circuit
-from pandora.qualtran_to_pandora_util import (
-    get_cirq_circuit_for_bloq,
-    assert_circuit_is_pandora_ingestible
+from pandora.util.circuit_util import (
+    get_adder_as_cirq_circuit,
+    remove_io_gates,
+    remove_measurements,
+    remove_classically_controlled_ops
 )
 
 WINDOW_SIZE = 2  # just to be extreme :)
 LABEL = 0
-DSN = "postgresql://moflici1:1234@localhost:5432/postgres"
-
-
-def get_adder_as_cirq_circuit(n_bits) -> cirq.Circuit:
-    """
-    Used of testing.
-    """
-    bloq = Add(QUInt(n_bits))
-    clifford_t_circuit = get_cirq_circuit_for_bloq(bloq)
-    assert_circuit_is_pandora_ingestible(clifford_t_circuit)
-    return clifford_t_circuit
-
-
-def get_qrom_as_cirq_circuit(data) -> cirq.Circuit:
-    """
-    Used of testing.
-    """
-    bloq = QROM.build_from_data(data)
-    qrom_circuit = get_cirq_circuit_for_bloq(bloq)
-    return qrom_circuit
-
-
-def remove_io_gates(circuit: cirq.Circuit) -> cirq.Circuit:
-    return cirq.Circuit(
-        op
-        for op in circuit.all_operations()
-        if not isinstance(op.gate, (In, Out))
-    )
+config_file = {
+    "database": "postgres",
+    "user": "moflici1",
+    "host": "localhost",
+    "port": "5432",
+    "password": "1234"
+}
 
 
 def assert_same_up_to_qubit_permutation(expected: cirq.Circuit, actual: cirq.Circuit):
@@ -131,7 +103,6 @@ def test_random_reconstruction(n_circuits=100):
 
 @pytest.mark.asyncio
 async def test_qualtran_adder_reconstruction():
-
     for n_bits in range(2, 4):
         print(f'Adder test {n_bits}')
 
@@ -143,7 +114,7 @@ async def test_qualtran_adder_reconstruction():
 
         print(full_adder_circuit)
 
-        db = PandoraDB(DSN)
+        db = PandoraDB(config_file)
         await db.connect()
 
         repo = GateRepository(db)

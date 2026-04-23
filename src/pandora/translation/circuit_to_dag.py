@@ -21,21 +21,6 @@ from pandora.translation.gates import PandoraGate
 from pandora.translation.link import LinkID
 
 
-def remove_classically_controlled_ops(circuit: cirq.Circuit) -> cirq.Circuit:
-    return cirq.Circuit(
-        op.without_classical_controls()
-        for op in circuit.all_operations()
-    )
-
-
-def remove_measurements(circuit: cirq.Circuit) -> cirq.Circuit:
-    return cirq.Circuit(
-        op
-        for op in circuit.all_operations()
-        if not isinstance(op.gate, (cirq.MeasurementGate, cirq.ResetChannel))
-    )
-
-
 class PandoraWindowedBuilder:
     """
     Single builder that supports:

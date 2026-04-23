@@ -26,12 +26,7 @@ class GateRepository:
             await conn.copy_records_to_table(
                 self.table,
                 records=records,
-                columns=[
-                    "id", "prev_q1", "prev_q2", "prev_q3",
-                    "type", "param", "global_shift", "switch",
-                    "next_q1", "next_q2", "next_q3",
-                    "visited", "label", "cl_ctrl", "meas_key"
-                ],
+                columns=self.columns,
             )
 
     async def fetch_all(self) -> List[PandoraGate]:

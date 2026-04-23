@@ -1,4 +1,5 @@
 # Import the Pandora class
+from .db.core import PandoraDB
 from .db.service import PandoraService
 from .db.repository import GateRepository
-from .optimisation.multithreaded_optimiser import PandoraOptimiser
+from .optimisation.optimiser import PandoraOptimiser

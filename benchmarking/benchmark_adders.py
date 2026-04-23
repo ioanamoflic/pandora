@@ -1,6 +1,8 @@
 import asyncio
 
 import re
+import sys
+
 from qiskit import QuantumCircuit
 
 from pandora.db.core import PandoraDB
@@ -120,13 +122,13 @@ def replace_all_toffolis_qiskit(qc):
     return new_qc
 
 
-async def main():
+async def main(config):
 
     for n_bits in [16, 32, 64, 128, 256, 512, 1024, 2048]:
         adder_circuit = get_adder(n_bits=n_bits)
         adder_circuit = replace_all_toffolis_qiskit(adder_circuit)
 
-        db = PandoraDB(DSN)
+        db = PandoraDB(config)
         await db.connect()
 
         try:
@@ -255,4 +257,9 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    if len(sys.argv) != 2:
+        sys.exit(0)
+
+    config_file_path = sys.argv[1]
+    asyncio.run(main(config_file_path))
+

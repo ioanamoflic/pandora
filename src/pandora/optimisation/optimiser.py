@@ -157,6 +157,24 @@ class PandoraOptimiser:
             )
             self._call_thread_proc(stored_procedure)
 
+    def cancel_two_qubit_gates_equiv(
+        self,
+        gate_types: tuple[PandoraGateTranslator, PandoraGateTranslator],
+        dedicated_nproc: int | None = None,
+        num_qubits: int | None = None,
+    ) -> None:
+        type_left, type_right = gate_types
+
+        for _ in range(dedicated_nproc or 0):
+            stored_procedure = (
+                f"call cancel_two_qubit_equiv("
+                f"{type_left.value}, "
+                f"{type_right.value}, "
+                f"{num_qubits}, "
+                f"{self.timeout})"
+            )
+            self._call_thread_proc(stored_procedure)
+
     def hhcxhh_to_cx(self, dedicated_nproc: int | None = None) -> None:
         for _ in range(dedicated_nproc or 0):
             stored_procedure = (
