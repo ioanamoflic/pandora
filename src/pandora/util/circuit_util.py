@@ -4,7 +4,7 @@ from qualtran.bloqs.arithmetic.addition import Add
 from qualtran.bloqs.data_loading import QROM
 from qualtran import QUInt
 
-from pandora.qualtran_to_pandora_util import (
+from pandora.util.qualtran_util import (
     get_cirq_circuit_for_bloq,
     assert_circuit_is_pandora_ingestible
 )

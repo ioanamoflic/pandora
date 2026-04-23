@@ -150,11 +150,6 @@ class PandoraGate:
             return base + (self.qubit_name,)
         return base
 
-    def insert_sql(self, table_name: str):
-        cols = list(asdict(self).keys())
-        placeholders = ", ".join(["%s"] * len(cols))
-        return f"INSERT INTO {table_name} ({', '.join(cols)}) VALUES ({placeholders})"
-
     def __repr__(self):
         return (
             f"PandoraGate(id={self.id}, type={self.type}, "

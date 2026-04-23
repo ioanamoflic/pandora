@@ -12,7 +12,6 @@ DSN = "postgresql://moflici1:1234@localhost:5432/postgres"
 async def run_fh(N: int, nproc: int, CONTAINER_ID):
     print(f"Starting FH {N}x{N} with {nproc} processes.")
 
-    # async DB setup (schema only)
     db = PandoraDB(DSN)
     await db.connect()
 

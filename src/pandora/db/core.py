@@ -9,9 +9,9 @@ class PandoraDB:
         self.pool: Optional[asyncpg.Pool] = None
 
         if isinstance(config, str):
-            self.dsn = self.dsn_from_json(config)
+            self.dsn = self._dsn_from_json(config)
         else:
-            self.dsn = self.dsn_from_dict(config)
+            self.dsn = self._dsn_from_dict(config)
 
     async def connect(self):
         self.pool = await asyncpg.create_pool(
@@ -30,16 +30,16 @@ class PandoraDB:
         """
         return self.pool.acquire()
 
-    def dsn_from_json(self, config_file_path):
+    def _dsn_from_json(self, config_file_path):
         import json
 
         with open(config_file_path, "r") as f:
             data = json.load(f)
 
-        return self.dsn_from_dict(data)
+        return self._dsn_from_dict(data)
 
     @staticmethod
-    def dsn_from_dict(data):
+    def _dsn_from_dict(data):
         return (
             f"postgresql://{data['user']}:{data['password']}"
             f"@{data.get('host', 'localhost')}:{data.get('port', 5432)}"

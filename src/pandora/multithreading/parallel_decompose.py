@@ -6,7 +6,7 @@ from pandora.db.repository import GateRepository
 from pandora.translation.circuit_to_dag import PandoraWindowedBuilder
 from pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
 
-from pandora.qualtran_to_pandora_util import get_RSA, generator_get_RSA_compatible_batch
+from pandora.util.qualtran_util import get_RSA, get_RSA_batch
 
 
 def worker_entry(
@@ -65,7 +65,7 @@ async def _worker_main(
             if not (proc_start <= i < proc_end):
                 continue
 
-            for batch, _ in generator_get_RSA_compatible_batch(
+            for batch, _ in get_RSA_batch(
                 circuit=high_level_op,
                 window_size=window_size,
             ):

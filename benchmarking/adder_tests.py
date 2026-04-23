@@ -8,7 +8,13 @@ from pandora.db.repository import GateRepository
 from pandora import PandoraOptimiser, PandoraService
 from pandora.translation.translator import PandoraGateTranslator
 
-DSN = "postgresql://moflici1:1234@localhost:5432/postgres"
+config = {
+    "database": "postgres",
+    "user": "moflici1",
+    "host": "localhost",
+    "port": "5432",
+    "password": "1234"
+}
 
 
 def decompose_toffoli_qiskit_reverse(qc, c0, c1, t):
@@ -90,7 +96,7 @@ def replace_all_toffolis_qiskit(qc, case: int):
 
 
 async def run_optimiser(adder_circuit):
-    db = PandoraDB(DSN)
+    db = PandoraDB(config)
     await db.connect()
 
     try:

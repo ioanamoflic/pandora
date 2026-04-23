@@ -1,6 +1,5 @@
 import pytest
 import cirq
-import itertools
 
 from benchmarking import cirq_util
 from pandora.translation.circuit_to_dag import PandoraWindowedBuilder
@@ -15,6 +14,7 @@ from pandora.util.circuit_util import (
     remove_measurements,
     remove_classically_controlled_ops
 )
+from pandora.util.test_util import assert_same_up_to_qubit_permutation
 
 WINDOW_SIZE = 2  # just to be extreme :)
 LABEL = 0
@@ -25,29 +25,6 @@ config_file = {
     "port": "5432",
     "password": "1234"
 }
-
-
-def assert_same_up_to_qubit_permutation(expected: cirq.Circuit, actual: cirq.Circuit):
-    """
-    Obviously this has horrendous time complexity.
-    """
-    expected_qubits = sorted(expected.all_qubits())
-    actual_qubits = sorted(actual.all_qubits())
-
-    assert len(expected_qubits) == len(actual_qubits), (
-        f"Different qubit counts: {len(expected_qubits)} != {len(actual_qubits)}"
-    )
-
-    for perm in itertools.permutations(actual_qubits):
-        qubit_map = dict(zip(perm, expected_qubits))
-        remapped = actual.transform_qubits(qubit_map)
-        try:
-            cirq.testing.assert_same_circuits(expected, remapped)
-            return
-        except AssertionError:
-            pass
-
-    raise AssertionError("Circuits are not equal up to qubit permutation")
 
 
 def test_simple_reconstruction():
