@@ -1,224 +1,152 @@
-import sys
 import time
-from collections.abc import Iterable, Iterator
-from typing import Callable
+from typing import Iterator, Any, Generator
 
 import cirq
+import sys
 
 from qualtran import Bloq, DecomposeTypeError
-from qualtran._infra.gate_with_registers import get_named_qubits
+from qualtran.bloqs.mod_arithmetic import ModAddK, CModAddK
 from qualtran.bloqs.arithmetic.addition import And
 from qualtran.bloqs.basic_gates import TwoBitCSwap
-from qualtran.bloqs.cryptography.rsa import RSAPhaseEstimate
-from qualtran.bloqs.mod_arithmetic import CModAddK, ModAddK
 from qualtran.cirq_interop import BloqAsCirqGate
+from qualtran._infra.gate_with_registers import get_named_qubits
+from qualtran.bloqs.cryptography.rsa import RSAPhaseEstimate
 
-from pyLIQTR.circuits.operators.AddMod import AddMod as PyLIQTRAddMod
+from pandora.translation.translator import KEEP_RZ
+from pyLIQTR.circuits.operators.AddMod import AddMod as pyLAM
 from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
 from pyLIQTR.utils.circuit_decomposition import generator_decompose
 
-from pandora.translation.translator import KEEP_RZ
+sys.setrecursionlimit(10000000)
 
-
-sys.setrecursionlimit(10_000_000)
-
-
-AT_MOST_TWO_QUBIT = cirq.Gateset(
-    cirq.Rz,
-    cirq.Rx,
-    cirq.Ry,
-    cirq.MeasurementGate,
-    cirq.ResetChannel,
+cirq_and_bloq_gate_set = cirq.Gateset(
+    cirq.Rz, cirq.Rx, cirq.Ry,
+    cirq.MeasurementGate, cirq.ResetChannel,
     cirq.GlobalPhaseGate,
-    cirq.ZPowGate,
-    cirq.XPowGate,
-    cirq.YPowGate,
-    cirq.HPowGate,
-    cirq.CZPowGate,
-    cirq.CXPowGate,
-    cirq.ZZPowGate,
-    cirq.XXPowGate,
-    cirq.X,
-    cirq.Y,
-    cirq.Z,
-)
+    cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
+    cirq.CZPowGate, cirq.CXPowGate,
+    cirq.ZZPowGate, cirq.XXPowGate,
+    cirq.CCXPowGate, cirq.CCZPowGate, cirq.TOFFOLI,
+    cirq.X, cirq.Y, cirq.Z,
+    And,
+    BloqAsCirqGate,
+    cirq.CSwapGate)
 
-AT_MOST_THREE_QUBIT = cirq.Gateset(
-    cirq.Rz,
-    cirq.Rx,
-    cirq.Ry,
-    cirq.MeasurementGate,
-    cirq.ResetChannel,
-    cirq.GlobalPhaseGate,
-    cirq.ZPowGate,
-    cirq.XPowGate,
-    cirq.YPowGate,
-    cirq.HPowGate,
-    cirq.CZPowGate,
-    cirq.CXPowGate,
-    cirq.ZZPowGate,
-    cirq.XXPowGate,
-    cirq.CCXPowGate,
-    cirq.CCZPowGate,
-    cirq.TOFFOLI,
-    cirq.X,
-    cirq.Y,
-    cirq.Z,
+pandora_ingestible_gate_set = cirq.Gateset(
+    cirq.Rz, cirq.Rx, cirq.Ry, cirq.MeasurementGate, cirq.ResetChannel,
+    cirq.GlobalPhaseGate, cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
+    cirq.CZPowGate, cirq.CXPowGate, cirq.ZZPowGate, cirq.XXPowGate, cirq.CCXPowGate,
     And,
     cirq.CSwapGate,
+    cirq.X, cirq.Y, cirq.Z,
 )
 
+pylam_gate_set = cirq.Gateset(
+    cirq.Rz, cirq.Rx, cirq.Ry,
+    cirq.MeasurementGate, cirq.ResetChannel,
+    cirq.GlobalPhaseGate,
+    cirq.ZPowGate, cirq.XPowGate, cirq.YPowGate, cirq.HPowGate,
+    cirq.CZPowGate, cirq.CXPowGate,
+    cirq.ZZPowGate, cirq.XXPowGate,
+    cirq.CCXPowGate, cirq.CCZPowGate, cirq.TOFFOLI,
+    cirq.X, cirq.Y, cirq.Z,
+    And,
+    cirq.CSwapGate)
 
-def flatten(items: Iterable) -> Iterator:
-    for item in items:
-        if isinstance(item, list):
-            yield from flatten(item)
+
+def flatten(nested: list):
+    for i in nested:
+        if isinstance(i, list):
+            for j in flatten(i):
+                yield j
         else:
-            yield item
+            yield i
 
 
-def _base_gate(op: cirq.Operation):
-    return op.without_classical_controls().gate
+def keep(op: cirq.Operation):
+    gate = op.without_classical_controls().gate
+    ret = gate in cirq_and_bloq_gate_set
+    if isinstance(gate, cirq.ops.raw_types._InverseCompositeGate):
+        ret |= op.gate._original in cirq_and_bloq_gate_set
+    return ret
 
 
-def _make_keep_predicate(gate_set: cirq.Gateset) -> Callable[[cirq.Operation], bool]:
-    def keep_fn(op: cirq.Operation) -> bool:
-        gate = _base_gate(op)
-        if gate in gate_set:
-            return True
-
-        if isinstance(gate, cirq.ops.raw_types._InverseCompositeGate):
-            return gate._original in gate_set
-
-        return False
-
-    return keep_fn
+def keep_pylam(op: cirq.Operation):
+    gate = op.without_classical_controls().gate
+    ret = gate in pylam_gate_set
+    if isinstance(gate, cirq.ops.raw_types._InverseCompositeGate):
+        ret |= op.gate._original in pylam_gate_set
+    return ret
 
 
-keep_two_qubit_gates = _make_keep_predicate(AT_MOST_TWO_QUBIT)
-keep_three_qubit_gates = _make_keep_predicate(AT_MOST_THREE_QUBIT)
+def get_cirq_circuit_for_bloq(bloq: Bloq):
+    # Get a cirq circuit containing only this operation.
+    circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=get_named_qubits(bloq.signature.lefts()))
+    # Decompose the operation until all gates are in the target gate set.
+    context = cirq.DecompositionContext(qubit_manager=cirq.GreedyQubitManager(prefix='anc'))
+    return cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
 
 
-def _assert_ops_in_gate_set(ops: Iterable[cirq.Operation], gate_set: cirq.Gateset) -> None:
-    bad = []
-    for op in ops:
-        if op.without_classical_controls() not in gate_set:
-            bad.append(op.without_classical_controls().gate)
-
-    if bad:
-        for gate in bad:
-            print(gate)
-        raise AssertionError("Found operations outside target gate set.")
+def assert_circuit_is_decomposable(circuit: cirq.Circuit):
+    # Assert that all operations in the decomposed circuit are part of the target gate set.
+    assert all(op.without_classical_controls() in cirq_and_bloq_gate_set for op in circuit.all_operations())
 
 
-def assert_circuit_is_decomposable(circuit: cirq.Circuit) -> None:
-    _assert_ops_in_gate_set(circuit.all_operations(), AT_MOST_TWO_QUBIT)
+def assert_circuit_is_pandora_ingestible(circuit: cirq.Circuit):
+    # Assert that all operations in the decomposed circuit are part of the target gate set.
+    for op in circuit.all_operations():
+        if op.without_classical_controls() not in pandora_ingestible_gate_set:
+            print(op.without_classical_controls().gate)
+    assert all(op.without_classical_controls() in pandora_ingestible_gate_set for op in circuit.all_operations())
 
 
-def assert_circuit_is_pandora_ingestible(circuit: cirq.Circuit) -> None:
-    _assert_ops_in_gate_set(circuit.all_operations(), AT_MOST_THREE_QUBIT)
+def assert_op_list_is_pandora_ingestible(op_list: list):
+    # Assert that all operations are part of the target gate set.
+    for op in op_list:
+        if isinstance(op, list):
+            op = op[0]
+        if op.without_classical_controls() not in pandora_ingestible_gate_set:
+            print(op.without_classical_controls().gate)
+    assert all(op.without_classical_controls() in pandora_ingestible_gate_set for op in op_list)
 
 
-def assert_op_list_is_pandora_ingestible(op_list: list[cirq.Operation]) -> None:
-    _assert_ops_in_gate_set(op_list, AT_MOST_THREE_QUBIT)
-
-
-def decompose_fredkin(op: cirq.Operation) -> list[cirq.Operation]:
+def decompose_fredkin(op: cirq.Operation):
+    ops = []
     ctrl, x, y = op.qubits
-    return [
-        cirq.CNOT(y, x),
-        cirq.CNOT(ctrl, x),
-        cirq.H(y),
-        cirq.T(ctrl),
-        cirq.T(x) ** -1,
-        cirq.T(y),
-        cirq.CNOT(y, x),
-        cirq.CNOT(ctrl, y),
-        cirq.T(x),
-        cirq.CNOT(ctrl, x),
-        cirq.T(y) ** -1,
-        cirq.T(x) ** -1,
-        cirq.CNOT(ctrl, y),
-        cirq.CNOT(y, x),
-        cirq.T(x),
-        cirq.H(y),
-        cirq.CNOT(y, x),
-    ]
+    ops += [cirq.CNOT(y, x)]
+    ops += [cirq.CNOT(ctrl, x), cirq.H(y)]
+    ops += [cirq.T(ctrl), cirq.T(x) ** -1, cirq.T(y)]
+    ops += [cirq.CNOT(y, x)]
+    ops += [cirq.CNOT(ctrl, y), cirq.T(x)]
+    ops += [cirq.CNOT(ctrl, x), cirq.T(y) ** -1]
+    ops += [cirq.T(x) ** -1, cirq.CNOT(ctrl, y)]
+    ops += [cirq.CNOT(y, x)]
+    ops += [cirq.T(x), cirq.H(y)]
+    ops += [cirq.CNOT(y, x)]
+    return ops
 
 
-def _decompose_bloq_to_circuit(bloq: Bloq) -> cirq.Circuit:
+def decompose_qualtran_bloq_gate(bloq: Bloq, window_size: int):
     cirq_quregs = get_named_qubits(bloq.signature.lefts())
     try:
-        return bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=cirq_quregs).unfreeze()
+        circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=cirq_quregs)
     except DecomposeTypeError:
-        return bloq.as_composite_bloq().to_cirq_circuit(cirq_quregs=cirq_quregs).unfreeze()
+        # there could be a specific error for atomic ops?
+        circuit = bloq.as_composite_bloq().to_cirq_circuit(cirq_quregs=cirq_quregs)
 
-
-def get_cirq_circuit_for_bloq(bloq: Bloq) -> cirq.Circuit:
-    circuit = _decompose_bloq_to_circuit(bloq)
-    context = cirq.DecompositionContext(
-        qubit_manager=cirq.GreedyQubitManager(prefix="anc")
-    )
-    return cirq.Circuit(cirq.decompose(circuit, keep=keep_two_qubit_gates, context=context))
-
-
-def _expand_cmodaddk(op: cirq.Operation) -> list[cirq.Operation]:
-    bloq = op.gate.bloq
-    top = PyLIQTRAddMod(
-        bitsize=bloq.bitsize + 1,
-        add_val=bloq.k,
-        mod=bloq.mod,
-        cvs=(),
-    ).on(*op.qubits)
-    return list(generator_decompose(top, keep=keep_three_qubit_gates))
-
-
-def _expand_modaddk(op: cirq.Operation) -> list[cirq.Operation]:
-    top = PyLIQTRAddMod(
-        bitsize=op.gate.bitsize,
-        add_val=op.gate.add_val,
-        mod=op.gate.mod,
-        cvs=op.gate.cvs,
-    ).on(*op.qubits)
-
-    expanded: list[cirq.Operation] = []
-    for decomposed in generator_decompose(top):
-        expanded.extend(
-            _perop_clifford_plus_t_direct_transform(
-                decomposed,
-                use_rotation_decomp_gates=KEEP_RZ,
-                use_random_decomp=True,
-                warn_if_not_decomposed=True,
-            )
-        )
-    return expanded
-
-
-def _expand_regular_op(op: cirq.Operation) -> list[cirq.Operation]:
-    return list(
-        _perop_clifford_plus_t_direct_transform(
-            op,
-            use_rotation_decomp_gates=KEEP_RZ,
-            use_random_decomp=True,
-            warn_if_not_decomposed=True,
-        )
-    )
-
-
-def decompose_qualtran_bloq_gate(
-    bloq: Bloq,
-    window_size: int,
-) -> Iterator[list[cirq.Operation]]:
-    circuit = _decompose_bloq_to_circuit(bloq)
-    window_ops: list[cirq.Operation] = []
-
-    for op in generator_decompose(circuit, keep=keep_two_qubit_gates):
+    window_ops = []
+    for op in generator_decompose(circuit, keep=keep):
         if isinstance(op.gate, BloqAsCirqGate):
             if isinstance(op.gate.bloq, TwoBitCSwap):
                 ctrl, x, y = op.qubits
                 window_ops.append(cirq.CSWAP.on(ctrl, x, y))
             elif isinstance(op.gate.bloq, CModAddK):
-                window_ops.extend(_expand_cmodaddk(op))
+                top = pyLAM(bitsize=op.gate.bloq.bitsize + 1,
+                            add_val=op.gate.bloq.k,
+                            mod=op.gate.bloq.mod,
+                            cvs=()).on(*op.qubits)
+                for d_top in generator_decompose(top, keep=keep_pylam):
+                    window_ops.append(d_top)
             else:
                 window_ops.append(op)
         else:
@@ -226,102 +154,114 @@ def decompose_qualtran_bloq_gate(
 
         if len(window_ops) >= window_size:
             yield window_ops
-            window_ops = []
+            window_ops.clear()
 
-    if window_ops:
+    if len(window_ops) > 0:
         yield window_ops
+        window_ops.clear()
 
 
-def _expand_for_pandora(op: cirq.Operation, window_size: int) -> list[cirq.Operation]:
-    if isinstance(op.gate, cirq.GlobalPhaseGate):
-        print(f"Encountered GlobalPhaseGate with qubits = {op.qubits}")
-        return []
-
-    if isinstance(op.gate, BloqAsCirqGate):
-        return list(flatten(decompose_qualtran_bloq_gate(op.gate.bloq, window_size)))
-
-    if isinstance(op.gate, ModAddK):
-        return _expand_modaddk(op)
-
-    return _expand_regular_op(op)
-
-
-def _expand_for_rsa(op: cirq.Operation, window_size: int) -> list[cirq.Operation]:
-    if isinstance(op.gate, BloqAsCirqGate):
-        return list(flatten(decompose_qualtran_bloq_gate(op.gate.bloq, window_size)))
-    return [op]
-
-
-def get_pandora_compatible_circuit(
-    circuit: cirq.Circuit,
-    decompose_from_high_level: bool = True,
-) -> cirq.Circuit:
+def get_pandora_compatible_circuit(circuit: cirq.Circuit, decompose_from_high_level=True) -> cirq.Circuit:
     """
-    Slow path for small circuits.
+    Takes a Cirq circuit as input and outputs a logically equivalent circuit with operations acting on at most three
+    qubits which can be ingested into Pandora.
+
+    This is the SLOW method. For small circuits only.
     """
     if decompose_from_high_level:
         context = cirq.DecompositionContext(qubit_manager=cirq.SimpleQubitManager())
-        circuit = cirq.Circuit(cirq.decompose(circuit, keep=keep_two_qubit_gates, context=context))
+        circuit = cirq.Circuit(cirq.decompose(circuit, keep=keep, context=context))
 
-    final_ops: list[cirq.Operation] = []
+    final_ops = []
     for op in circuit.all_operations():
         if isinstance(op.gate, BloqAsCirqGate):
-            final_ops.extend(flatten(decompose_qualtran_bloq_gate(op.gate.bloq, sys.maxsize)))
+            atomic_ops = list(decompose_qualtran_bloq_gate(op.gate.bloq))
+            final_ops = final_ops + list(flatten(atomic_ops))
         else:
             final_ops.append(op)
 
-    return cirq.Circuit(final_ops)
+    decomposed_circuit = cirq.Circuit(final_ops)
+    return decomposed_circuit
 
 
-def _yield_windowed_ops(
-    source_ops: Iterable[cirq.Operation],
-    window_size: int,
-    expand_fn: Callable[[cirq.Operation, int], list[cirq.Operation]],
-    validate: bool,
-) -> Iterator[tuple[list[cirq.Operation], float]]:
-    window_ops: list[cirq.Operation] = []
-    batch_start = time.time()
+def get_batch(circuit: cirq.Circuit,
+              window_size: int) -> Generator[tuple[list[Any], float], None, None]:
+    """
+    This is a generator-based (windowed) decomposition into Clifford+T build on top of pyLIQTR's generator
+    decomposition method. The method yields a batch of window_size elements.
+    Args:
+        circuit: the high-level cirq circuit
+        window_size: size of the window
 
-    for op in source_ops:
-        window_ops.extend(expand_fn(op, window_size))
+    Returns:
+        Generator over the tuples consisting of the cirq operations contained in the batch.
+    """
+    window_ops = []
+
+    for dop in generator_decompose(circuit, keep=keep):
+        start_dop = time.time()
+        if isinstance(dop.gate, cirq.GlobalPhaseGate):
+            print(f'Encountered GlobalPhaseGate with qubits = {dop.qubits}')
+            pass
+        elif isinstance(dop.gate, BloqAsCirqGate):
+            atomic_ops = decompose_qualtran_bloq_gate(dop.gate.bloq, window_size=window_size)
+            window_ops.extend(atomic_ops)
+        elif isinstance(dop.gate, ModAddK):
+            top = pyLAM(bitsize=dop.gate.bitsize,
+                        add_val=dop.gate.add_val,
+                        mod=dop.gate.mod,
+                        cvs=dop.gate.cvs).on(*dop.qubits)
+            for d_top in generator_decompose(top):
+                atomic_ops = _perop_clifford_plus_t_direct_transform(d_top,
+                                                                     use_rotation_decomp_gates=KEEP_RZ,
+                                                                     use_random_decomp=True,
+                                                                     warn_if_not_decomposed=True)
+                window_ops.extend(atomic_ops)
+        else:
+            atomic_ops = _perop_clifford_plus_t_direct_transform(dop,
+                                                                 use_rotation_decomp_gates=KEEP_RZ,
+                                                                 use_random_decomp=True,
+                                                                 warn_if_not_decomposed=True)
+            window_ops.extend(atomic_ops)
 
         if len(window_ops) >= window_size:
-            batch = list(flatten(window_ops))
-            if validate:
-                assert_op_list_is_pandora_ingestible(batch)
-            yield batch, time.time() - batch_start
-            window_ops = []
-            batch_start = time.time()
+            window_ops = list(flatten(window_ops))
+            assert_op_list_is_pandora_ingestible(window_ops)
+            yield window_ops, time.time() - start_dop
+            window_ops.clear()
 
-    if window_ops:
-        batch = list(flatten(window_ops))
-        if validate:
-            assert_op_list_is_pandora_ingestible(batch)
-        yield batch, time.time() - batch_start
+    start_last = time.time()
+    if len(window_ops) > 0:
+        window_ops = list(flatten(window_ops))
+        assert_op_list_is_pandora_ingestible(window_ops)
+        yield window_ops, time.time() - start_last
 
 
-def get_batch(
-    circuit: cirq.Circuit,
-    window_size: int,
-) -> Iterator[tuple[list[cirq.Operation], float]]:
-    return _yield_windowed_ops(
-        source_ops=generator_decompose(circuit, keep=keep_two_qubit_gates),
-        window_size=window_size,
-        expand_fn=_expand_for_pandora,
-        validate=True,
-    )
+def get_RSA_batch(circuit: cirq.Circuit,
+                  window_size: int) -> Generator[tuple[list[Any], float], None, None]:
+    window_ops = []
 
+    for dop in generator_decompose(circuit, keep=keep):
+        start_dop = time.time()
+        if isinstance(dop.gate, BloqAsCirqGate):
+            window_batches = decompose_qualtran_bloq_gate(dop.gate.bloq, window_size=window_size)
 
-def get_RSA_batch(
-    circuit: cirq.Circuit,
-    window_size: int,
-) -> Iterator[tuple[list[cirq.Operation], float]]:
-    return _yield_windowed_ops(
-        source_ops=generator_decompose(circuit, keep=keep_two_qubit_gates),
-        window_size=window_size,
-        expand_fn=_expand_for_rsa,
-        validate=False,
-    )
+            for window_batch in window_batches:
+                window_ops.extend(window_batch)
+
+                if len(window_ops) >= window_size:
+                    yield window_ops, time.time() - start_dop
+                    window_ops.clear()
+        else:
+            window_ops.append(dop)
+
+        if len(window_ops) >= window_size:
+            yield window_ops, time.time() - start_dop
+            window_ops.clear()
+
+    start_last = time.time()
+    if len(window_ops) > 0:
+        yield window_ops, time.time() - start_last
 
 
 def get_RSA(n):
@@ -360,7 +300,7 @@ def get_RSA(n):
                     "6373289912154831438167899885040445364023527381951378636564391212010397122822"
                     "120720357")
     else:
-        raise Exception("Requested n not here.")
+        raise "Requested n not here."
 
     rsa_pe_small = RSAPhaseEstimate.make_for_shor(big_n=big_n, g=9)
     circuit = rsa_pe_small.as_composite_bloq() \

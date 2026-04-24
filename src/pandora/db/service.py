@@ -5,7 +5,8 @@ from typing import Any, List, Optional
 
 from pandora.db.core import PandoraDB
 from pandora.db.repository import GateRepository
-from pandora.multithreading.parallel_decompose import worker_entry
+from pandora.parallel.job import ProcJob
+from pandora.parallel.decompose import worker_entry
 from pandora.translation.circuit_to_dag import PandoraWindowedBuilder
 from pandora.translation.translator import GLOBAL_IN_ID
 from pandora.widgetization.union_find import UnionFindWidgetizer
@@ -48,11 +49,8 @@ class PandoraService:
 
     def parallel_decompose(
             self,
-            nprocs: int,
-            container_id: int = 0,
-            n_containers: int = 1,
+            job: ProcJob,
             window_size: Optional[int] = None,
-            N: Optional[int] = None,
     ) -> None:
         """
         Launch parallel decomposition workers.
@@ -62,28 +60,25 @@ class PandoraService:
         - converts batches to Pandora gates
         - inserts batches into the database via async repository calls
         """
-        if nprocs < 1:
+        if job.nprocs_per_node < 1:
             raise ValueError("nprocs must be >= 1")
-        if n_containers < 1:
+        if job.n_nodes < 1:
             raise ValueError("n_containers must be >= 1")
-        if not (0 <= container_id < n_containers):
+        if not (0 <= job.my_node_id < job.n_nodes):
             raise ValueError("container_id must satisfy 0 <= container_id < n_containers")
 
         effective_window_size = window_size or self.window_size
 
         processes: list[Process] = []
 
-        for worker_id in range(nprocs):
+        for worker_id in range(job.nprocs_per_node):
+            job.my_proc_id = worker_id
             p = Process(
                 target=worker_entry,
                 args=(
-                    worker_id,
-                    nprocs,
-                    container_id,
-                    n_containers,
+                    job,
                     self.db.dsn,
                     effective_window_size,
-                    N,
                 ),
             )
             processes.append(p)

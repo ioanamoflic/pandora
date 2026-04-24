@@ -3,15 +3,18 @@ from typing import Optional
 
 
 class PandoraDB:
-    def __init__(self, config: str | dict, min_size: int = 1, max_size: int = 10):
+    def __init__(self, config: str | dict, dsn: str = None, min_size: int = 1, max_size: int = 10):
+        self.dsn = dsn
         self.min_size = min_size
         self.max_size = max_size
         self.pool: Optional[asyncpg.Pool] = None
 
-        if isinstance(config, str):
+        if not dsn and isinstance(config, str):
             self.dsn = self._dsn_from_json(config)
-        else:
+        elif not dsn and isinstance(config, dict):
             self.dsn = self._dsn_from_dict(config)
+
+        assert self.dsn is not None
 
     async def connect(self):
         self.pool = await asyncpg.create_pool(
