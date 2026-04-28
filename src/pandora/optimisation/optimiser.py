@@ -27,7 +27,7 @@ class PandoraOptimiser:
         self.timeout = timeout
         self.pass_count = pass_count
         self.logger_id = logger_id
-        self.max_concurrency = max_concurrency or 8
+        self.max_concurrency = max_concurrency or 32
 
         self._thread_proc: list[str] = []
 

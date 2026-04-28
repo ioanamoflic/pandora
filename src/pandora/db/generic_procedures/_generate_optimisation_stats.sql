@@ -44,13 +44,10 @@ begin
         insert into optimization_results(id, logger_id, total_count, t_count, s_count, h_count, cx_count, x_count)
         values (count, logid, total, t_cnt, s_cnt, h_cnt, cx_cnt, x_cnt);
 
-        perform pg_sleep(sleep_for);
-
-    	commit;
-
         if extract(epoch from (clock_timestamp() - start_time)) > timeout then
             exit;
         end if;
 
 	end loop;
+    commit;
 end;$$;

@@ -3,7 +3,7 @@ from typing import Optional
 
 
 class PandoraDB:
-    def __init__(self, config: str | dict, min_size: int = 1, max_size: int = 10):
+    def __init__(self, config: str | dict, min_size: int = 1, max_size: int = 32):
         self.min_size = min_size
         self.max_size = max_size
         self.pool: Optional[asyncpg.Pool] = None

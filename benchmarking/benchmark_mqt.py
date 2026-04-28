@@ -15,8 +15,6 @@ from pandora.db.service import PandoraService
 from pandora.optimisation.optimiser import PandoraOptimiser
 from pandora.translation.translator import PandoraGateTranslator
 
-DSN = "postgresql://moflici1:1234@localhost:5432/postgres"
-
 
 def generate_random_cnot_circuit(num_qubits: int = 2, num_gates: int = 8) -> QuantumCircuit:
     if num_qubits < 2:
@@ -100,6 +98,7 @@ async def pandora_verify(
             pass_count=int(2e9),
             timeout=timeout_sec,
             logger_id=1,
+            max_concurrency=nprocs
         )
 
         await service.build_circuit(circuit=concatenated)
@@ -121,16 +120,26 @@ async def pandora_verify(
         await db.close()
 
 
-def mqt_verify(circ1: QuantumCircuit, circ2: QuantumCircuit, timeout_sec: int) -> tuple[
+def mqt_verify(bench: str, circ1: QuantumCircuit, circ2: QuantumCircuit, timeout_sec: int) -> tuple[
     EquivalenceCriterion, float, float]:
     start = time.time()
-    result = verify(
-        circ1,
-        circ2,
-        timeout=timeout_sec,
-        run_simulation_checker=False,
-        run_alternating_checker=False,
-    )
+    
+    if bench == 'zx':
+        result = verify(
+            circ1,
+            circ2,
+            timeout=timeout_sec,
+            run_simulation_checker=False,
+            run_alternating_checker=False,
+        )
+    elif bench == 'dd':
+        result = verify(
+            circ1,
+            circ2,
+            timeout=timeout_sec,
+            run_simulation_checker=False,
+            run_zx_checker=False,
+        )
     wall_time = time.time() - start
     return result.equivalence, wall_time, result.check_time
 
@@ -159,13 +168,14 @@ async def run_pandora_benchmark(
 
 
 def run_mqt_benchmark(
+        bench: str,
         num_qubits: int,
         run_idx: int,
         is_equiv: int,
         timeout_sec: int,
 ) -> tuple[EquivalenceCriterion, float, float]:
     circ1, circ2 = load_benchmark_circuits(num_qubits, run_idx, is_equiv)
-    return mqt_verify(circ1, circ2, timeout_sec)
+    return mqt_verify(bench, circ1, circ2, timeout_sec)
 
 
 async def main():
@@ -202,6 +212,7 @@ async def main():
 
             else:
                 equiv, wall_time, backend_check_time = run_mqt_benchmark(
+                    bench=backend,
                     num_qubits=num_qubits,
                     run_idx=run_idx,
                     is_equiv=is_equiv,

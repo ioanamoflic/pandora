@@ -11,8 +11,6 @@ from pandora.db.service import PandoraService
 from pandora.translation.translator import PandoraGateTranslator
 from pandora import PandoraOptimiser
 
-DSN = "postgresql://moflici1:1234@localhost:5432/postgres"
-
 
 def parse_controls(ctr_str):
     """
@@ -120,28 +118,31 @@ def replace_all_toffolis_qiskit(qc):
             new_qc.append(op, qargs, cargs)
 
     return new_qc
-
-
+        
+        
 async def main(config):
 
+    # 30 seconds timeout for the optimiser
+    timeout = 30
+    
     for n_bits in [16, 32, 64, 128, 256, 512, 1024, 2048]:
         adder_circuit = get_adder(n_bits=n_bits)
         adder_circuit = replace_all_toffolis_qiskit(adder_circuit)
-
+        
         db = PandoraDB(config)
         await db.connect()
-
+        
         try:
             pandora_optimizer = PandoraOptimiser(
                 db=db,
-                pass_count=int(2e9),
-                timeout=10,
+                pass_count=int(1e7),
+                timeout=timeout,
                 logger_id=n_bits,
             )
 
             repo = GateRepository(db)
             service = PandoraService(db=db, repo=repo)
-
+            
             await service.build_circuit(
                 circuit=adder_circuit
             )
@@ -248,7 +249,7 @@ async def main(config):
             pandora_optimizer.hhcxhh_to_cx(dedicated_nproc=1)
 
             pandora_optimizer.log()
-
+            
             await pandora_optimizer.start()
             await pandora_optimizer.generate_csv(logger_id=n_bits)
 

@@ -106,20 +106,21 @@ def cx_to_hhcxhh_transform_seq(circ: Circuit, nodes) -> Circuit:
 
 if __name__ == "__main__":
     nr_passes = 1
-    sample_percentage = 10
 
-    for nq in range(10000, 100001, 10000):
-        print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
+    for sample_percentage in [0.1, 1, 10]:
+        
+        for nq in range(10000, 100001, 10000):
+            print(f'Number of qubits: {nq} for {nr_passes} passes and {sample_percentage} probability')
 
-        tket_circ, _ = generate_random_CX_circuit(n_templates=nq,
-                                                  n_qubits=50)
-        start_time = time.time()
-        for i in range(nr_passes):
-            cx_to_hhcxhh_transform_seq(tket_circ, get_random_seq_gates_from_circuit(tket_circ, sample_percentage))
+            tket_circ, _ = generate_random_CX_circuit(n_templates=nq,
+                                                    n_qubits=50)
+            start_time = time.time()
+            for i in range(nr_passes):
+                cx_to_hhcxhh_transform_seq(tket_circ, get_random_seq_gates_from_circuit(tket_circ, sample_percentage))
 
-        op_time = time.time() - start_time
-        print('Time to rewrite:', op_time)
+            op_time = time.time() - start_time
+            print('Time to rewrite:', op_time)
 
-        with open(f'TKET_template_search_{sample_percentage}.csv', 'a') as f:
-            writer = csv.writer(f)
-            writer.writerow((nq, op_time, sample_percentage))
+            with open(f'TKET_template_search_{sample_percentage}.csv', 'a') as f:
+                writer = csv.writer(f)
+                writer.writerow((nq, op_time, sample_percentage))

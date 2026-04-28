@@ -66,7 +66,7 @@ def fig2():
     plt.savefig("fig1.pdf", bbox_inches='tight', dpi=600)
 
 
-def fig2_V2():
+def fig_speed():
     df_pandora_01 = pd.read_csv('pandora_template_search_random_flip_0.1.csv')
     df_pandora_1 = pd.read_csv('pandora_template_search_random_flip_1.csv')
     df_pandora_10 = pd.read_csv('pandora_template_search_random_flip_10.csv')
@@ -146,8 +146,8 @@ def fig2_V2():
     ax1.set_ylabel("Seconds")
     ax1.legend()
 
-    plt.savefig("fig1v2.png", bbox_inches='tight', dpi=600)
-    plt.savefig("fig1v2.pdf", bbox_inches='tight', dpi=600)
+    plt.savefig("fig_speed.png", bbox_inches='tight', dpi=600)
+    plt.savefig("fig_speed.pdf", bbox_inches='tight', dpi=600)
 
 
 def fig3():
@@ -329,16 +329,23 @@ def fig5():
     plt.savefig("fig4.png", bbox_inches='tight', dpi=600)
 
 
-def fig6():
-    df_mqt = pd.read_csv(f'results/pandora_mqt_32_final.csv')
+def fig_verification():
+    pandora_0 = pd.read_csv(f'pandora_0_verification.csv')
+    pandora_1 = pd.read_csv(f'pandora_1_verification.csv')
+    
+    dd_0 = pd.read_csv(f'dd_0_verification.csv')
+    # dd_1 = pd.read_csv(f'dd_1_verification.csv')  
+      
+    zx_0 = pd.read_csv(f'zx_0_verification.csv')
+    zx_1 = pd.read_csv(f'zx_1_verification.csv')
+    
+    circuits = pandora_0.iloc[:, 1]
 
-    circuits = df_mqt['circ_idx']
-
-    pandora_equiv = df_mqt['pandora_time_equiv']
-    pandora_neq = df_mqt['pandora_time_neq']
-    dd_equiv = df_mqt['dd_time_equiv']
-    dd_neq = df_mqt['dd_time_neq']
-    zx_equiv = df_mqt['zx_time_equiv']
+    pandora_equiv = pandora_0.iloc[:, 3]
+    pandora_neq = pandora_1.iloc[:, 3]
+    dd_equiv = zx_0.iloc[:, 3]
+    dd_neq = zx_1.iloc[:, 3]
+    zx_equiv = dd_0.iloc[:, 3]
 
     fig, (ax1) = plt.subplots(1, 1, figsize=(4.7, 3.2), gridspec_kw={'height_ratios': [1]})
 
@@ -354,12 +361,12 @@ def fig6():
     ax1.set_yscale('log')
     ax1.legend()
 
-    plt.savefig("fig5.pdf", bbox_inches='tight', dpi=600)
-    plt.savefig("fig5.png", bbox_inches='tight', dpi=600)
+    plt.savefig("fig_verification.pdf", bbox_inches='tight', dpi=600)
+    plt.savefig("fig_verification.png", bbox_inches='tight', dpi=600)
 
 
 def fig_adders():
-    bit_widths = [16, 32, 64, 128, 512, 1024, 2048]
+    bit_widths = [16, 32, 64, 128, 256, 512, 1024, 2048]
 
     fig, axes = plt.subplots(nrows=2, ncols=4, figsize=(8, 4), dpi=300, constrained_layout=True)
     axes = axes.flatten()
@@ -393,19 +400,27 @@ def fig_adders():
 
 
 def fig_adder_reduction():
+    from benchmarking.benchmark_adders import get_adder, replace_all_toffolis_qiskit
+
     bits = [16, 32, 64, 128, 256, 512, 1024, 2048]
-    labels = [f'Adder_{nbit}' for nbit in bits]
-    files = [f"adder_{nbit}.csv" for nbit in bits]
 
     reductions_pct = []
+    labels = []
 
-    for file in files:
+    for n_bits in bits:
+        labels.append(f'Adder_{n_bits}')
+        file = f"adder_{n_bits}.csv"
+
+        adder_circuit = replace_all_toffolis_qiskit(get_adder(n_bits=n_bits))
+        counts = adder_circuit.count_ops()
+        t_count = counts.get('t', 0) + counts.get('tdg', 0)
+
         df = pd.read_csv(file)
 
         if df.empty:
             continue
 
-        t_start = df.iloc[0]["t_count"]
+        t_start = t_count
         t_end = df.iloc[-1]["t_count"]
 
         # Avoid division by zero
@@ -440,7 +455,8 @@ if __name__ == "__main__":
     # fig3()
     # fig4()
     # fig5()
-    # fig6()
-    # fig_adders()
+    fig_verification()
+    fig_adders()
     fig_adder_reduction()
-    # fig2_V2()
+    fig_speed()
+ 

@@ -35,7 +35,7 @@ begin
 
         found_match := false;
 
-        if mismatch_count >= 100000 then
+        if mismatch_count >= 1000 then
             exit;
         end if;
 

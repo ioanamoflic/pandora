@@ -153,32 +153,34 @@ def main():
     direction = int(sys.argv[1])
 
     nr_passes = 1
-    sample_percentage = 0.1
     n_qubits = 50
-    out_file = f"qiskit_template_search_random_flip_{sample_percentage}.csv"
+    
+    for sample_percentage in [0.1, 1, 10]:
+        
+        out_file = f"qiskit_template_search_random_flip_{sample_percentage}.csv"
 
-    for n_templates in range(10_000, 100_001, 10_000):
-        print(
-            f"Number of templates: {n_templates} "
-            f"for {nr_passes} passes and {sample_percentage} probability"
-        )
+        for n_templates in range(10_000, 100_001, 10_000):
+            print(
+                f"Number of templates: {n_templates} "
+                f"for {nr_passes} passes and {sample_percentage} probability"
+            )
 
-        total_rewrite_time = benchmark_rewrite(
-            direction=direction,
-            n_templates=n_templates,
-            n_qubits=n_qubits,
-            nr_passes=nr_passes,
-            sample_percentage=sample_percentage,
-        )
+            total_rewrite_time = benchmark_rewrite(
+                direction=direction,
+                n_templates=n_templates,
+                n_qubits=n_qubits,
+                nr_passes=nr_passes,
+                sample_percentage=sample_percentage,
+            )
 
-        print("Time to rewrite:", total_rewrite_time, flush=True)
+            print("Time to rewrite:", total_rewrite_time, flush=True)
 
-        append_result(
-            csv_path=out_file,
-            n_templates=n_templates,
-            total_time=total_rewrite_time,
-            sample_percentage=sample_percentage,
-        )
+            append_result(
+                csv_path=out_file,
+                n_templates=n_templates,
+                total_time=total_rewrite_time,
+                sample_percentage=sample_percentage,
+            )
 
 
 if __name__ == "__main__":

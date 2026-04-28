@@ -102,32 +102,33 @@ async def main():
 
     config_file_path = sys.argv[1]
     nprocs = int(sys.argv[2])
+    
+    n_rounds = 1
+    nr_passes = 1
 
-    db = PandoraDB(config_file_path)
-    await db.connect()
+    for sample_percentage in [0.1, 1, 10]:
 
-    try:
-        n_rounds = 1
-        nr_passes = 1
-        sample_percentage = 0.1
+        db = PandoraDB(config_file_path)
+        await db.connect()
 
-        out_file = f"pandora_template_search_random_flip_{sample_percentage}.csv"
+        try:
+            out_file = f"pandora_template_search_random_flip_{sample_percentage}.csv"
 
-        for nq in range(10_000, 100_001, 10_000):
-            avg_time = await run_single_case(
-                db=db,
-                nq=nq,
-                n_rounds=n_rounds,
-                nr_passes=nr_passes,
-                sample_percentage=sample_percentage,
-                nprocs=nprocs,
-            )
+            for nq in range(10_000, 100_001, 10_000):
+                avg_time = await run_single_case(
+                    db=db,
+                    nq=nq,
+                    n_rounds=n_rounds,
+                    nr_passes=nr_passes,
+                    sample_percentage=sample_percentage,
+                    nprocs=nprocs,
+                )
 
-            with open(out_file, "a", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow((nq, avg_time, sample_percentage, nprocs))
-    finally:
-        await db.close()
+                with open(out_file, "a", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow((nq, avg_time, sample_percentage, nprocs))
+        finally:
+            await db.close()
 
 
 if __name__ == "__main__":
