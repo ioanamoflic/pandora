@@ -68,8 +68,8 @@ class PandoraGateTranslator(Enum):
     ZPowGate = 7
     HPowGate = 8
     _PauliX = 9
-    _PauliZ = 10
-    _PauliY = 11
+    _PauliY = 10
+    _PauliZ = 11
     GlobalPhaseGate = 12
     ResetChannel = 13
     M = 14
