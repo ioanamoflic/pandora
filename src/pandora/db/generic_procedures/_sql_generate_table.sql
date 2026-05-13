@@ -7,7 +7,7 @@ AS $$
 $$;
 
 CREATE OR REPLACE FUNCTION get_type_from_link(link bigint)
-RETURNS bigint
+RETURNS smallint
 LANGUAGE sql
 IMMUTABLE PARALLEL SAFE
 AS $$
@@ -200,3 +200,36 @@ create table IF NOT EXISTS public.layered_cliff_t
     layer     bigint
 );
 
+
+-- === ZX ===
+
+create table zx_vertex (
+    id bigserial primary key,
+    type smallint not null,
+    qubit bigint not null,
+    row bigint not null,
+    param real not null default 0 -- used as a pi multiplier
+) WITH (FILLFACTOR = 50);
+
+CREATE INDEX zx_vertex_type ON zx_vertex (type);
+
+-- Edges are stored with the smaller id as source. Use zx_check_edge_order to get the correct order for an edge
+create table zx_edge (
+    id bigserial primary key,
+    type smallint not null,
+    -- Encoded ZX vertex references: create_link(zx_vertex.id, 0, zx_vertex.type).
+    -- Decode with get_id_from_link(ref) for the vertex id and get_type_from_link(ref)
+    -- for the vertex type.
+    source bigint not null,
+    target bigint not null
+);
+
+-- Vertex types
+CREATE OR REPLACE FUNCTION zx_const_input_type()      RETURNS smallint LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT 0::smallint  $$;
+CREATE OR REPLACE FUNCTION zx_const_output_type()     RETURNS smallint LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT 1::smallint  $$;
+CREATE OR REPLACE FUNCTION zx_const_z_spider()        RETURNS smallint LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT 32::smallint $$;
+CREATE OR REPLACE FUNCTION zx_const_x_spider()        RETURNS smallint LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT 33::smallint $$;
+
+-- Edge types
+CREATE OR REPLACE FUNCTION zx_const_regular_edge()    RETURNS smallint LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT 0::smallint  $$;
+CREATE OR REPLACE FUNCTION zx_const_hadamard_edge()   RETURNS smallint LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT 1::smallint  $$;

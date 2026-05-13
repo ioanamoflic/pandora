@@ -159,7 +159,9 @@ class PandoraService:
             'max_missed_rounds',
             'benchmark_results',
             'optimization_results',
-            'gate_types'
+            'gate_types',
+            'zx_vertex',
+            'zx_edge'
         ]
         async with self.db.pool.acquire() as conn:
             for t in tables:
