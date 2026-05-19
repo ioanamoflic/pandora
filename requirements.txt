@@ -3,6 +3,7 @@ qualtran==0.6.1
 psycopg2-binary
 requests
 pytest
+pytest-asyncio
 gmpy2
 qiskit==1.4.4 # for mqt benchmarks
 mqt.qcec
