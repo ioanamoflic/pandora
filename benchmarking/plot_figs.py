@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import glob
 import numpy as np
 import pandas as pd
 from matplotlib.gridspec import GridSpec
@@ -12,59 +13,6 @@ plt.rcParams.update({
     "legend.fontsize": 6,
     "lines.markersize": 3,
 })
-
-
-def fig2():
-    df_tket = pd.read_csv(f'results/tket_bench_final.csv')
-    df_qiskit = pd.read_csv(f'results/qiskit_bench_final.csv')
-
-    tket_cnot_counts = df_tket['n_cx']
-    pandora_times = df_tket['Pandora']
-    tket_times = df_tket['TKET']
-
-    qiskit_labels = df_qiskit['Category']
-    qiskit_x = np.arange(len(qiskit_labels))
-    pandora_qiskit = df_qiskit['Pandora']
-    qiskit_search = df_qiskit['Qiskit search']
-    qiskit_rewrite = df_qiskit['Qiskit rewrite']
-    qiskit_total = df_qiskit['Qiskit total']
-
-    fig = plt.figure(figsize=(4.7, 3.2), dpi=600)
-    gs = GridSpec(1, 2, height_ratios=[1], hspace=0.5)
-
-    ax1 = fig.add_subplot(gs[0, 0])
-    ax1.grid(True, linestyle=':', color='gray', alpha=0.6)
-
-    ax1.loglog(tket_cnot_counts, pandora_times, marker='o', color='cadetblue', label='Pandora')
-    ax1.loglog(tket_cnot_counts, tket_times, marker='o', color='brown', label='TKET')
-
-    # for x, y in zip(tket_cnot_counts, pandora_times):
-    #     ax1.annotate(f"{y:.2f}", (x, y), color='blue', fontsize=6, ha='right', va='bottom')
-    # for x, y in zip(tket_cnot_counts, tket_times):
-    #     ax1.annotate(f"{y:.2f}", (x, y), color='black', fontsize=6, ha='right', va='bottom')
-
-    ax1.set_xlabel("TKET: Number of CNOTs")
-    ax1.set_ylabel("Seconds")
-    ax1.set_title("(a)")
-    ax1.legend()
-
-    ax2 = fig.add_subplot(gs[0, 1], sharey=ax1)
-    ax2.grid(True, linestyle=':', color='gray', alpha=0.6)
-
-    ax2.semilogy(qiskit_x, qiskit_search, label='Qiskit search', color='red', marker='o', alpha=0.6)
-    ax2.semilogy(qiskit_x, qiskit_rewrite, label='Qiskit rewrite', color='darksalmon', marker='o', alpha=0.6)
-    ax2.semilogy(qiskit_x, qiskit_total, label='Qiskit total', color='brown', marker='o')
-    ax2.semilogy(qiskit_x, pandora_qiskit, label='Pandora', color='cadetblue', marker='o')
-
-    ax2.set_xticks(qiskit_x)
-    ax2.set_xticklabels(qiskit_labels, rotation=30, ha='right')
-    ax2.set_xlabel("Qiskit: (#Qubits, Ratio)")
-    ax2.legend()
-    ax2.set_title("(b)")
-
-    plt.savefig("fig1.png", bbox_inches='tight', dpi=600)
-    plt.savefig("fig1.pdf", bbox_inches='tight', dpi=600)
-
 
 def fig_speed():
     df_pandora_01 = pd.read_csv('pandora_template_search_random_flip_0.1.csv')
@@ -329,23 +277,44 @@ def fig5():
     plt.savefig("fig4.png", bbox_inches='tight', dpi=600)
 
 
+def generate_average_times(file):    
+    files = sorted(glob.glob(f"{file}_*.csv"))
+    print(files)
+    dfs = [pd.read_csv(f, header=None) for f in files]
+    result = dfs[0].copy()
+    result[3] = sum(df[3] for df in dfs) / len(dfs)
+
+    result.to_csv(f"{file}_avg.csv",
+                header=False,
+                index=False)
+
+
 def fig_verification():
-    pandora_0 = pd.read_csv(f'pandora_0_verification.csv')
-    pandora_1 = pd.read_csv(f'pandora_1_verification.csv')
+    for file_name in ['pandora_0_verification',
+                      'pandora_1_verification',
+                      'dd_0_verification',
+                      'dd_1_verification',
+                      'zx_0_verification',
+                      'zx_1_verification']:
+        generate_average_times(file_name)
+
+    pandora_0 = pd.read_csv(f'pandora_0_verification_avg.csv')
+    pandora_1 = pd.read_csv(f'pandora_1_verification_avg.csv')
     
-    dd_0 = pd.read_csv(f'dd_0_verification.csv')
-    # dd_1 = pd.read_csv(f'dd_1_verification.csv')  
+    dd_0 = pd.read_csv(f'dd_0_verification_avg.csv')
+    dd_1 = pd.read_csv(f'dd_1_verification_avg.csv')  
       
-    zx_0 = pd.read_csv(f'zx_0_verification.csv')
-    zx_1 = pd.read_csv(f'zx_1_verification.csv')
+    zx_0 = pd.read_csv(f'zx_0_verification_avg.csv')
+    zx_1 = pd.read_csv(f'zx_1_verification_avg.csv')
     
     circuits = pandora_0.iloc[:, 1]
 
     pandora_equiv = pandora_0.iloc[:, 3]
     pandora_neq = pandora_1.iloc[:, 3]
-    dd_equiv = zx_0.iloc[:, 3]
-    dd_neq = zx_1.iloc[:, 3]
-    zx_equiv = dd_0.iloc[:, 3]
+    dd_equiv = dd_0.iloc[:, 3]
+    dd_neq = dd_1.iloc[:, 3]
+    zx_equiv = zx_0.iloc[:, 3]
+    zx_neq = zx_1.iloc[:, 3]
 
     fig, (ax1) = plt.subplots(1, 1, figsize=(4.7, 3.2), gridspec_kw={'height_ratios': [1]})
 
@@ -353,6 +322,7 @@ def fig_verification():
     ax1.plot(circuits, dd_equiv, marker='o', label='DD equiv', color='lightpink', zorder=3)
     ax1.plot(circuits, dd_neq, marker='D', label='DD neq', color='lightpink', zorder=3)
     ax1.plot(circuits, zx_equiv, marker='o', label='ZX equiv', color='powderblue', zorder=3)
+    ax1.plot(circuits, zx_neq, marker='D', label='ZX neq', color='powderblue', zorder=3)
     ax1.plot(circuits, pandora_equiv, marker='o', label='Pandora equiv', color='navy', zorder=3)
     ax1.plot(circuits, pandora_neq, marker='D', label='Pandora neq', color='navy', zorder=3)
 
@@ -448,7 +418,8 @@ def fig_adder_reduction():
 
     plt.tight_layout()
     plt.savefig("fig_adder_reduction.png", bbox_inches='tight', dpi=600)
-    
+    plt.savefig("fig_adder_reduction.pdf", bbox_inches='tight', dpi=600)
+
     
 if __name__ == "__main__":
     # fig2()

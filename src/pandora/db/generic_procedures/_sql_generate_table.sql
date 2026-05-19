@@ -48,11 +48,14 @@ create table IF NOT EXISTS public.linked_circuit
     label   char,
     cl_ctrl boolean,
     meas_key smallint
-) WITH (FILLFACTOR = 50);
+) WITH (FILLFACTOR = 100);
 
-CREATE INDEX ON linked_circuit (type);
+-- For equivalence benchamrk
+CREATE INDEX linked_circuit_type_idx on linked_circuit(type);
 
-CREATE INDEX idx_linked_circuit_prev1_mod_100 ON linked_circuit (next_q1, next_q2) WHERE div(next_q1, 1000) = div(next_q2, 1000);
+CREATE INDEX linked_circuit_next_ids_equal_idx on linked_circuit(type, (get_type_from_link(next_q1)))
+where get_id_from_link(next_q1) = get_id_from_link(next_q2);
+-- For equivalence benchamrk
 
 CREATE TABLE IF NOT EXISTS gate_types (
     id smallint unique not null,

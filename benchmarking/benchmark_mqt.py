@@ -179,15 +179,18 @@ def run_mqt_benchmark(
 
 
 async def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 5:
         sys.exit(0)
 
     config_file_path = sys.argv[1]
     is_equiv = int(sys.argv[2])
     backend = sys.argv[3]
+    exp_id = int(sys.argv[4])
 
+    assert backend in ['pandora', 'dd', 'zx']
+    
     timeout_sec = 1000
-    nprocs = 24
+    nprocs = 1
     nr_runs = 10
     results = []
 
@@ -228,7 +231,7 @@ async def main():
 
         print("-----", total_time / nr_runs)
 
-    out_path = f"{backend}_{is_equiv}_verification.csv"
+    out_path = f"{backend}_{is_equiv}_verification_{exp_id}.csv"
     with open(out_path, "a", newline="") as f:
         writer = csv.writer(f)
         writer.writerows(results)

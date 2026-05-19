@@ -4,7 +4,7 @@ psycopg2-binary
 requests
 pytest
 gmpy2
-qiskit
+qiskit==1.4.4 # for mqt benchmarks
 mqt.qcec
 qiskit_qasm3_import
 pytket

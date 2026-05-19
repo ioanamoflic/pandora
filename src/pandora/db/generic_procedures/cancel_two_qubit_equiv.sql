@@ -15,7 +15,6 @@ declare
 	second_next_q2_id bigint;
 
     found_match boolean;
-    mismatch_count int;
 
     a record;
     b record;
@@ -27,17 +26,10 @@ declare
 
 begin
     start_time := clock_timestamp();
-    mismatch_count := 0;
 
-    select count(id) into remaining_gate_count from linked_circuit;
-
-	while remaining_gate_count > 2 * qubit_count loop
+    while true loop
 
         found_match := false;
-
-        if mismatch_count >= 1000 then
-            exit;
-        end if;
 
         for gate in
             select * from linked_circuit
@@ -124,12 +116,9 @@ begin
 
         end loop; -- end gate loop
 
-
-        if found_match is False then
-            mismatch_count := mismatch_count + 1;
+        if found_match is false then
+            exit;
         end if;
-
-	    select count(id) into remaining_gate_count from linked_circuit;
 
         if extract(epoch from (clock_timestamp() - start_time)) > timeout then
             exit;
