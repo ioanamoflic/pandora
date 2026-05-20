@@ -1,4 +1,5 @@
 create or replace procedure linked_hhcxhh_to_cx(pass_count int, timeout int)
+-- create or replace procedure linked_hhcxhh_to_cx(my_partition int, pass_count int, timeout int)
     language plpgsql
 as
 $$
@@ -45,6 +46,7 @@ begin
                        type = any(cx_types)
                        and get_type_from_link(prev_q1) = h_type and get_type_from_link(prev_q2) = h_type
                        and get_type_from_link(next_q1) = h_type and get_type_from_link(next_q2) = h_type
+                       -- and partition_id = my_partition
         loop
             select * into cx from linked_circuit where id = gate.id for update skip locked;
 

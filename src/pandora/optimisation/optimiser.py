@@ -175,11 +175,19 @@ class PandoraOptimiser:
             )
             self._call_thread_proc(stored_procedure)
 
-    def hhcxhh_to_cx(self, dedicated_nproc: int | None = None) -> None:
-        for _ in range(dedicated_nproc or 0):
-            stored_procedure = (
-                f"call linked_hhcxhh_to_cx({self.pass_count}, {self.timeout})"
-            )
+    def hhcxhh_to_cx(self, 
+                     dedicated_nproc: int | None = None, 
+                     run_multiple: bool | None = False) -> None:
+        
+        for i in range(dedicated_nproc or 0):
+            if run_multiple:
+                stored_procedure = (
+                    f"call linked_hhcxhh_to_cx({i}, {self.pass_count}, {self.timeout})"
+                )
+            else:
+                stored_procedure = (
+                    f"call linked_hhcxhh_to_cx({self.pass_count}, {self.timeout})"
+                )   
             self._call_thread_proc(stored_procedure)
 
     def cx_to_hhcxhh(self, dedicated_nproc: int | None = None) -> None:

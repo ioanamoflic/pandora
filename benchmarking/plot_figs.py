@@ -3,6 +3,7 @@ import glob
 import numpy as np
 import pandas as pd
 from matplotlib.gridspec import GridSpec
+from matplotlib.ticker import ScalarFormatter
 
 plt.rcParams.update({
     "font.size": 7,
@@ -15,17 +16,17 @@ plt.rcParams.update({
 })
 
 def fig_speed():
-    df_pandora_01 = pd.read_csv('pandora_template_search_random_flip_0.1.csv')
-    df_pandora_1 = pd.read_csv('pandora_template_search_random_flip_1.csv')
-    df_pandora_10 = pd.read_csv('pandora_template_search_random_flip_10.csv')
+    df_pandora_01 = pd.read_csv('benchmarking/results/pandora_seq/pandora_template_search_random_flip_0.1.csv',header=None)
+    df_pandora_1 = pd.read_csv('benchmarking/results/pandora_seq/pandora_template_search_random_flip_1.csv',header=None)
+    df_pandora_10 = pd.read_csv('benchmarking/results/pandora_seq/pandora_template_search_random_flip_10.csv',header=None)
 
-    df_qiskit_01 = pd.read_csv('qiskit_template_search_random_flip_0.1.csv')
-    df_qiskit_1 = pd.read_csv('qiskit_template_search_random_flip_1.csv')
-    df_qiskit_10 = pd.read_csv('qiskit_template_search_random_flip_10.csv')
+    df_qiskit_01 = pd.read_csv('benchmarking/results/qiskit_seq/qiskit_template_search_random_flip_0.1.csv',header=None)
+    df_qiskit_1 = pd.read_csv('benchmarking/results/qiskit_seq/qiskit_template_search_random_flip_1.csv',header=None)
+    df_qiskit_10 = pd.read_csv('benchmarking/results/qiskit_seq/qiskit_template_search_random_flip_10.csv',header=None)
     
-    df_tket_01 = pd.read_csv('TKET_template_search_0.1.csv')
-    df_tket_1 = pd.read_csv('TKET_template_search_1.csv')
-    df_tket_10 = pd.read_csv('TKET_template_search_10.csv')
+    df_tket_01 = pd.read_csv('benchmarking/results/tket_seq/TKET_template_search_0.1.csv',header=None)
+    df_tket_1 = pd.read_csv('benchmarking/results/tket_seq/TKET_template_search_1.csv',header=None)
+    df_tket_10 = pd.read_csv('benchmarking/results/tket_seq/TKET_template_search_10.csv',header=None)
     
     # first column
     template_count = df_pandora_01.iloc[:, 0]
@@ -98,24 +99,17 @@ def fig_speed():
     plt.savefig("fig_speed.pdf", bbox_inches='tight', dpi=600)
 
 
-def fig3():
-    df_fh = pd.read_csv(f'results/fh50_bench_final.csv')
-    df_adder = pd.read_csv(f'results/adder_improvement.csv')
-    df_pandora = pd.read_csv(f'results/pandora_multithreaded_speedups.csv')
+def fig_multi():
+    df_fh = pd.read_csv(f'benchmarking/results/fh50_bench_final.csv', header=None)
+    df_speedup = pd.read_csv(f'benchmarking/results/pandora_template_search_parallel.csv', header=None)
 
-    threads_fh = df_fh['nprocs'][:5]
-    threads_pandora = df_pandora['nprocs'][:5]
-
-    speedup_fh = df_fh['speedup'][:5]
-    speedup_pandora = df_pandora['speedup'][:5]
-
-    adders = df_adder['circuit']
-    tcount_reduction = df_adder['improvement_3600']
-
-    print(threads_fh)
-    print(threads_pandora)
-    print(speedup_fh)
-    print(speedup_pandora)
+    threads_fh = df_fh.iloc[:, 0]
+    speedup_fh = df_fh.iloc[:, 1]
+    
+    times = df_speedup.iloc[:, 1]
+    threads_opt = [1, 2, 4, 8, 16]
+    baseline_time = times.iloc[0]
+    speedup_opt = baseline_time / times
 
     fig = plt.figure(figsize=(5, 5), dpi=600)
     gs = GridSpec(2, 2, hspace=0.5)
@@ -134,30 +128,33 @@ def fig3():
 
     ax2 = fig.add_subplot(gs[0, 1])
     ax2.grid(True, linestyle=':', alpha=0.6, zorder=0)
-
-    ax2.plot(threads_pandora, threads_pandora, linestyle='--', color='gray', label='Ideal')
-    ax2.plot(threads_pandora, speedup_pandora, marker='o', color='mediumslateblue', label='Observed')
+    ax2.plot(threads_opt, threads_opt, linestyle='--', color='gray', label='Ideal')
+    ax2.plot(threads_opt, speedup_opt, marker='o', color='mediumslateblue', label='Observed')
     ax2.set_title("(b)")
     ax2.set_xlabel("Number of Threads")
     ax2.set_xscale('log', base=10)
     ax2.set_yscale('log', base=10)
-    ax2.set_xticks(threads_pandora)
+    ax2.set_xticks(threads_opt)
     ax2.get_xaxis().set_major_formatter(plt.ScalarFormatter())
 
+    tcount_reduction = get_adder_reduction()
+    adders = [16, 32, 64, 128, 256, 512, 1024, 2048]
+    x = np.arange(len(adders))
+
     ax3 = fig.add_subplot(gs[1, :])
-    ax3.grid(True, linestyle=':', alpha=0.6, zorder=0)
-    ax3.bar(adders, tcount_reduction, color='lightsteelblue', zorder=2)
+    ax3.grid(True, axis='y', linestyle='--', linewidth=0.8, alpha=0.5, zorder=0)
+    ax3.bar(x, tcount_reduction, color='lightsteelblue', zorder=2)
     ax3.set_ylabel("T-count reduced (%)")
-    # ax3.set_ylim(0, 16)
-    ax3.set_xticklabels(adders, rotation=30, ha='right')
     ax3.set_title("(c)")
+    ax3.set_xticks(x)
+    ax3.set_xticklabels(adders, rotation=30, ha='right')
 
-    plt.savefig("fig2.png", bbox_inches='tight', dpi=600)
-    plt.savefig("fig2.pdf", bbox_inches='tight', dpi=600)
+    plt.savefig("fig_multi.png", bbox_inches='tight', dpi=600)
+    plt.savefig("fig_multi.pdf", bbox_inches='tight', dpi=600)
 
 
-def fig4():
-    df_rsa = pd.read_csv(f'results/rsa_bench_final.csv')
+def fig_rsa():
+    df_rsa = pd.read_csv(f'benchmarking/results/rsa_bench_final.csv')
 
     bits = df_rsa['n_bits']
     time_high = df_rsa['time_high_decomp']
@@ -167,7 +164,7 @@ def fig4():
 
     fig = plt.figure(figsize=(5, 5), dpi=300)
     gs = GridSpec(2, 2, height_ratios=[1, 1], hspace=0.5, wspace=0.4)
-
+    
     ax1 = fig.add_subplot(gs[0, :])
     ax1.plot(bits, time_high, 'o-', color='navy', label="Shor High-Level")
     ax1.plot(bits, time_modadd, 'o-', color='mediumslateblue', label="CtrlScaleModAdd")
@@ -196,20 +193,23 @@ def fig4():
     ax3.set_ylabel("Gates/Second")
     ax3.set_xlabel("Bits Shor's algorithm")
     ax3.grid(True, linestyle=':', alpha=0.6)
-
-    bit_labels = [r"$2^6$", r"$2^7$", r"$2^8$", r"$2^9$", r"$2^{10}$", r"$2^{11}$"]
+    
+    bit_labels = [rf"$2^{{{int(np.log2(b))}}}$" for b in bits]
 
     for ax in [ax1, ax2, ax3]:
         ax.set_xticks(bits)
         ax.set_xticklabels(bit_labels, rotation=25, ha='right')
 
-    plt.savefig("fig3.png", bbox_inches='tight', dpi=600)
-    plt.savefig("fig3.pdf", bbox_inches='tight', dpi=600)
+    plt.savefig("fig_rsa.png", bbox_inches='tight', dpi=600)
+    plt.savefig("fig_rsa.pdf", bbox_inches='tight', dpi=600)
 
 
-def fig5():
-    df_decomp = pd.read_csv(f'results/decomposition_final.csv')
-    df_estimates = pd.read_csv(f'results/fh_final.csv')
+def fig_fh():
+    df_decomp = pd.read_csv(f'benchmarking/results/decomposition_final.csv')
+    df_bar = df_decomp.dropna(subset=['N', 'n_gates'])
+
+    x_bar = df_bar['N'].astype(int).astype(str)
+    y_bar = df_bar['n_gates']
 
     x = df_decomp['id']
     decomp_times = df_decomp['decomp_time']
@@ -219,9 +219,6 @@ def fig5():
     pyliqtr_rate = df_decomp['rate_pyliqtr']
     pandora_rate = df_decomp['rate_pandora']
     partition_rate = df_decomp['rate_partitioning']
-
-    x_bar = ['20', '30', '40', '50', '100']
-    y_bar = df_estimates['n_gates']
 
     x_line = df_decomp['id']
     gate_count = df_decomp['pandora_count']
@@ -263,7 +260,7 @@ def fig5():
     ax3.set_yscale('log')
     ax3.set_xlabel('N x N')
     ax3.set_ylabel('Clifford+T gate count')
-    ax3.set_xticklabels(x_bar)
+    # ax3.set_xticklabels(x_bar)
 
     ax4 = fig.add_subplot(gs[1, 1])
     ax4.plot(x_line, gate_count, 'o-', color='cadetblue', label='Gate count (Clifford+T)')
@@ -273,8 +270,8 @@ def fig5():
     ax4.legend()
     ax4.grid(True, linestyle=':', alpha=0.6)
 
-    plt.savefig("fig4.pdf", bbox_inches='tight', dpi=600)
-    plt.savefig("fig4.png", bbox_inches='tight', dpi=600)
+    plt.savefig("fig_fh.pdf", bbox_inches='tight', dpi=600)
+    plt.savefig("fig_fh.png", bbox_inches='tight', dpi=600)
 
 
 def generate_average_times(file):    
@@ -290,22 +287,22 @@ def generate_average_times(file):
 
 
 def fig_verification():
-    for file_name in ['pandora_0_verification',
-                      'pandora_1_verification',
-                      'dd_0_verification',
-                      'dd_1_verification',
-                      'zx_0_verification',
-                      'zx_1_verification']:
-        generate_average_times(file_name)
+    # for file_name in ['pandora_0_verification',
+    #                   'pandora_1_verification',
+    #                   'dd_0_verification',
+    #                   'dd_1_verification',
+    #                   'zx_0_verification',
+    #                   'zx_1_verification']:
+    #     generate_average_times(file_name)
 
-    pandora_0 = pd.read_csv(f'pandora_0_verification_avg.csv')
-    pandora_1 = pd.read_csv(f'pandora_1_verification_avg.csv')
+    pandora_0 = pd.read_csv(f'benchmarking/results/pandora_equiv_check/pandora_0_verification_avg.csv')
+    pandora_1 = pd.read_csv(f'benchmarking/results/pandora_equiv_check/pandora_1_verification_avg.csv')
     
-    dd_0 = pd.read_csv(f'dd_0_verification_avg.csv')
-    dd_1 = pd.read_csv(f'dd_1_verification_avg.csv')  
+    dd_0 = pd.read_csv(f'benchmarking/results/dd_equiv_check/dd_0_verification_avg.csv')
+    dd_1 = pd.read_csv(f'benchmarking/results/dd_equiv_check/dd_1_verification_avg.csv')  
       
-    zx_0 = pd.read_csv(f'zx_0_verification_avg.csv')
-    zx_1 = pd.read_csv(f'zx_1_verification_avg.csv')
+    zx_0 = pd.read_csv(f'benchmarking/results/zx_equiv_check/zx_0_verification_avg.csv')
+    zx_1 = pd.read_csv(f'benchmarking/results/zx_equiv_check/zx_1_verification_avg.csv')
     
     circuits = pandora_0.iloc[:, 1]
 
@@ -350,7 +347,7 @@ def fig_adders():
     }
 
     for i, n_bits in enumerate(bit_widths):
-        df = pd.read_csv(f'adder_{n_bits}.csv')
+        df = pd.read_csv(f'benchmarking/results/adder_results_30s/adder_{n_bits}.csv')
         ax = axes[i]
 
         for col, (style, label) in plot_columns.items():
@@ -363,13 +360,13 @@ def fig_adders():
         ax.set_ylabel('Gate Count')
         ax.legend(fontsize='x-small')
 
-    plt.savefig("adders_all.png", bbox_inches='tight', dpi=600)
-    plt.savefig("adders_all.pdf", bbox_inches='tight', dpi=600)
+    plt.savefig("fig_adder_opt.png", bbox_inches='tight', dpi=600)
+    plt.savefig("fig_adder_opt.pdf", bbox_inches='tight', dpi=600)
 
     plt.close()
 
 
-def fig_adder_reduction():
+def get_adder_reduction():
     from benchmarking.benchmark_adders import get_adder, replace_all_toffolis_qiskit
 
     bits = [16, 32, 64, 128, 256, 512, 1024, 2048]
@@ -379,7 +376,7 @@ def fig_adder_reduction():
 
     for n_bits in bits:
         labels.append(f'Adder_{n_bits}')
-        file = f"adder_{n_bits}.csv"
+        file = f"benchmarking/results/adder_results_30s/adder_{n_bits}.csv"
 
         adder_circuit = replace_all_toffolis_qiskit(get_adder(n_bits=n_bits))
         counts = adder_circuit.count_ops()
@@ -402,32 +399,16 @@ def fig_adder_reduction():
         reductions_pct.append(reduction_pct)
     
     print(reductions_pct)
-
-    # --- Styling to match your example ---
-    plt.figure(figsize=(8, 4.5))
-    ax = plt.gca()
-
-    bars = plt.bar(labels, reductions_pct, color='lightsteelblue')
-
-    ax.grid(True, which='both', axis='both', linestyle='--', linewidth=0.8, alpha=0.5)
-    ax.set_axisbelow(True)
-
-    plt.ylabel("T-count reduced (%)")
-
-    plt.xticks(rotation=30, ha="right")
-
-    plt.tight_layout()
-    plt.savefig("fig_adder_reduction.png", bbox_inches='tight', dpi=600)
-    plt.savefig("fig_adder_reduction.pdf", bbox_inches='tight', dpi=600)
+    
+    return reductions_pct
 
     
 if __name__ == "__main__":
-    # fig2()
-    # fig3()
-    # fig4()
-    # fig5()
-    fig_verification()
-    fig_adders()
-    fig_adder_reduction()
     fig_speed()
+    fig_rsa()
+    fig_fh()
+    fig_multi()
+    fig_adders()
+    fig_verification()
+
  

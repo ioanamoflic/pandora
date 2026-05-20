@@ -17,14 +17,22 @@ async def count_h_gates(db: PandoraDB) -> int:
         return await conn.fetchval(
             "select count(id) from linked_circuit where type=$1;",
             PandoraGateTranslator.HPowGate.value,
-        )
+        ) 
 
-
+async def partition_table(db: PandoraDB, nprocs: int):
+    async with db.pool.acquire() as conn:
+        await conn.execute("alter table linked_circuit add column partition_id integer;")
+        await conn.execute("update linked_circuit set partition_id = id % $1;", nprocs)
+        
+    
 async def rewrite_parallel(
     db: PandoraDB,
     nprocs: int,
     nr_passes: int,
 ) -> None:
+    
+    await partition_table(db, nprocs)
+
     optimiser = PandoraOptimiser(
         db=db,
         pass_count=nr_passes,
@@ -33,7 +41,7 @@ async def rewrite_parallel(
         max_concurrency=nprocs if nprocs > 0 else 1,
     )
 
-    optimiser.hhcxhh_to_cx(dedicated_nproc=nprocs)
+    optimiser.hhcxhh_to_cx(dedicated_nproc=nprocs, run_multiple=True)
     await optimiser.start()
 
 
@@ -113,6 +121,8 @@ async def main():
 
         try:
             out_file = f"pandora_template_search_random_flip_{sample_percentage}.csv"
+            if nprocs > 0:
+                out_file = f"pandora_template_search_random_flip_{sample_percentage}_parallel.csv"
 
             for nq in range(10_000, 100_001, 10_000):
                 avg_time = await run_single_case(
