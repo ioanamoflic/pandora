@@ -101,8 +101,8 @@ KEEP_RZ = False
 # accepted gates for now
 QISKIT_TO_PANDORA = {
     "rx": PandoraGateTranslator.Rx.value,
-    "ry": PandoraGateTranslator.Rx.value,
-    "rz": PandoraGateTranslator.Rx.value,
+    "ry": PandoraGateTranslator.Ry.value,
+    "rz": PandoraGateTranslator.Rz.value,
     "h": PandoraGateTranslator.HPowGate.value,
     "x": PandoraGateTranslator._PauliX.value,
     "y": PandoraGateTranslator._PauliY.value,
