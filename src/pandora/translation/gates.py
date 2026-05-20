@@ -243,7 +243,8 @@ class PandoraGateWrapper:
         cls = PANDORA_TO_QISKIT[gate_type]
 
         if gate_type in REQUIRES_ROTATION:
-            return cls(phi=self.gate.param)
+            # Pandora params are multiples of pi, but Qiskit uses radians
+            return cls(self.gate.param * np.pi)
 
         if gate_type in IS_IO:
             return cls

@@ -1,3 +1,4 @@
+import math
 from typing import Optional
 
 from qiskit.circuit import CircuitInstruction, Measure
@@ -59,7 +60,8 @@ class QiskitToPandoraTranslator:
             raise ValueError(f"Unsupported gate: {qiskit_name}")
 
         gate_code = QISKIT_TO_PANDORA[qiskit_name]
-        parameter = float(op.params[0]) if op.params else 0.0
+        # Qiskit rotation gates take angles in radians, while Pandora takes them in multiples of pi, so we convert here.
+        parameter = float(op.params[0] / math.pi) if op.params else 0.0
         global_shift = 0.0
         measurement_key = None
 
