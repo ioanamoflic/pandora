@@ -70,3 +70,16 @@ def test_qiskit_exponent_gates_have_param():
         (PandoraGateTranslator.CZPowGate.value, 1.0),
         (PandoraGateTranslator.CCXPowGate.value, 1.0),
     ]
+    
+def test_pandora_to_qiskit_extra_gates():
+    gates = [
+        PandoraGate(gate_code=PandoraGateTranslator.Swap.value),
+        PandoraGate(gate_code=PandoraGateTranslator.CNOT.value),
+    ]
+
+    qiskit_gates = [PandoraGateWrapper(gate).to_qiskit_gate() for gate in gates]
+
+    assert [gate.name for gate in qiskit_gates] == [
+        "swap",
+        "cx",
+    ]

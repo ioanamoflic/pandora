@@ -138,9 +138,11 @@ PANDORA_TO_QISKIT = {
     PandoraGateTranslator._PauliZ.value: qiskit.circuit.library.ZGate,
     PandoraGateTranslator._PauliY.value: qiskit.circuit.library.YGate,
     PandoraGateTranslator.CXPowGate.value: qiskit.circuit.library.CXGate,
+    PandoraGateTranslator.CZ.value: qiskit.circuit.library.CZGate,
     PandoraGateTranslator.CZPowGate.value: qiskit.circuit.library.CZGate,
     PandoraGateTranslator.CCXPowGate.value: qiskit.circuit.library.CCXGate,
-    PandoraGateTranslator.Swap.value: qiskit.circuit.library.SwapGate
+    PandoraGateTranslator.Swap.value: qiskit.circuit.library.SwapGate,
+    PandoraGateTranslator.CNOT.value: qiskit.circuit.library.CXGate,
 }
 
 IS_IO = [PandoraGateTranslator.In.value, PandoraGateTranslator.Out.value]
