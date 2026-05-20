@@ -156,8 +156,8 @@ PANDORA_TO_CIRQ = {
     PandoraGateTranslator.YPowGate.value: cirq.YPowGate,
     PandoraGateTranslator.HPowGate.value: cirq.HPowGate,
     PandoraGateTranslator._PauliX.value: cirq.X,
-    PandoraGateTranslator._PauliY.value: cirq.Z,
-    PandoraGateTranslator._PauliZ.value: cirq.Y,
+    PandoraGateTranslator._PauliY.value: cirq.Y,
+    PandoraGateTranslator._PauliZ.value: cirq.Z,
     PandoraGateTranslator.GlobalPhaseGate.value: cirq.GlobalPhaseGate,
     PandoraGateTranslator.ResetChannel.value: cirq.ResetChannel(),
     PandoraGateTranslator.In.value: In(),
@@ -173,7 +173,7 @@ PANDORA_TO_CIRQ = {
     PandoraGateTranslator.Toffoli.value: cirq.CCX,
     PandoraGateTranslator.CCXPowGate.value: cirq.CCXPowGate,
     PandoraGateTranslator.And.value: And,
-    PandoraGateTranslator.CSwapGate: cirq.CSwapGate
+    PandoraGateTranslator.CSwapGate.value: cirq.CSwapGate
 }
 
 PANDORA_TO_READABLE = {
