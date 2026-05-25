@@ -22,7 +22,6 @@ config_file = {
 
 @pytest.mark.asyncio
 async def test_lscom_adder_reconstruction():
-    q = [cirq.NamedQubit('0'), cirq.NamedQubit('1')]
 
     full_adder_circuit = get_adder_as_cirq_circuit(n_bits=3)
 
