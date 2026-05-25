@@ -1,3 +1,5 @@
+from typing import List
+
 import cirq
 import qiskit
 
@@ -13,7 +15,11 @@ from pandora.translation.translator import (
     TWO_QUBIT_GATES,
     PandoraGateTranslator,
 )
-from pandora.translation.gates import PandoraGateWrapper, PandoraGate
+from pandora.translation.gates import (
+    PandoraGate,
+    PandoraGateWrapper,
+    PandoraGateLayer
+)
 from pandora.translation.link import LinkID
 
 
@@ -102,6 +108,10 @@ class PandoraCircuitReconstructor:
     def to_qiskit(self) -> qiskit.QuantumCircuit:
         wrapped = self._resolve_qubits()
         return self._to_qiskit(wrapped, self.n_qubits)
+
+    def to_lscom(self) -> List[PandoraGateLayer]:
+        wrapped = self._resolve_qubits()
+        return self._to_lscom(wrapped)
 
     def _n_qubits(self) -> int:
         return sum(1 for g in self.gates if g.type == PandoraGateTranslator.In.value)
@@ -230,6 +240,18 @@ class PandoraCircuitReconstructor:
 
         return circuit
 
+    @staticmethod
+    def _to_lscom(wrapped: list[PandoraGateWrapper]) -> List[PandoraGateLayer]:
+        gates = []
+
+        for w in wrapped:
+            if w.prev_id1 is None and w.next_id1 is None:
+                raise PandoraWrappedGateMissingLinks
+
+            gates.append(PandoraGateLayer.from_pandora_wrapped(pandora_wrapped=w))
+
+        return gates
+
 
 def pandora_to_circuit(
     pandora_gates: list[PandoraGate],
@@ -240,4 +262,11 @@ def pandora_to_circuit(
 
     if circuit_type == "cirq":
         return recon.to_cirq()
-    return recon.to_qiskit()
+
+    if circuit_type == 'qiskit':
+        return recon.to_qiskit()
+
+    if circuit_type == "lscom":
+        return recon.to_lscom()
+
+    return None

@@ -4,7 +4,10 @@ from pathlib import Path
 from typing import Any, List, Optional
 
 from pandora.db.core import PandoraDB
-from pandora.db.repository import GateRepository
+from pandora.db.repository import (
+    GateRepository,
+    GateLayerRepository
+)
 from pandora.multithreading.parallel_decompose import worker_entry
 from pandora.translation.circuit_to_dag import PandoraWindowedBuilder
 from pandora.translation.translator import GLOBAL_IN_ID
@@ -18,17 +21,20 @@ class PandoraService:
             self,
             db: PandoraDB,
             repo: GateRepository,
+            repo_layered: GateLayerRepository = None,
             decomposition_window_size: int = 1_000_000,
     ):
         self.db = db
         self.repo = repo
+        self.repo_layered = repo_layered
         self.window_size = decomposition_window_size
 
     async def build_pandora(self):
         await self._drop_tables()
         await self._build_schema()
         await self._refresh_procedures()
-        await self._reset_sequence(table_names=['linked_circuit'])
+        await self._reset_sequence(table_names=['linked_circuit',
+                                                'layered_lscom'])
 
     async def build_circuit(self, circuit: Any):
         await self.build_pandora()
@@ -103,6 +109,17 @@ class PandoraService:
         from pandora.translation.dag_to_circuit import pandora_to_circuit
         return pandora_to_circuit(gates, circuit_type)
 
+    async def load_circuit_into_layered(self):
+        gates = await self.repo.fetch_all()  # will have to stream these in batches later
+
+        from pandora.translation.dag_to_circuit import pandora_to_circuit
+        layered_gates = pandora_to_circuit(gates, "lscom")
+
+        await self.repo_layered.insert_copy(layered_gates)
+
+    async def load_circuit_from_layered(self):
+        return await self.repo_layered.fetch_all()  # will have to stream these later
+
     async def get_edge_list(self):
         async with self.db.pool.acquire() as conn:
             return await conn.fetch("SELECT * FROM edge_list")
@@ -159,7 +176,8 @@ class PandoraService:
             'max_missed_rounds',
             'benchmark_results',
             'optimization_results',
-            'gate_types'
+            'gate_types',
+            'layered_lscom'
         ]
         async with self.db.pool.acquire() as conn:
             for t in tables:

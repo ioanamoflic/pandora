@@ -255,3 +255,61 @@ class PandoraGateWrapper:
 
     def __str__(self):
         return f"{self.gate.type}({self.q1}, {self.q2}, {self.q3})"
+
+
+@dataclass
+class PandoraGateLayer:
+
+    def __init__(
+            self,
+            id: int = None,
+            control_q: int = None,
+            target_q: int = None,
+            type: int = None,
+            param: float = None,
+            layer: int = None, ):
+        self.id = id
+        self.control_q = control_q
+        self.target_q = target_q
+        self.type = type
+        self.param = param
+        self.layer = layer
+
+    @classmethod
+    def from_pandora_wrapped(cls, pandora_wrapped: PandoraGateWrapper):
+        assert isinstance(pandora_wrapped, PandoraGateWrapper)
+
+        if pandora_wrapped.q3 is not None:
+            raise "LSCOM only supports < 3 qubit-gates!"
+
+        return cls(
+            id=pandora_wrapped.gate.id,
+            control_q=pandora_wrapped.q1,
+            target_q=pandora_wrapped.q2,
+            type=pandora_wrapped.gate.type,
+            param=pandora_wrapped.gate.param,
+            layer=pandora_wrapped.moment)
+
+    @classmethod
+    def from_db_row(cls, row):
+        return cls(
+            id=row[0],
+            control_q=row[1],
+            target_q=row[2],
+            type=row[3],
+            param=row[4],
+            layer=row[5]
+        )
+
+    def to_tuple(self):
+        base = (
+            self.id,
+            self.control_q,
+            self.target_q,
+            self.type,
+            self.param,
+            self.layer,
+        )
+        return base
+
+

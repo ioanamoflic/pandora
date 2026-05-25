@@ -190,7 +190,7 @@ create table if not exists public.mem_cx
 );
 
 
-create table IF NOT EXISTS public.layered_cliff_t
+create table IF NOT EXISTS public.layered_lscom
 (
     id        bigserial primary key, 
     control_q bigint,

@@ -1,7 +1,10 @@
 from typing import List, AsyncIterator
 
 from pandora.db.core import PandoraDB
-from pandora.translation.gates import PandoraGate
+from pandora.translation.gates import (
+    PandoraGate,
+    PandoraGateLayer
+)
 
 
 class GateRepository:
@@ -85,6 +88,69 @@ class GateRepository:
                 batch = []
                 async for row in cursor:
                     batch.append(PandoraGate.from_db_row(row))
+
+                    if len(batch) >= batch_size:
+                        yield batch
+                        batch = []
+
+                if batch:
+                    yield batch
+
+
+class GateLayerRepository:
+    def __init__(self, db: PandoraDB, table: str = "layered_lscom"):
+        self.db = db
+        self.table = table
+
+        self.columns = [
+            "id",
+            "control_q",
+            "target_q",
+            "type",
+            "param",
+            "layer",
+        ]
+
+    async def insert_copy(self, gates: List[PandoraGateLayer]):
+        if not gates:
+            return
+
+        records = [g.to_tuple() for g in gates]
+
+        async with self.db.pool.acquire() as conn:
+            await conn.copy_records_to_table(
+                self.table,
+                records=records,
+                columns=self.columns,
+            )
+
+    async def fetch_all(self) -> List[PandoraGateLayer]:
+        query = f"SELECT * FROM {self.table}"
+
+        async with self.db.acquire() as conn:
+            rows = await conn.fetch(query)
+
+        return [PandoraGateLayer.from_db_row(row) for row in rows]
+
+    async def fetch_by_label(self, label: int):
+        pass
+
+    async def fetch_by_ids(self, ids: list[int]):
+        pass
+
+    async def stream_edge_batches(self, batch_size: int):
+        pass
+
+    async def stream(self, batch_size: int = 1000) -> AsyncIterator[List[PandoraGateLayer]]:
+        query = f"SELECT * FROM {self.table}"
+
+        async with self.db.acquire() as conn:
+            async with conn.transaction():
+                cursor = await conn.cursor(query)
+
+                batch = []
+                async for row in cursor:
+                    batch.append(PandoraGateLayer.from_db_row(row))
 
                     if len(batch) >= batch_size:
                         yield batch
