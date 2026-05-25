@@ -1,4 +1,6 @@
 import cirq
+import qiskit
+from qiskit import QuantumCircuit
 
 from qualtran.bloqs.arithmetic.addition import Add
 from qualtran.bloqs.data_loading import QROM
@@ -30,12 +32,31 @@ def get_qrom_as_cirq_circuit(data) -> cirq.Circuit:
     return qrom_circuit
 
 
-def remove_io_gates(circuit: cirq.Circuit) -> cirq.Circuit:
-    return cirq.Circuit(
-        op
-        for op in circuit.all_operations()
-        if not isinstance(op.gate, (In, Out))
-    )
+def remove_io_gates(circuit: cirq.Circuit | qiskit.QuantumCircuit,
+                    type='cirq'):
+    if type == 'cirq':
+        return cirq.Circuit(
+            op
+            for op in circuit.all_operations()
+            if not isinstance(op.gate, (In, Out))
+        )
+
+    if type == 'qiskit':
+        new_circuit = QuantumCircuit(
+            circuit.num_qubits,
+            circuit.num_clbits
+        )
+        for inst in circuit.data:
+            if inst.operation.name not in ("In", "Out"):
+                new_circuit.append(
+                    inst.operation,
+                    inst.qubits,
+                    inst.clbits
+                )
+
+        return new_circuit
+
+    return None
 
 
 def remove_classically_controlled_ops(circuit: cirq.Circuit) -> cirq.Circuit:

@@ -2,6 +2,7 @@ import itertools
 import math
 
 import cirq
+from qiskit import QuantumCircuit
 
 
 def assert_same_up_to_qubit_permutation(expected: cirq.Circuit, actual: cirq.Circuit):
@@ -74,3 +75,48 @@ def count_t_gates(circuit, tol=1e-8):
         for op in moment
         if is_t_like(op)
     )
+
+
+def permute_qiskit_circuit(circuit: QuantumCircuit, permutation) -> QuantumCircuit:
+    new_circuit = QuantumCircuit(circuit.num_qubits, circuit.num_clbits)
+
+    old_to_new = {
+        circuit.qubits[old_idx]: new_circuit.qubits[new_idx]
+        for new_idx, old_idx in enumerate(permutation)
+    }
+    old_clbit_to_new = {
+        circuit.clbits[i]: new_circuit.clbits[i]
+        for i in range(circuit.num_clbits)
+    }
+
+    for inst in circuit.data:
+        new_qargs = [old_to_new[q] for q in inst.qubits]
+        new_cargs = [old_clbit_to_new[c] for c in inst.clbits]
+        new_circuit.append(inst.operation, new_qargs, new_cargs)
+
+    return new_circuit
+
+
+def assert_same_up_to_qubit_permutation_qiskit(
+    expected: QuantumCircuit,
+    actual: QuantumCircuit,
+):
+    """
+    Obviously this has horrendous time complexity.
+    """
+    assert expected.num_qubits == actual.num_qubits, (
+        f"Different qubit counts: {expected.num_qubits} != {actual.num_qubits}"
+    )
+    assert expected.num_clbits == actual.num_clbits, (
+        f"Different clbit counts: {expected.num_clbits} != {actual.num_clbits}"
+    )
+
+    n = actual.num_qubits
+
+    for permutation in itertools.permutations(range(n)):
+        remapped = permute_qiskit_circuit(actual, permutation)
+
+        if expected == remapped:
+            return
+
+    raise AssertionError("Circuits are not equal up to qubit permutation")

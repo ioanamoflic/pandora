@@ -1,7 +1,13 @@
 import cirq
 from collections import defaultdict
 
-from pandora.translation.translator import PANDORA_TO_CIRQ
+from qiskit import QuantumCircuit
+from qiskit.circuit import Operation
+
+from pandora.translation.translator import (
+    PANDORA_TO_CIRQ,
+    PANDORA_TO_QISKIT
+)
 
 
 def gate_qubits(g):
@@ -55,3 +61,49 @@ def pandora_gate_layers_to_cirq(gate_layers):
         cirq.Moment(ops_by_layer[layer])
         for layer in sorted(ops_by_layer)
     )
+
+
+def make_qiskit_instruction(gate_like, param):
+    if isinstance(gate_like, type):
+        if param is not None:
+            try:
+                return gate_like(param)
+            except TypeError:
+                return gate_like()
+        return gate_like()
+
+    if isinstance(gate_like, Operation):
+        return gate_like
+
+    if hasattr(gate_like, "num_qubits") and hasattr(gate_like, "params"):
+        return gate_like
+
+    raise TypeError(f"Unsupported Qiskit gate mapping: {gate_like!r}")
+
+
+def pandora_gate_layers_to_qiskit(gate_layers):
+    if not gate_layers:
+        return QuantumCircuit(0)
+
+    max_q = max(
+        q
+        for g in gate_layers
+        for q in (g.control_q, g.target_q)
+        if q is not None
+    )
+
+    qc = QuantumCircuit(max_q + 1)
+
+    for g in sorted(gate_layers, key=lambda x: (x.layer, x.id)):
+        qargs = gate_qubits(g)
+
+        if not qargs:
+            continue
+
+        gate_like = PANDORA_TO_QISKIT[g.type]
+
+        instruction = make_qiskit_instruction(gate_like, g.param)
+
+        qc.append(instruction, qargs)
+
+    return qc
