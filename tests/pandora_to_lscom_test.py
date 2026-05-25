@@ -4,7 +4,8 @@ import pytest
 from pandora.db.core import PandoraDB
 from pandora.db.repository import GateRepository, GateLayerRepository
 from pandora.db.service import PandoraService
-from pandora.util.circuit_util import remove_io_gates
+from pandora.util.circuit_util import remove_io_gates, get_adder_as_cirq_circuit, remove_measurements, \
+    remove_classically_controlled_ops
 from pandora.util.lscom_util import pandora_gate_layers_to_cirq
 from pandora.util.test_util import assert_same_up_to_qubit_permutation
 
@@ -20,13 +21,13 @@ config_file = {
 
 
 @pytest.mark.asyncio
-async def test_lscom_reconstruction():
+async def test_lscom_adder_reconstruction():
     q = [cirq.NamedQubit('0'), cirq.NamedQubit('1')]
 
-    dummy_state = cirq.Circuit(
-        cirq.H(q[0]),
-        cirq.CX(q[0], q[1]),
-        cirq.CX(q[0], q[1])
+    full_adder_circuit = get_adder_as_cirq_circuit(n_bits=3)
+
+    full_adder_circuit = remove_measurements(
+        remove_classically_controlled_ops(full_adder_circuit)
     )
 
     db = PandoraDB(config_file)
@@ -38,7 +39,7 @@ async def test_lscom_reconstruction():
     service = PandoraService(db=db, repo=repo, repo_layered=repo_layer)
 
     await service.build_circuit(
-        circuit=dummy_state
+        circuit=full_adder_circuit
     )
 
     await service.load_circuit_into_layered()
@@ -49,4 +50,4 @@ async def test_lscom_reconstruction():
 
     extracted_circuit = remove_io_gates(pandora_gate_layers_to_cirq(extracted_layered_gates))
 
-    assert_same_up_to_qubit_permutation(expected=dummy_state, actual=extracted_circuit)
+    assert_same_up_to_qubit_permutation(expected=full_adder_circuit, actual=extracted_circuit)
