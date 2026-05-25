@@ -1,4 +1,3 @@
-import cirq
 import pytest
 
 from pandora.db.core import PandoraDB
