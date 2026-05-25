@@ -3,8 +3,12 @@ import pytest
 from pandora.db.core import PandoraDB
 from pandora.db.repository import GateRepository, GateLayerRepository
 from pandora.db.service import PandoraService
-from pandora.util.circuit_util import remove_io_gates, get_adder_as_cirq_circuit, remove_measurements, \
+from pandora.util.circuit_util import (
+    remove_io_gates,
+    get_adder_as_cirq_circuit,
+    remove_measurements,
     remove_classically_controlled_ops
+)
 from pandora.util.lscom_util import pandora_gate_layers_to_cirq
 from pandora.util.test_util import assert_same_up_to_qubit_permutation
 
