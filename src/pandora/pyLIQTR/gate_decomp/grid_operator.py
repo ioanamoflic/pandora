@@ -10,7 +10,7 @@ import gmpy2
 import numpy as np
 from gmpy2 import mpfr
 
-from pyLIQTR.gate_decomp.rings import Z_OMEGA
+from pandora.pyLIQTR.gate_decomp.rings import Z_OMEGA
 
 
 class GridOperator:

@@ -8,13 +8,13 @@ from functools import partial
 
 import cirq
 from qualtran import CompositeBloq
-from pyLIQTR.utils.deferred import Deferred
-from pyLIQTR.utils.repeat import circuit_to_quregs
+from pandora.pyLIQTR.utils.deferred import Deferred
+from pandora.pyLIQTR.utils.repeat import circuit_to_quregs
 
-from pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
-from pyLIQTR.utils.circuit_decomposition import generator_decompose
+from pandora.pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
+from pandora.pyLIQTR.utils.circuit_decomposition import generator_decompose
 
-from pyLIQTR.utils.tests.test_helpers import TestHelpers, extract_and_run_tests
+from pandora.pyLIQTR.utils.tests.test_helpers import TestHelpers, extract_and_run_tests
 
 from qualtran.bloqs.basic_gates import CNOT, Hadamard
 from qualtran import BloqBuilder

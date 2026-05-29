@@ -4,7 +4,7 @@ from typing import Optional
 from pandora.db.core import PandoraDB
 from pandora.db.repository import GateRepository
 from pandora.translation.circuit_to_dag import PandoraWindowedBuilder
-from pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
+from pandora.pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
 
 from pandora.util.qualtran_util import get_RSA, get_RSA_batch
 
