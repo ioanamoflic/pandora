@@ -66,11 +66,7 @@ Examples of how to run some of the benchmarks from the manuscript can be found i
 
 ### Issues
 * There is a compatibility issue between Qualtran and pyLIQTR. In order to decompose RSA, we require the latest version of Qualtran (0.6),
-which is incompatible with pyLIQTR (on which we rely for Fermi-Hubbard circuit decompositions). Therefore, in order to run the Fermi-Hubbard decomposition, `requirements.txt` needs:
-    ```
-    qualtran==0.4
-    pyLIQTR==1.3.3
-    ```
+which is incompatible with pyLIQTR (on which we rely for Fermi-Hubbard circuit decompositions). Therefore, you must choose the respective mode during installation with `pip install -e '.[rsa]'` or `pip install -e '.[fh]'`.
   
 ## Citing Pandora
 Please use
