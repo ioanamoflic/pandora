@@ -3,6 +3,7 @@ from typing import Optional
 
 import cirq
 import numpy as np
+import qiskit
 
 from pandora.exceptions.exceptions import PandoraGateWrappedMissingQubits
 from pandora.translation.translator import (
@@ -243,7 +244,23 @@ class PandoraGateWrapper:
         cls = PANDORA_TO_QISKIT[gate_type]
 
         if gate_type in REQUIRES_ROTATION:
-            return cls(phi=self.gate.param)
+            # Pandora params are multiples of pi, but Qiskit uses radians
+            return cls(self.gate.param * np.pi)
+
+        # The pow and rotation gates are equal up to a global phase
+        elif gate_type in REQUIRES_EXPONENT and self.gate.param == 1:
+            return cls()
+        elif gate_type == PandoraGateTranslator.XPowGate.value:
+            return qiskit.circuit.library.RXGate(self.gate.param * np.pi)
+        elif gate_type == PandoraGateTranslator.YPowGate.value:
+            return qiskit.circuit.library.RYGate(self.gate.param * np.pi)
+        elif gate_type == PandoraGateTranslator.ZPowGate.value:
+            return qiskit.circuit.library.RZGate(self.gate.param * np.pi)
+
+        elif gate_type in REQUIRES_EXPONENT:
+            raise NotImplementedError(
+                f"Qiskit gate {cls} with exponent {self.gate.param} not implemented"
+            )
 
         if gate_type in IS_IO:
             return cls
