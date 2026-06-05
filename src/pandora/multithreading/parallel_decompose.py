@@ -59,7 +59,7 @@ async def _worker_main(
 
     try:
         repo = GateRepository(db)
-        builder = PandoraWindowedBuilder(window_size=window_size, label=worker_id)
+        builder = PandoraWindowedBuilder(window_size=window_size, label=str(worker_id))
 
         for i, high_level_op in enumerate(container_op_list):
             if not (proc_start <= i < proc_end):

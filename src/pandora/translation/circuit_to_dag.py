@@ -77,6 +77,7 @@ class PandoraWindowedBuilder:
             return data.data
 
         if isinstance(data, Iterable):
+            self.translator = CirqToPandoraTranslator()
             return data
 
         raise WrongPandoraBuilderInput
