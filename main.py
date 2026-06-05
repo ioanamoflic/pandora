@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import sys
+import time
 
 from benchmarking.benchmark_adders import get_adder, replace_all_toffolis_qiskit
 from pandora.db.core import PandoraDB
@@ -24,6 +25,7 @@ async def run_rsa(config_file, BIG_N: int, nproc: int, container_id: int):
     service.parallel_decompose(
         nprocs=nproc,
         N=BIG_N,
+        config_file=config_file,
         container_id=container_id,
         n_containers=1,
         window_size=10000,
@@ -31,7 +33,7 @@ async def run_rsa(config_file, BIG_N: int, nproc: int, container_id: int):
 
 
 async def run_adder(config_file):
-    adder_circuit = replace_all_toffolis_qiskit(get_adder(n_bits=2048))
+    adder_circuit = replace_all_toffolis_qiskit(get_adder(n_bits=128))
 
     db = PandoraDB(config_file)
     await db.connect()
@@ -77,4 +79,6 @@ async def main():
 
 
 if __name__ == "__main__":
+    start = time.time()
     asyncio.run(main())
+    print("this took: ", time.time() - start)

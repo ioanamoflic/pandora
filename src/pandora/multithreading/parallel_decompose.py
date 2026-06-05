@@ -14,7 +14,7 @@ def worker_entry(
     nprocs: int,
     container_id: int,
     n_containers: int,
-    dsn: str,
+    config_file: str,
     window_size: int,
     N: Optional[int],
 ) -> None:
@@ -24,7 +24,7 @@ def worker_entry(
             nprocs=nprocs,
             container_id=container_id,
             n_containers=n_containers,
-            dsn=dsn,
+            config_file=config_file,
             window_size=window_size,
             N=N,
         )
@@ -36,7 +36,7 @@ async def _worker_main(
     nprocs: int,
     container_id: int,
     n_containers: int,
-    dsn: str,
+    config_file: str,
     window_size: int,
     N: Optional[int],
 ) -> None:
@@ -54,7 +54,7 @@ async def _worker_main(
     proc_start = (container_op_count * worker_id) // nprocs
     proc_end = (container_op_count * (worker_id + 1)) // nprocs
 
-    db = PandoraDB(dsn)
+    db = PandoraDB(config_file)
     await db.connect()
 
     try:

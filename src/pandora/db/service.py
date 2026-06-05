@@ -54,6 +54,7 @@ class PandoraService:
 
     def parallel_decompose(
             self,
+            config_file: str,
             nprocs: int,
             container_id: int = 0,
             n_containers: int = 1,
@@ -87,7 +88,7 @@ class PandoraService:
                     nprocs,
                     container_id,
                     n_containers,
-                    self.db.dsn,
+                    config_file,
                     effective_window_size,
                     N,
                 ),
