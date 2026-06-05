@@ -68,8 +68,8 @@ class PandoraGateTranslator(Enum):
     ZPowGate = 7
     HPowGate = 8
     _PauliX = 9
-    _PauliZ = 10
-    _PauliY = 11
+    _PauliY = 10
+    _PauliZ = 11
     GlobalPhaseGate = 12
     ResetChannel = 13
     M = 14
@@ -101,8 +101,8 @@ KEEP_RZ = False
 # accepted gates for now
 QISKIT_TO_PANDORA = {
     "rx": PandoraGateTranslator.Rx.value,
-    "ry": PandoraGateTranslator.Rx.value,
-    "rz": PandoraGateTranslator.Rx.value,
+    "ry": PandoraGateTranslator.Ry.value,
+    "rz": PandoraGateTranslator.Rz.value,
     "h": PandoraGateTranslator.HPowGate.value,
     "x": PandoraGateTranslator._PauliX.value,
     "y": PandoraGateTranslator._PauliY.value,
@@ -131,13 +131,18 @@ PANDORA_TO_QISKIT = {
     PandoraGateTranslator.S_dag.value: qiskit.circuit.library.SdgGate,
     PandoraGateTranslator.T.value: qiskit.circuit.library.TGate,
     PandoraGateTranslator.T_dag.value: qiskit.circuit.library.TdgGate,
+    PandoraGateTranslator.XPowGate.value: qiskit.circuit.library.XGate,
+    PandoraGateTranslator.YPowGate.value: qiskit.circuit.library.YGate,
+    PandoraGateTranslator.ZPowGate.value: qiskit.circuit.library.ZGate,
     PandoraGateTranslator._PauliX.value: qiskit.circuit.library.XGate,
     PandoraGateTranslator._PauliZ.value: qiskit.circuit.library.ZGate,
     PandoraGateTranslator._PauliY.value: qiskit.circuit.library.YGate,
     PandoraGateTranslator.CXPowGate.value: qiskit.circuit.library.CXGate,
+    PandoraGateTranslator.CZ.value: qiskit.circuit.library.CZGate,
     PandoraGateTranslator.CZPowGate.value: qiskit.circuit.library.CZGate,
     PandoraGateTranslator.CCXPowGate.value: qiskit.circuit.library.CCXGate,
-    PandoraGateTranslator.Swap.value: qiskit.circuit.library.SwapGate
+    PandoraGateTranslator.Swap.value: qiskit.circuit.library.SwapGate,
+    PandoraGateTranslator.CNOT.value: qiskit.circuit.library.CXGate,
 }
 
 IS_IO = [PandoraGateTranslator.In.value, PandoraGateTranslator.Out.value]
@@ -151,8 +156,8 @@ PANDORA_TO_CIRQ = {
     PandoraGateTranslator.YPowGate.value: cirq.YPowGate,
     PandoraGateTranslator.HPowGate.value: cirq.HPowGate,
     PandoraGateTranslator._PauliX.value: cirq.X,
-    PandoraGateTranslator._PauliY.value: cirq.Z,
-    PandoraGateTranslator._PauliZ.value: cirq.Y,
+    PandoraGateTranslator._PauliY.value: cirq.Y,
+    PandoraGateTranslator._PauliZ.value: cirq.Z,
     PandoraGateTranslator.GlobalPhaseGate.value: cirq.GlobalPhaseGate,
     PandoraGateTranslator.ResetChannel.value: cirq.ResetChannel(),
     PandoraGateTranslator.In.value: In(),
@@ -168,7 +173,7 @@ PANDORA_TO_CIRQ = {
     PandoraGateTranslator.Toffoli.value: cirq.CCX,
     PandoraGateTranslator.CCXPowGate.value: cirq.CCXPowGate,
     PandoraGateTranslator.And.value: And,
-    PandoraGateTranslator.CSwapGate: cirq.CSwapGate
+    PandoraGateTranslator.CSwapGate.value: cirq.CSwapGate
 }
 
 PANDORA_TO_READABLE = {
