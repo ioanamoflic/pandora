@@ -26,9 +26,7 @@ Apptainer image that will be used by `run_apptainer.sh` (see following section).
 
 ## With Apptainer 
 For running on HPC hardware, this is highly encouraged. Apptainer does not require sudo rights and is also light-weight and open-source.
-Multiple Pandora containers can be started in parallel, each with its own `.json` config file (make sure that the port is different). 
 
-* A PostgreSQL config file example is `default_config.json`.
 * The database storage location can be configured in `run_apptainer.sh`. As a rule of thumb, each billion of Clifford+T 
 gates in the Pandora format takes about 100GB of storage.
 * A command example for starting the container and decomposing an 64-bit RSA instance (nproc = 1 & container id = 0) is

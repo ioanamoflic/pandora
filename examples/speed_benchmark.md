@@ -17,7 +17,6 @@ The rewrite rule applied here is
 Make sure you have:
 
 - the apptainer setup from README.md
-- a PostgreSQL config file (```default_config.json``` used here as an example)
 
 ---
 
@@ -43,7 +42,7 @@ For each sample percentage ```[0.1, 1, 10]``` the script:
 
 ### For Pandora
 ```bash
-bash run_apptainer.sh benchmarking/benchmark_pandora.py default_config.json <NPROCS>
+bash run_apptainer.sh benchmarking/benchmark_pandora.py <NPROCS>
 ```
 
 ### For Qiskit
