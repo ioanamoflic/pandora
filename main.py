@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import sys
 import time
 
 from benchmarking.benchmark_adders import get_adder, replace_all_toffolis_qiskit
@@ -8,6 +7,7 @@ from pandora.db.core import PandoraDB
 from pandora.db.repository import GateRepository, GateLayerRepository
 from pandora.db.service import PandoraService
 
+import argparse
 
 async def run_rsa(config_file, BIG_N: int, nproc: int, container_id: int):
     print(f"Starting RSA with {nproc} processes.")
@@ -32,8 +32,8 @@ async def run_rsa(config_file, BIG_N: int, nproc: int, container_id: int):
     )
 
 
-async def run_adder(config_file):
-    adder_circuit = replace_all_toffolis_qiskit(get_adder(n_bits=128))
+async def run_adder(config_file, N_BITS: int):
+    adder_circuit = replace_all_toffolis_qiskit(get_adder(n_bits=N_BITS))
 
     db = PandoraDB(config_file)
     await db.connect()
@@ -52,30 +52,36 @@ async def run_adder(config_file):
 
 
 async def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--config',
+                        help='PostgreSQL config file path',
+                        default='default_config.json')
+
+    subparsers = parser.add_subparsers(dest='mode', required=True)
+
+    rsa_parser = subparsers.add_parser('rsa', help='Run RSA decomposition')
+    rsa_parser.add_argument('BIG_N', type=int, help='RSA modulus bit size')
+    rsa_parser.add_argument('NPROC', type=int, help='Number of parallel processes')
+    rsa_parser.add_argument('CONTAINER_ID', type=int, help='Container ID')
+
+    adder_parser = subparsers.add_parser('adder', help='Run adder circuit')
+    adder_parser.add_argument('N_BITS', type=int, help='Number of bits for the adder')
+
+    subparsers.add_parser('fh', help='Fermi-Hubbard (not yet implemented)')
+
+    args = parser.parse_args()
+
     logging.basicConfig()
     logger = logging.getLogger("pandora")
     logger.setLevel(logging.INFO)
 
-    if len(sys.argv) == 1:
-        return
-
-    next_arg = 1
-
-    cmd = sys.argv[next_arg]
-    config_file_path = sys.argv[next_arg + 1]
-
-    if cmd == "adder":
-        await run_adder(config_file_path)
-
-    elif cmd == "rsa":
-        BIG_N = int(sys.argv[next_arg + 2])
-        NPROC = int(sys.argv[next_arg + 3])
-        CONTAINER_ID = int(sys.argv[next_arg + 4])
-
-        await run_rsa(config_file_path, BIG_N, NPROC, CONTAINER_ID)
-
-    else:
-        raise ValueError(f"Unknown mode: {cmd}")
+    match args.mode:
+        case "adder":
+            await run_adder(args.config, args.N_BITS)
+        case "rsa":
+            await run_rsa(args.config, args.BIG_N, args.NPROC, args.CONTAINER_ID)
+        case "fh":
+            raise NotImplementedError("FH not supported in this version yet")
 
 
 if __name__ == "__main__":
