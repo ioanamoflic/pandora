@@ -11,7 +11,7 @@ import qualtran
 from qualtran._infra.gate_with_registers import GateWithRegisters
 from qualtran._infra.registers import Signature
 
-from pyLIQTR.utils.meta import MetaBloq
+from pandora.pyLIQTR.utils.meta import MetaBloq
 
 
 class Deferred(MetaBloq):

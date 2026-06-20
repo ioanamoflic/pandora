@@ -29,8 +29,8 @@ import sys
 import gmpy2
 from gmpy2 import mpfr, mpc
 
-from pyLIQTR.gate_decomp.rings import Z_SQRT2, Z_OMEGA, is_reducible, reduce
-from pyLIQTR.gate_decomp.ellipse import (
+from pandora.pyLIQTR.gate_decomp.rings import Z_SQRT2, Z_OMEGA, is_reducible, reduce
+from pandora.pyLIQTR.gate_decomp.ellipse import (
     Ellipse,
     calculate_bias,
     calculate_skew,
@@ -39,7 +39,7 @@ from pyLIQTR.gate_decomp.ellipse import (
 )
 
 
-from pyLIQTR.gate_decomp.grid_operator import GridOperator
+from pandora.pyLIQTR.gate_decomp.grid_operator import GridOperator
 
 
 def scaled_one_dim_grid_problem(

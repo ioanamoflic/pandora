@@ -4,7 +4,7 @@ SPDX-License-Identifier: BSD-2-Clause
 """
 
 
-from pyLIQTR.gate_decomp.rings import Z_OMEGA, Z_SQRT2
+from pandora.pyLIQTR.gate_decomp.rings import Z_OMEGA, Z_SQRT2
 
 import math
 import numpy as np

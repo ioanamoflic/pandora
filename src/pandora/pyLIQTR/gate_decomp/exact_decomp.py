@@ -25,9 +25,9 @@ Amano normal form for single qubit Clifford+T operators [1,2,3]
 [3] - https://www.cs.umd.edu/~amchilds/qa/qa.pdf Section 3
 """
 
-from pyLIQTR.gate_decomp.matrices import MAT_D_OMEGA, SO3
-from pyLIQTR.gate_decomp.rings import Z_OMEGA
-from pyLIQTR.gate_decomp.clifford_gates import clifford_tuple
+from pandora.pyLIQTR.gate_decomp.matrices import MAT_D_OMEGA, SO3
+from pandora.pyLIQTR.gate_decomp.rings import Z_OMEGA
+from pandora.pyLIQTR.gate_decomp.clifford_gates import clifford_tuple
 
 import numpy as np
 from numpy.typing import ArrayLike

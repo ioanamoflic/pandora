@@ -14,9 +14,9 @@ from qualtran.bloqs.mod_arithmetic import CModAddK, ModAddK
 from qualtran.cirq_interop import BloqAsCirqGate
 
 from pandora.translation.translator import KEEP_RZ
-from pyLIQTR.circuits.operators.AddMod import AddMod as PyLiqtrAddMod
-from pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
-from pyLIQTR.utils.circuit_decomposition import generator_decompose
+from pandora.pyLIQTR.circuits.operators.AddMod import AddMod as PyLiqtrAddMod
+from pandora.pyLIQTR.gate_decomp.cirq_transforms import _perop_clifford_plus_t_direct_transform
+from pandora.pyLIQTR.utils.circuit_decomposition import generator_decompose
 
 
 sys.setrecursionlimit(10_000_000)

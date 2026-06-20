@@ -10,18 +10,18 @@ from typing import Tuple, Union
 import gmpy2
 from gmpy2 import mpc, mpfr
 
-from pyLIQTR.gate_decomp.exact_decomp import (
+from pandora.pyLIQTR.gate_decomp.exact_decomp import (
     exact_decomp_to_matrix_string,
     exact_decomp_to_qasm,
 )
 
-from pyLIQTR.gate_decomp.point_enumeration import (
+from pandora.pyLIQTR.gate_decomp.point_enumeration import (
     candidate_generator_direct,
     candidate_generator_fallback,
 )
 
-from pyLIQTR.gate_decomp.rings import Z_OMEGA, Z_SQRT2
-from pyLIQTR.gate_decomp.solve_diophantine import solveDiophantine
+from pandora.pyLIQTR.gate_decomp.rings import Z_OMEGA, Z_SQRT2
+from pandora.pyLIQTR.gate_decomp.solve_diophantine import solveDiophantine
 
 
 def is_reducible(u: Z_OMEGA) -> bool:

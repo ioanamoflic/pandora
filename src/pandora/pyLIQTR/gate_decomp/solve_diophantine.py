@@ -22,7 +22,7 @@ The approach used for solving the equation is described in [1].
 [1] - arXiv:1403.2975
 """
 
-from pyLIQTR.gate_decomp.rings import Z_OMEGA, Z_SQRT2
+from pandora.pyLIQTR.gate_decomp.rings import Z_OMEGA, Z_SQRT2
 
 from typing import List
 from random import randint

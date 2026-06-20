@@ -11,9 +11,9 @@ import cirq
 from qualtran import CompositeBloq, BloqBuilder
 from qualtran._infra.gate_with_registers import GateWithRegisters
 
-from pyLIQTR.utils.meta import MetaBloq
-from pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
-from pyLIQTR.utils.circuit_decomposition import generator_decompose
+from pandora.pyLIQTR.utils.meta import MetaBloq
+from pandora.pyLIQTR.utils.circuit_decomposition import circuit_decompose_multi
+from pandora.pyLIQTR.utils.circuit_decomposition import generator_decompose
 
 
 def extract_and_run_tests(tst: unittest.TestCase):

@@ -36,13 +36,13 @@ import cirq
 import gmpy2
 from gmpy2 import mpfr
 
-from pyLIQTR.gate_decomp.exact_decomp import exact_decomp
+from pandora.pyLIQTR.gate_decomp.exact_decomp import exact_decomp
 
-from pyLIQTR.gate_decomp.gate_approximation import (
+from pandora.pyLIQTR.gate_decomp.gate_approximation import (
     get_ring_elts_direct,
 )
 
-from pyLIQTR.gate_decomp.rotation_gates import (
+from pandora.pyLIQTR.gate_decomp.rotation_gates import (
     T_COUNT_CONST,
     T_COUNT_SLOPE,
     T_COUNT_STD_DEV,

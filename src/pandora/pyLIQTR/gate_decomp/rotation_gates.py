@@ -32,8 +32,8 @@ from cirq._compat import proper_repr
 import gmpy2
 from gmpy2 import mpfr
 
-from pyLIQTR.gate_decomp.exact_decomp import exact_decomp_compressed
-from pyLIQTR.gate_decomp.gate_approximation import (
+from pandora.pyLIQTR.gate_decomp.exact_decomp import exact_decomp_compressed
+from pandora.pyLIQTR.gate_decomp.gate_approximation import (
     get_ring_elts_direct,
 )
 

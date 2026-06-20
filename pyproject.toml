@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pandora"
+version = "0.1.0"
+description = "Pandora demo tools from liblsqecc"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [ { name = "ioanamoflic" } ]
+dependencies = [
+	"asyncpg",
+	"psycopg2-binary",
+	"requests",
+	"gmpy2",
+	"mqt.qcec",
+	"qiskit_qasm3_import",
+	"pytket",
+    "qiskit==1.4.4", # benchmarks
+    "pytest",
+    "pytest-asyncio",
+]
+
+# TODO: set RSA as default optional dependency when PEP 771 implemented:
+# https://peps.python.org/pep-0771/
+# default-optional-dependency-keys = [ "rsa" ]
+
+[project.optional-dependencies]
+# RSA mode uses newer qualtran
+rsa = ["qualtran==0.6.1"]
+
+# Fermi-Hubbard mode: pyliqtr currently depends on an older qualtran incompatible with RSA mode
+fh = ["pyliqtr==1.4.1", "qualtran==0.4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

@@ -20,7 +20,7 @@ may violate any copyrights that exist in this work.
 Get a list of all single qubit clifford operators (up to phase)
 """
 
-from pyLIQTR.gate_decomp.matrices import SO3, MAT_D_OMEGA
+from pandora.pyLIQTR.gate_decomp.matrices import SO3, MAT_D_OMEGA
 
 Xm = MAT_D_OMEGA.X()
 Ym = MAT_D_OMEGA.Y()

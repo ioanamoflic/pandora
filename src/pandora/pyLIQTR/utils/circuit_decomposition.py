@@ -256,7 +256,7 @@ def keep(gate_op):
 
 def circuit_decompose_multi(circuit, N, context=None):
     if context is None:
-        import pyLIQTR.utils.global_ancilla_manager as gam
+        import pandora.pyLIQTR.utils.global_ancilla_manager as gam
         context = cirq.DecompositionContext(gam.gam)
     circuit = cirq.align_left(cirq.Circuit(generator_decompose(circuit,
                                                                keep=keep,
@@ -268,7 +268,7 @@ def circuit_decompose_multi(circuit, N, context=None):
 
 def decompose_once(circuit, debug=False, context=None):
     if context is None:
-        import pyLIQTR.utils.global_ancilla_manager as gam
+        import pandora.pyLIQTR.utils.global_ancilla_manager as gam
         context = cirq.DecompositionContext(gam.gam)
     circuit = cirq.align_left(cirq.Circuit(generator_decompose(circuit,
                                                                keep=keep,
@@ -280,7 +280,7 @@ def decompose_once(circuit, debug=False, context=None):
 
 def decompose_op(op, debug=False, context=None):
     if context is None:
-        import pyLIQTR.utils.global_ancilla_manager as gam
+        import pandora.pyLIQTR.utils.global_ancilla_manager as gam
         context = cirq.DecompositionContext(gam.gam)
     gates = [op for op in generator_decompose(cirq.Circuit(op), keep=keep, on_stuck_raise=None, context=context,
                                               max_decomposition_passes=1)]
