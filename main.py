@@ -1,13 +1,11 @@
 import asyncio
-import logging
-import time
+import argparse
 
 from benchmarking.benchmark_adders import get_adder, replace_all_toffolis_qiskit
 from pandora.db.core import PandoraDB
 from pandora.db.repository import GateRepository, GateLayerRepository
 from pandora.db.service import PandoraService
 
-import argparse
 
 async def run_rsa(config_file, BIG_N: int, nproc: int, container_id: int):
     print(f"Starting RSA with {nproc} processes.")
@@ -55,36 +53,30 @@ async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config',
                         help='PostgreSQL config file path',
-                        default='default_config.json')
+                        default=None)
 
     subparsers = parser.add_subparsers(dest='mode', required=True)
 
     rsa_parser = subparsers.add_parser('rsa', help='Run RSA decomposition')
-    rsa_parser.add_argument('BIG_N', type=int, help='RSA modulus bit size')
-    rsa_parser.add_argument('NPROC', type=int, help='Number of parallel processes')
-    rsa_parser.add_argument('CONTAINER_ID', type=int, help='Container ID')
+    rsa_parser.add_argument('--n', type=int, required=True, help='RSA modulus bit size')
+    rsa_parser.add_argument('--nproc', type=int, required=True, help='Number of parallel processes')
+    rsa_parser.add_argument('--container_id', type=int, required=True, help='Container ID')
 
     adder_parser = subparsers.add_parser('adder', help='Run adder circuit')
-    adder_parser.add_argument('N_BITS', type=int, help='Number of bits for the adder')
+    adder_parser.add_argument('--nbits', type=int, required=True, help='Number of bits for the adder')
 
     subparsers.add_parser('fh', help='Fermi-Hubbard (not yet implemented)')
 
     args = parser.parse_args()
 
-    logging.basicConfig()
-    logger = logging.getLogger("pandora")
-    logger.setLevel(logging.INFO)
-
     match args.mode:
         case "adder":
-            await run_adder(args.config, args.N_BITS)
+            await run_adder(args.config, args.nbits)
         case "rsa":
-            await run_rsa(args.config, args.BIG_N, args.NPROC, args.CONTAINER_ID)
+            await run_rsa(args.config, args.n, args.nproc, args.container_id)
         case "fh":
             raise NotImplementedError("FH not supported in this version yet")
 
 
 if __name__ == "__main__":
-    start = time.time()
     asyncio.run(main())
-    print("this took: ", time.time() - start)
