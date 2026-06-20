@@ -39,7 +39,6 @@ Note that for all benchmarks that do not need postgres, one can use ```run_appta
 
 ## Without Apptainer
 * Install PostgreSQL and get a server running. For example, on MacOS you can use [this tutorial](https://www.atlassian.com/data/sql/how-to-start-a-postgresql-server-on-mac-os-x).
-* A PostgreSQL config file example is `default_config.json`. 
 * `python3.10 main.py rsa --n 64 --nproc 1 --container_id 0` for building and decomposing an 64-bit RSA instance into Pandora.
 
 ## Widgetization
