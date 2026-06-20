@@ -7,10 +7,10 @@ from qualtran.bloqs.data_loading import QROM
 from qualtran import QUInt
 
 from pandora.util.qualtran_util import (
-    get_cirq_circuit_for_bloq,
     assert_circuit_is_pandora_ingestible
 )
 from pandora.translation.translator import In, Out
+from pandora.util.test_util import test_get_cirq_circuit_for_bloq
 
 
 def get_adder_as_cirq_circuit(n_bits) -> cirq.Circuit:
@@ -18,7 +18,7 @@ def get_adder_as_cirq_circuit(n_bits) -> cirq.Circuit:
     Used of testing.
     """
     bloq = Add(QUInt(n_bits))
-    clifford_t_circuit = get_cirq_circuit_for_bloq(bloq)
+    clifford_t_circuit = test_get_cirq_circuit_for_bloq(bloq)
     assert_circuit_is_pandora_ingestible(clifford_t_circuit)
     return clifford_t_circuit
 
@@ -28,7 +28,7 @@ def get_qrom_as_cirq_circuit(data) -> cirq.Circuit:
     Used of testing.
     """
     bloq = QROM.build_from_data(data)
-    qrom_circuit = get_cirq_circuit_for_bloq(bloq)
+    qrom_circuit = test_get_cirq_circuit_for_bloq(bloq)
     return qrom_circuit
 
 

@@ -1,21 +1,32 @@
+import json
+
 import asyncpg
 from typing import Optional
 
 
 class PandoraDB:
-    def __init__(self, config: str | dict, min_size: int = 1, max_size: int = 32):
+    def __init__(self, config: str | dict = None, min_size: int = 1, max_size: int = 32):
         self.min_size = min_size
         self.max_size = max_size
         self.pool: Optional[asyncpg.Pool] = None
 
-        if isinstance(config, str):
-            self.dsn = self._dsn_from_json(config)
+        if config is None:
+            self.config = {}
+        elif isinstance(config, str):
+            self.config = self._config_from_json(config)
         else:
-            self.dsn = self._dsn_from_dict(config)
+            self.config = config
 
     async def connect(self):
+        """
+        If anything is missing in configs or the config is not specified, Postgres should use defaults.
+        """
         self.pool = await asyncpg.create_pool(
-            dsn=self.dsn,
+            host=self.config.get("host") or "localhost",
+            port=self.config.get("port") or 5432,
+            user=self.config.get("user") or None,
+            password=self.config.get("password") or None,
+            database=self.config.get("database") or "postgres",
             min_size=self.min_size,
             max_size=self.max_size,
         )
@@ -30,18 +41,8 @@ class PandoraDB:
         """
         return self.pool.acquire()
 
-    def _dsn_from_json(self, config_file_path):
-        import json
-
-        with open(config_file_path, "r") as f:
-            data = json.load(f)
-
-        return self._dsn_from_dict(data)
-
     @staticmethod
-    def _dsn_from_dict(data):
-        return (
-            f"postgresql://{data['user']}:{data['password']}"
-            f"@{data.get('host', 'localhost')}:{data.get('port', 5432)}"
-            f"/{data.get('database', 'postgres')}"
-        )
+    def _config_from_json(config_file_path):
+        with open(config_file_path, "r") as f:
+            return json.load(f)
+

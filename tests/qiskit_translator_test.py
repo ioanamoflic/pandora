@@ -5,6 +5,7 @@ from pandora.translation.gates import PandoraGate, PandoraGateWrapper
 from pandora.translation.qiskit_translator import QiskitToPandoraTranslator
 from pandora.translation.translator import PandoraGateTranslator
 
+
 def test_qiskit_rotation_gates_keep_their_axis():
     circuit = QuantumCircuit(1)
     circuit.rx(0.1, 0)
@@ -19,6 +20,7 @@ def test_qiskit_rotation_gates_keep_their_axis():
         PandoraGateTranslator.Ry.value,
         PandoraGateTranslator.Rz.value,
     ]
+
 
 def test_qiskit_rotation_gates_keep_their_value():
     circuit = QuantumCircuit(1)
@@ -54,6 +56,7 @@ def test_qiskit_exponent_gates_work():
         "ccx",
     ]
 
+
 def test_qiskit_exponent_gates_have_param():
     circuit = QuantumCircuit(4)
     circuit.h(0)
@@ -70,7 +73,8 @@ def test_qiskit_exponent_gates_have_param():
         (PandoraGateTranslator.CZPowGate.value, 1.0),
         (PandoraGateTranslator.CCXPowGate.value, 1.0),
     ]
-    
+
+
 def test_pandora_to_qiskit_extra_gates():
     gates = [
         PandoraGate(gate_code=PandoraGateTranslator.Swap.value),

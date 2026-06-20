@@ -3,6 +3,43 @@ import math
 
 import cirq
 from qiskit import QuantumCircuit
+from qualtran import Bloq
+from qualtran._infra.gate_with_registers import get_named_qubits
+
+from pandora.util.qualtran_util import keep_with_gate_set
+
+TEST_BASE_GATES = cirq.Gateset(
+    cirq.Rz,
+    cirq.Rx,
+    cirq.Ry,
+    cirq.MeasurementGate,
+    cirq.ResetChannel,
+    cirq.GlobalPhaseGate,
+    cirq.ZPowGate,
+    cirq.XPowGate,
+    cirq.YPowGate,
+    cirq.HPowGate,
+    cirq.CZPowGate,
+    cirq.CXPowGate,
+    cirq.X,
+    cirq.Y,
+    cirq.Z,
+)
+
+
+def test_keep(op: cirq.Operation) -> bool:
+    return keep_with_gate_set(op, TEST_BASE_GATES)
+
+
+def test_get_cirq_circuit_for_bloq(bloq: Bloq) -> cirq.Circuit:
+    cirq_quregs = get_named_qubits(bloq.signature.lefts())
+    circuit = bloq.decompose_bloq().to_cirq_circuit(cirq_quregs=cirq_quregs)
+
+    context = cirq.DecompositionContext(
+        qubit_manager=cirq.GreedyQubitManager(prefix="anc")
+    )
+
+    return cirq.Circuit(cirq.decompose(circuit, keep=test_keep, context=context))
 
 
 def assert_same_up_to_qubit_permutation(expected: cirq.Circuit, actual: cirq.Circuit):

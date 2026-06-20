@@ -18,13 +18,6 @@ from pandora.util.test_util import assert_same_up_to_qubit_permutation, assert_s
 
 WINDOW_SIZE = 2
 LABEL = 0
-config_file = {
-    "database": "postgres",
-    "user": "moflici1",
-    "host": "localhost",
-    "port": "5432",
-    "password": "1234"
-}
 
 
 @pytest.mark.asyncio
@@ -36,7 +29,7 @@ async def test_lscom_adder_reconstruction():
         remove_classically_controlled_ops(full_adder_circuit)
     )
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     repo = GateRepository(db)
@@ -63,7 +56,7 @@ async def test_lscom_adder_reconstruction():
 async def test_lscom_adder_reconstruction_v2():
     adder_circuit = replace_all_toffolis_qiskit(get_adder(n_bits=1))
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     repo = GateRepository(db)

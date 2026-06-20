@@ -18,13 +18,6 @@ from pandora.util.test_util import assert_same_up_to_qubit_permutation
 
 WINDOW_SIZE = 2  # just to be extreme :)
 LABEL = 0
-config_file = {
-    "database": "postgres",
-    "user": "moflici1",
-    "host": "localhost",
-    "port": "5432",
-    "password": "1234"
-}
 
 
 def test_simple_reconstruction():
@@ -91,7 +84,7 @@ async def test_qualtran_adder_reconstruction():
 
         print(full_adder_circuit)
 
-        db = PandoraDB(config_file)
+        db = PandoraDB()
         await db.connect()
 
         repo = GateRepository(db)

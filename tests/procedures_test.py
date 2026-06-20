@@ -20,15 +20,6 @@ PauliX = PandoraGateTranslator._PauliX
 PauliZ = PandoraGateTranslator._PauliZ
 
 
-config_file = {
-    "database": "postgres",
-    "user": "moflici1",
-    "host": "localhost",
-    "port": "5432",
-    "password": "1234"
-}
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize("pass_count", [1])
 @pytest.mark.parametrize("timeout", [1])
@@ -42,7 +33,7 @@ async def test_cancel_single_qubit(pass_count, timeout):
         ]
     )
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -87,7 +78,7 @@ async def test_cancel_two_qubit(pass_count, timeout):
         ]
     )
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -144,7 +135,7 @@ async def test_case_1(pass_count, timeout):
          ]
     )
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -225,7 +216,7 @@ async def test_case_1_repeated(pass_count, timeout, n):
         ]
     )
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -293,7 +284,7 @@ async def test_commute_single_control_left(pass_count, timeout):
         ]
     )
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -355,7 +346,7 @@ async def test_cx_to_hhcxhh_a(pass_count, timeout):
         ]
     )
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -409,7 +400,7 @@ async def test_cx_to_hhcxhh_b(pass_count, timeout):
         ]
     )
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -457,7 +448,7 @@ async def test_hhcxhh_to_cx_a(pass_count, timeout):
     )
     expected_circuit = cirq.Circuit([cirq.CX.on(q2, q1)])
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -511,7 +502,7 @@ async def test_hhcxhh_to_cx_b(pass_count, timeout):
         ]
     )
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -557,7 +548,7 @@ async def test_replace_two_sq_with_one(pass_count, timeout):
         cirq.S.on(q),
     ])
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -621,7 +612,7 @@ async def test_case_2(pass_count, timeout):
         cirq.H.on(q1),
     ])
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -716,7 +707,7 @@ async def test_case_2_repeated(n, pass_count, timeout):
         ]
     )
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -795,7 +786,7 @@ async def test_logical_correctness_random(pass_count, stop_after):
 
             t_count_before = count_t_gates(initial_circuit)
 
-            db = PandoraDB(config_file)
+            db = PandoraDB()
             await db.connect()
 
             try:
@@ -921,7 +912,7 @@ async def test_commute_T_leftmost_location(n_proc, stop_after, pass_count):
     for _ in range(cx_count):
         initial_circuit.append(cirq.T(qubits[1]) ** -1)
 
-    db = PandoraDB(config_file)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -1044,7 +1035,7 @@ async def test_race_condition(pass_count, timeout, stop_after, trials):
 
     for i in range(trials):
 
-        db = PandoraDB(config_file)
+        db = PandoraDB()
         await db.connect()
 
         try:
