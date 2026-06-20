@@ -156,7 +156,7 @@ async def main():
 
             pandora_optimizer.cancel_single_qubit_gates(
                 gate_types=(H, H),
-                gate_params=(0, 0),
+                gate_params=(1, 1),
                 dedicated_nproc=1,
             )
             pandora_optimizer.cancel_single_qubit_gates(
@@ -193,7 +193,7 @@ async def main():
 
             pandora_optimizer.cancel_two_qubit_gates(
                 gate_types=(CX, CX),
-                gate_param=0,
+                gate_param=1,
                 dedicated_nproc=1,
             )
 
