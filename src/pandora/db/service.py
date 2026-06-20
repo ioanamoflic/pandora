@@ -54,10 +54,10 @@ class PandoraService:
 
     def parallel_decompose(
             self,
-            config_file: str,
             nprocs: int,
             container_id: int = 0,
             n_containers: int = 1,
+            config_file: str = None,
             window_size: Optional[int] = None,
             N: Optional[int] = None,
     ) -> None:
@@ -88,9 +88,9 @@ class PandoraService:
                     nprocs,
                     container_id,
                     n_containers,
-                    config_file,
                     effective_window_size,
                     N,
+                    config_file,
                 ),
             )
             processes.append(p)
