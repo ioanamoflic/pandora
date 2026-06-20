@@ -33,7 +33,7 @@ Multiple Pandora containers can be started in parallel, each with its own `.json
 gates in the Pandora format takes about 100GB of storage.
 * A command example for starting the container and decomposing an 64-bit RSA instance (nproc = 1 & container id = 0) is
 ```
-bash run_apptainer.sh main.py default_config.json rsa 1 1 0 64
+bash run_apptainer.sh main.py rsa --n 64 --nproc 1 --container_id 0
 ```
 Note that for all benchmarks that do not need postgres, one can use ```run_apptainer_no_postgres.sh```.
 
