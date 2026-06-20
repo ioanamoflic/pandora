@@ -26,21 +26,18 @@ Apptainer image that will be used by `run_apptainer.sh` (see following section).
 
 ## With Apptainer 
 For running on HPC hardware, this is highly encouraged. Apptainer does not require sudo rights and is also light-weight and open-source.
-Multiple Pandora containers can be started in parallel, each with its own `.json` config file (make sure that the port is different). 
 
-* A PostgreSQL config file example is `default_config.json`.
 * The database storage location can be configured in `run_apptainer.sh`. As a rule of thumb, each billion of Clifford+T 
 gates in the Pandora format takes about 100GB of storage.
 * A command example for starting the container and decomposing an 64-bit RSA instance (nproc = 1 & container id = 0) is
 ```
-bash run_apptainer.sh main.py default_config.json rsa 1 1 0 64
+bash run_apptainer.sh main.py rsa --n 64 --nproc 1 --container_id 0
 ```
 Note that for all benchmarks that do not need postgres, one can use ```run_apptainer_no_postgres.sh```.
 
 ## Without Apptainer
 * Install PostgreSQL and get a server running. For example, on MacOS you can use [this tutorial](https://www.atlassian.com/data/sql/how-to-start-a-postgresql-server-on-mac-os-x).
-* A PostgreSQL config file example is `default_config.json`. 
-* `python3.10 main.py default_config.json rsa 1 1 0 64` for building and decomposing an 64-bit RSA instance into Pandora.
+* `python3.10 main.py rsa --n 64 --nproc 1 --container_id 0` for building and decomposing an 64-bit RSA instance into Pandora.
 
 ## Widgetization
 This is an example of a widgetised Fermi-Hubbard instance (N=2) decomposed into Clifford+T with around 58K gates.

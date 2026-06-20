@@ -15,7 +15,6 @@ It generates random CNOT circuits, constructs equivalent or non-equivalent pairs
 Make sure you have:
 
 - the apptainer setup from README.md
-- a PostgreSQL config file (```default_config.json``` used here as an example)
 
 ---
 
@@ -33,7 +32,7 @@ Make sure you have:
 * ```dd``` - MQT decision diagram checker
 
 ```bash
-bash run_apptainer.sh benchmarking/benchmark_mqt.py default_config.json <IS_EQUIV> <BACKEND>
+bash run_apptainer.sh benchmarking/benchmark_mqt.py <IS_EQUIV> <BACKEND>
 ```
 ### What the Script Does
 

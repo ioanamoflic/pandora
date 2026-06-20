@@ -7,7 +7,6 @@ This script builds reversible adder circuits, stores them in Pandora’s Postgre
 You need:
 
 - the apptainer setup from README.md
-- a PostgreSQL config file (```default_config.json``` used here as an example)
 - adder benchmark files are found under:
 
 ```text
@@ -21,7 +20,7 @@ benchmarking/adders/Adder2048.txt
 It is recommended to run this benchmark using apptainer (see instructions in project readme):
 
 ```bash
-bash run_apptainer.sh benchmarking/benchmark_adders.py default_config.json
+bash run_apptainer.sh benchmarking/benchmark_adders.py
 ```
 
 For each adder size in ```[16, 32, 64, 128, 256, 512, 1024, 2048]```, the script:
