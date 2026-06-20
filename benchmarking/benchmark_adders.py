@@ -1,7 +1,6 @@
 import asyncio
 
 import re
-import sys
 
 from qiskit import QuantumCircuit
 
@@ -120,8 +119,7 @@ def replace_all_toffolis_qiskit(qc):
     return new_qc
         
         
-async def main(config):
-
+async def main():
     # 30 seconds timeout for the optimiser
     timeout = 30
     
@@ -129,7 +127,7 @@ async def main(config):
         adder_circuit = get_adder(n_bits=n_bits)
         adder_circuit = replace_all_toffolis_qiskit(adder_circuit)
         
-        db = PandoraDB(config)
+        db = PandoraDB()
         await db.connect()
         
         try:
@@ -258,9 +256,6 @@ async def main(config):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        sys.exit(0)
+    asyncio.run(main())
 
-    config_file_path = sys.argv[1]
-    asyncio.run(main(config_file_path))
 

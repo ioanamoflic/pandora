@@ -17,20 +17,20 @@ async def count_h_gates(db: PandoraDB) -> int:
         return await conn.fetchval(
             "select count(id) from linked_circuit where type=$1;",
             PandoraGateTranslator.HPowGate.value,
-        ) 
+        )
+
 
 async def partition_table(db: PandoraDB, nprocs: int):
     async with db.pool.acquire() as conn:
         await conn.execute("alter table linked_circuit add column partition_id integer;")
         await conn.execute("update linked_circuit set partition_id = id % $1;", nprocs)
-        
-    
+
+
 async def rewrite_parallel(
-    db: PandoraDB,
-    nprocs: int,
-    nr_passes: int,
+        db: PandoraDB,
+        nprocs: int,
+        nr_passes: int,
 ) -> None:
-    
     await partition_table(db, nprocs)
 
     optimiser = PandoraOptimiser(
@@ -51,12 +51,12 @@ async def rewrite_sequential(db: PandoraDB, nr_passes: int) -> None:
 
 
 async def run_single_case(
-    db: PandoraDB,
-    nq: int,
-    n_rounds: int,
-    nr_passes: int,
-    sample_percentage: int | float,
-    nprocs: int,
+        db: PandoraDB,
+        nq: int,
+        n_rounds: int,
+        nr_passes: int,
+        sample_percentage: int | float,
+        nprocs: int,
 ) -> float:
     total_time = 0.0
 
@@ -105,18 +105,17 @@ async def run_single_case(
 
 
 async def main():
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 2:
         sys.exit(0)
 
-    config_file_path = sys.argv[1]
-    nprocs = int(sys.argv[2])
-    
+    nprocs = int(sys.argv[1])
+
     n_rounds = 1
     nr_passes = 1
 
     for sample_percentage in [0.1, 1, 10]:
 
-        db = PandoraDB(config_file_path)
+        db = PandoraDB()
         await db.connect()
 
         try:

@@ -76,7 +76,6 @@ def build_benchmark_circuits(num_qubits: int, run_idx: int, is_equiv: int) -> tu
 
 
 async def pandora_verify(
-        config_file_path: str,
         nprocs: int,
         circ1: QuantumCircuit,
         circ2: QuantumCircuit,
@@ -85,7 +84,7 @@ async def pandora_verify(
     concatenated = circ1.compose(circ2.inverse())
     cx_gate = PandoraGateTranslator.CXPowGate
 
-    db = PandoraDB(config_file_path)
+    db = PandoraDB()
     await db.connect()
 
     try:
@@ -145,7 +144,6 @@ def mqt_verify(bench: str, circ1: QuantumCircuit, circ2: QuantumCircuit, timeout
 
 
 async def run_pandora_benchmark(
-        config_file_path: str,
         num_qubits: int,
         run_idx: int,
         is_equiv: int,
@@ -160,7 +158,6 @@ async def run_pandora_benchmark(
         circ1=circ1,
         circ2=circ2,
         timeout_sec=timeout_sec,
-        config_file_path=config_file_path
     )
     wall_time = time.time() - start
 
@@ -179,13 +176,12 @@ def run_mqt_benchmark(
 
 
 async def main():
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 4:
         sys.exit(0)
 
-    config_file_path = sys.argv[1]
-    is_equiv = int(sys.argv[2])
-    backend = sys.argv[3]
-    exp_id = int(sys.argv[4])
+    is_equiv = int(sys.argv[1])
+    backend = sys.argv[2]
+    exp_id = int(sys.argv[3])
 
     assert backend in ['pandora', 'dd', 'zx']
     
@@ -208,7 +204,6 @@ async def main():
                     is_equiv=is_equiv,
                     nprocs=nprocs,
                     timeout_sec=timeout_sec,
-                    config_file_path=config_file_path,
                 )
                 print("Pandora time:", wall_time)
                 print("Equiv:", equiv)
