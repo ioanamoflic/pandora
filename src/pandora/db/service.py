@@ -123,6 +123,12 @@ class PandoraService:
         async with self.db.acquire() as conn:
             await conn.execute("CALL linked_circuit_to_zx()")
         print(f"Circuit to ZX conversion took {time.time() - start:.2f}s")
+
+    async def simplify_zx_basic(self) -> None:
+        start = time.time()
+        async with self.db.acquire() as conn:
+            await conn.execute(f"CALL zx_basic_simp()")
+        print(f"ZX basic simplification took {time.time() - start:.2f}s")
     async def get_edge_list(self):
         async with self.db.pool.acquire() as conn:
             return await conn.fetch("SELECT * FROM edge_list")
@@ -214,6 +220,14 @@ class PandoraService:
             # ZX
             'generic_procedures/zx_helpers.sql',
             'generic_procedures/zx_load.sql',
+            
+            # ZX rewrites
+            'generic_procedures/zx_rewrites/zx_id_simp.sql',
+            'generic_procedures/zx_rewrites/zx_remove_self_loops.sql',
+            'generic_procedures/zx_rewrites/zx_spider_simp.sql',
+            'generic_procedures/zx_rewrites/zx_x_to_z.sql',
+            
+            'generic_procedures/zx_basic_simp.sql',
 
             # benchmarking only
             'generic_procedures/hhcxhh_to_cx_seq.sql',
