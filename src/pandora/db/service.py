@@ -117,6 +117,12 @@ class PandoraService:
         async with self.db.acquire() as conn:
             return await read_to_pyzx_graph(conn)
         print(f"ZX graph extraction took {time.time() - start:.2f}s")
+
+    async def convert_linked_circuit_to_zx(self) -> None:
+        start = time.time()
+        async with self.db.acquire() as conn:
+            await conn.execute("CALL linked_circuit_to_zx()")
+        print(f"Circuit to ZX conversion took {time.time() - start:.2f}s")
     async def get_edge_list(self):
         async with self.db.pool.acquire() as conn:
             return await conn.fetch("SELECT * FROM edge_list")
@@ -207,6 +213,7 @@ class PandoraService:
 
             # ZX
             'generic_procedures/zx_helpers.sql',
+            'generic_procedures/zx_load.sql',
 
             # benchmarking only
             'generic_procedures/hhcxhh_to_cx_seq.sql',

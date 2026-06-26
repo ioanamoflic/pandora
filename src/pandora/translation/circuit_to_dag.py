@@ -70,10 +70,12 @@ class PandoraWindowedBuilder:
     ) -> Iterable:
         if isinstance(data, cirq.Circuit):
             self.translator = CirqToPandoraTranslator()
+            self._ensure_ordered_inputs(cirq.QubitOrder.DEFAULT.order_for(data.all_qubits()))
             return data.all_operations()
 
         if isinstance(data, qiskit.QuantumCircuit):
             self.translator = QiskitToPandoraTranslator()
+            self._ensure_ordered_inputs(data.qubits)
             return data.data
 
         if isinstance(data, Iterable):
@@ -98,21 +100,28 @@ class PandoraWindowedBuilder:
         self.gates[gate_id] = gate
         self.buffer.extend(completed)
 
+    def _ensure_input(self, q) -> None:
+        if q in self.latest:
+            return
+
+        gid = self._new_id()
+        in_type = PandoraGateTranslator.In.value
+
+        self.gates[gid] = PandoraGate(
+            gate_id=gid,
+            gate_code=in_type,
+            label=self.label,
+        )
+
+        self.latest[q] = LinkID.encode(gid, 0, in_type)
+
+    def _ensure_ordered_inputs(self, qubits) -> None:
+        for q in qubits:
+            self._ensure_input(q)
+
     def _ensure_inputs(self, op) -> None:
         for q in self._get_qubits(op):
-            if q in self.latest:
-                continue
-
-            gid = self._new_id()
-            in_type = PandoraGateTranslator.In.value
-
-            self.gates[gid] = PandoraGate(
-                gate_id=gid,
-                gate_code=in_type,
-                label=self.label,
-            )
-
-            self.latest[q] = LinkID.encode(gid, 0, in_type)
+            self._ensure_input(q)
 
     @staticmethod
     def _is_complete(g: PandoraGate):
