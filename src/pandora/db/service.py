@@ -8,6 +8,7 @@ from pandora.db.repository import GateRepository
 from pandora.multithreading.parallel_decompose import worker_entry
 from pandora.translation.circuit_to_dag import PandoraWindowedBuilder
 from pandora.translation.translator import GLOBAL_IN_ID
+from pandora.translation.pyzx import read_to_pyzx_graph, write_from_pyzx_graph
 from pandora.widgetization.union_find import UnionFindWidgetizer
 
 BASE_DIR = Path(__file__).resolve().parent  # pandora/db/
@@ -102,7 +103,20 @@ class PandoraService:
 
         from pandora.translation.dag_to_circuit import pandora_to_circuit
         return pandora_to_circuit(gates, circuit_type)
+        
+    async def load_from_pyzx(self, graph: Any):
+        start = time.time()
+        async with self.db.acquire() as conn:
+            return await write_from_pyzx_graph(conn, graph)
+        print(f"ZX graph loading took {time.time() - start:.2f}s")
 
+    async def export_to_pyzx(self, from_circuit: bool = False):
+        if (from_circuit):
+            await self.convert_linked_circuit_to_zx()
+        start = time.time()
+        async with self.db.acquire() as conn:
+            return await read_to_pyzx_graph(conn)
+        print(f"ZX graph extraction took {time.time() - start:.2f}s")
     async def get_edge_list(self):
         async with self.db.pool.acquire() as conn:
             return await conn.fetch("SELECT * FROM edge_list")
