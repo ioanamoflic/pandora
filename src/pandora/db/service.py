@@ -205,6 +205,9 @@ class PandoraService:
             # worker procedures
             'generic_procedures/generate_edge_list.sql',
 
+            # ZX
+            'generic_procedures/zx_helpers.sql',
+
             # benchmarking only
             'generic_procedures/hhcxhh_to_cx_seq.sql',
             'generic_procedures/_generate_optimisation_stats.sql',

@@ -63,38 +63,42 @@ CREATE TABLE IF NOT EXISTS gate_types (
 );
 
 INSERT INTO gate_types (id, name) VALUES
-(0, 'in'),
-(1, 'out'),
-(2, 'rx'),
-(3, 'ry'),
-(4, 'rz'),
-(5, 'xpow'),
-(6, 'ypow'),
-(7, 'zpow'),
-(8, 'h'),
-(9, 'paulix'),
-(10, 'pauliy'),
-(11, 'pauliz'),
-(12, 'globalphase'),
-(13, 'reset'),
-(14, 'meas'),
-(15, 'cx'),
-(16, 'cz'),
-(17, 'czpow'),
-(18, 'cxpow'),
-(19, 'xxpow'),
-(20, 'zzpow'),
-(21, 'toffoli'),
-(22, 'and'),
-(23, 'ccx'),
-(24, 'cswap'),
-(25, 'globalin'),
-(26, 'globalout'),
-(27, 's'),
-(28, 'sdag'),
-(29, 't'),
-(30, 'tdag'),
-(31, 'swap');
+(0, 'in'),           -- Input node (wire entry point)
+(1, 'out'),          -- Output node (wire exit point)
+(2, 'rx'),           -- Rotation around X axis by angle param
+(3, 'ry'),           -- Rotation around Y axis by angle param
+(4, 'rz'),           -- Rotation around Z axis by angle param
+(5, 'xpow'),         -- X gate raised to the power param (XPowGate)
+(6, 'ypow'),         -- Y gate raised to the power param (YPowGate)
+(7, 'zpow'),         -- Z gate raised to the power param (ZPowGate)
+(8, 'h'),            -- Hadamard gate
+(9, 'paulix'),       -- Pauli X gate (bit-flip / NOT gate)
+(10, 'pauliy'),      -- Pauli Y gate
+(11, 'pauliz'),      -- Pauli Z gate (phase-flip)
+(12, 'globalphase'), -- Global phase gate (unobservable scalar phase)
+(13, 'reset'),       -- Reset qubit to |0⟩
+(14, 'meas'),        -- Measurement gate (projects qubit to computational basis)
+(15, 'cx'),          -- Controlled-X gate (CNOT)
+(16, 'cz'),          -- Controlled-Z gate
+(17, 'czpow'),       -- Controlled-Z gate raised to the power param
+(18, 'cxpow'),       -- Controlled-X gate raised to the power param
+(19, 'xxpow'),       -- XX interaction gate raised to the power param (Ising XX)
+(20, 'zzpow'),       -- ZZ interaction gate raised to the power param (Ising ZZ)
+(21, 'toffoli'),     -- Toffoli gate (doubly controlled X / CCX)
+(22, 'and'),         -- AND gate (Toffoli with |0⟩ ancilla, uncompute-aware)
+(23, 'ccx'),         -- Doubly controlled X gate (alias for Toffoli)
+(24, 'cswap'),       -- Controlled-SWAP gate (Fredkin gate)
+(25, 'globalin'),    -- Global input node (multi-qubit circuit entry)
+(26, 'globalout'),   -- Global output node (multi-qubit circuit exit)
+(27, 's'),           -- S gate (phase gate, sqrt(Z), π/2 rotation around Z)
+(28, 'sdag'),        -- S† gate (inverse S, -π/2 rotation around Z)
+(29, 't'),           -- T gate (π/8 gate, sqrt(S), π/4 rotation around Z)
+(30, 'tdag'),        -- T† gate (inverse T, -π/4 rotation around Z)
+(31, 'swap'),        -- SWAP gate (exchanges states of two qubits)
+(32, 'zspider'),     -- Z spider
+(33, 'xspider'),     -- X spider
+(34, 'edge'),        -- Edge (for ZX diagrams, connects vertices)
+(35, 'hbox');        -- H-box (generalized Hadamard vertex in ZX diagrams)
 
 create table IF NOT EXISTS public.optimization_results
 (
@@ -202,6 +206,37 @@ create table IF NOT EXISTS public.layered_cliff_t
 
 
 -- === ZX ===
+CREATE OR REPLACE FUNCTION zx_phase_is_zero(p real)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE PARALLEL SAFE
+AS $$
+    SELECT p = 0::real;
+$$;
+
+CREATE OR REPLACE FUNCTION zx_phase_is_pauli(p real)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE PARALLEL SAFE
+AS $$
+    SELECT p IN (0::real, 1::real);
+$$;
+
+CREATE OR REPLACE FUNCTION zx_phase_is_clifford(p real)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE PARALLEL SAFE
+AS $$
+    SELECT p IN (0::real, 0.5::real, 1::real, 1.5::real);
+$$;
+
+CREATE OR REPLACE FUNCTION zx_phase_is_proper_clifford(p real)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE PARALLEL SAFE
+AS $$
+    SELECT p IN (0.5::real, 1.5::real);
+$$;
 
 create table zx_vertex (
     id bigserial primary key,
@@ -212,6 +247,10 @@ create table zx_vertex (
 ) WITH (FILLFACTOR = 50);
 
 CREATE INDEX zx_vertex_type ON zx_vertex (type);
+CREATE INDEX zx_vertex_zero_phase ON zx_vertex ((zx_phase_is_zero(param)));
+CREATE INDEX zx_vertex_pauli ON zx_vertex ((zx_phase_is_pauli(param)));
+CREATE INDEX zx_vertex_clifford ON zx_vertex ((zx_phase_is_clifford(param)));
+CREATE INDEX zx_vertex_proper_clifford ON zx_vertex ((zx_phase_is_proper_clifford(param)));
 
 -- Edges are stored with the smaller id as source. Use zx_check_edge_order to get the correct order for an edge
 create table zx_edge (
@@ -223,6 +262,12 @@ create table zx_edge (
     source bigint not null,
     target bigint not null
 );
+
+CREATE UNIQUE INDEX zx_edge_pair_unique ON zx_edge (
+    get_id_from_link(source),
+    get_id_from_link(target)
+);
+CREATE INDEX zx_edge_target_id ON zx_edge (get_id_from_link(target));
 
 -- Vertex types
 CREATE OR REPLACE FUNCTION zx_const_input_type()      RETURNS smallint LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT 0::smallint  $$;
