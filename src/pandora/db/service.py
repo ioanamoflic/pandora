@@ -135,6 +135,11 @@ class PandoraService:
         async with self.db.acquire() as conn:
             await conn.execute(f"CALL zx_full_reduce()")
         print(f"ZX full simplification took {time.time() - start:.2f}s")
+        
+    async def zx_is_identity(self) -> bool:
+        async with self.db.acquire() as conn:
+            return await conn.fetchval("SELECT zx_is_identity()")
+
     async def get_edge_list(self):
         async with self.db.pool.acquire() as conn:
             return await conn.fetch("SELECT * FROM edge_list")
@@ -241,6 +246,8 @@ class PandoraService:
             
             'generic_procedures/zx_basic_simp.sql',
             'generic_procedures/zx_full_reduce.sql',
+
+            'generic_procedures/zx_is_identity.sql',
 
             # benchmarking only
             'generic_procedures/hhcxhh_to_cx_seq.sql',
