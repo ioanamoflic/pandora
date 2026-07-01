@@ -146,6 +146,10 @@ class PandoraService:
         async with self.db.acquire() as conn:
             return await conn.fetchval("SELECT zx_is_identity()")
 
+    async def zx_is_bipartite(self) -> bool:
+        async with self.db.acquire() as conn:
+            return await conn.fetchval("SELECT zx_is_bipartite()")
+
     async def get_edge_list(self):
         async with self.db.pool.acquire() as conn:
             return await conn.fetch("SELECT * FROM edge_list")
@@ -255,6 +259,7 @@ class PandoraService:
             'generic_procedures/zx_full_reduce.sql',
 
             'generic_procedures/zx_is_identity.sql',
+            'generic_procedures/zx_is_bipartite.sql',
 
             # benchmarking only
             'generic_procedures/hhcxhh_to_cx_seq.sql',
