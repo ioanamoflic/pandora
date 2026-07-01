@@ -135,7 +135,13 @@ class PandoraService:
         async with self.db.acquire() as conn:
             await conn.execute(f"CALL zx_full_reduce()")
         print(f"ZX full simplification took {time.time() - start:.2f}s")
-        
+
+    async def zx_remove_h_edges(self) -> None:
+        start = time.time()
+        async with self.db.acquire() as conn:
+            await conn.execute(f"CALL zx_remove_h_edges(false)")
+        print(f"ZX RG conversion took {time.time() - start:.2f}s")
+
     async def zx_is_identity(self) -> bool:
         async with self.db.acquire() as conn:
             return await conn.fetchval("SELECT zx_is_identity()")
@@ -243,6 +249,7 @@ class PandoraService:
             'generic_procedures/zx_rewrites/zx_spider_simp.sql',
             'generic_procedures/zx_rewrites/zx_supplementarity_simp.sql',
             'generic_procedures/zx_rewrites/zx_x_to_z.sql',
+            'generic_procedures/zx_rewrites/zx_remove_h_edges.sql',
             
             'generic_procedures/zx_basic_simp.sql',
             'generic_procedures/zx_full_reduce.sql',
