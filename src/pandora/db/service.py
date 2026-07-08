@@ -7,7 +7,7 @@ from pandora.db.core import PandoraDB
 from pandora.db.repository import GateRepository
 from pandora.multithreading.parallel_decompose import worker_entry
 from pandora.translation.circuit_to_dag import PandoraWindowedBuilder
-from pandora.translation.translator import GLOBAL_IN_ID
+from pandora.translation.translator import GLOBAL_IN_ID, PandoraGateTranslator
 from pandora.translation.pyzx import read_to_pyzx_graph, write_from_pyzx_graph
 from pandora.widgetization.union_find import UnionFindWidgetizer
 
@@ -150,6 +150,26 @@ class PandoraService:
         async with self.db.acquire() as conn:
             return await conn.fetchval("SELECT zx_is_bipartite()")
 
+    async def zx_bp_get_check_values(self) -> list:
+        """Read the per-check aggregated values (sum of incoming variable messages)"""
+        async with self.db.acquire() as conn:
+            return await conn.fetch("SELECT vertex_id, value FROM zx_bp_check_value ORDER BY vertex_id")
+
+    async def zx_bp_min_sum(
+            self,
+            iters,
+            variable_type: int = PandoraGateTranslator.X_SPIDER.value,
+    ):
+        """Run in-DB min-sum message passing on a bipartite ZX graph.
+        """
+        start = time.time()
+        async with self.db.acquire() as conn:
+            await conn.execute(
+                "CALL zx_bp_min_sum($1::int, $2::smallint)",
+                iters, variable_type,
+            )
+        print(f"ZX min-sum BP took {time.time() - start:.2f}s")
+
     async def get_edge_list(self):
         async with self.db.pool.acquire() as conn:
             return await conn.fetch("SELECT * FROM edge_list")
@@ -207,6 +227,7 @@ class PandoraService:
             'benchmark_results',
             'optimization_results',
             'gate_types',
+            'zx_bp_check_value',
             'zx_vertex',
             'zx_edge'
         ]
@@ -260,6 +281,9 @@ class PandoraService:
 
             'generic_procedures/zx_is_identity.sql',
             'generic_procedures/zx_is_bipartite.sql',
+
+            # ZX belief propagation
+            'generic_procedures/zx_bp_min_sum.sql',
 
             # benchmarking only
             'generic_procedures/hhcxhh_to_cx_seq.sql',

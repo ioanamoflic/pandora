@@ -278,3 +278,11 @@ CREATE OR REPLACE FUNCTION zx_const_x_spider()        RETURNS smallint LANGUAGE 
 -- Edge types
 CREATE OR REPLACE FUNCTION zx_const_regular_edge()    RETURNS smallint LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT 0::smallint  $$;
 CREATE OR REPLACE FUNCTION zx_const_hadamard_edge()   RETURNS smallint LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT 1::smallint  $$;
+
+
+-- === belief-propagation ===
+
+create table zx_bp_check_value (
+    vertex_id bigint primary key references zx_vertex(id) on delete cascade,
+    value     double precision not null
+);

@@ -70,8 +70,8 @@ async def read_to_pyzx_graph(conn) -> pyzx.Graph:
     return g
 
 async def write_from_pyzx_graph(conn, g: pyzx.Graph) -> None:
-    await conn.execute("TRUNCATE TABLE zx_edge RESTART IDENTITY")
-    await conn.execute("TRUNCATE TABLE zx_vertex RESTART IDENTITY")
+    await conn.execute("TRUNCATE TABLE zx_edge RESTART IDENTITY CASCADE")
+    await conn.execute("TRUNCATE TABLE zx_vertex RESTART IDENTITY CASCADE")
 
     inputs = set(g.inputs())
     outputs = set(g.outputs())

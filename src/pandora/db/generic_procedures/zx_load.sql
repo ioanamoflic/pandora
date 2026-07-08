@@ -338,8 +338,8 @@ BEGIN
         RAISE EXCEPTION 'linked_circuit is not in depth-order';
     END IF;
 
-    TRUNCATE TABLE zx_edge RESTART IDENTITY;
-    TRUNCATE TABLE zx_vertex RESTART IDENTITY;
+    TRUNCATE TABLE zx_edge RESTART IDENTITY CASCADE;
+    TRUNCATE TABLE zx_vertex RESTART IDENTITY CASCADE;
 
     CREATE TEMP TABLE wire_head (
         source_gate_id bigint NOT NULL,

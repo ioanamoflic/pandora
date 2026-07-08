@@ -21,8 +21,8 @@ async def conn():
 
     try:
         async with db.acquire() as conn:
-            await conn.execute("TRUNCATE TABLE zx_edge RESTART IDENTITY")
-            await conn.execute("TRUNCATE TABLE zx_vertex RESTART IDENTITY")
+            await conn.execute("TRUNCATE TABLE zx_edge RESTART IDENTITY CASCADE")
+            await conn.execute("TRUNCATE TABLE zx_vertex RESTART IDENTITY CASCADE")
 
             yield conn
     finally:
