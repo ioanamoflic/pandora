@@ -275,7 +275,12 @@ class PandoraService:
             'generic_procedures/zx_rewrites/zx_supplementarity_simp.sql',
             'generic_procedures/zx_rewrites/zx_x_to_z.sql',
             'generic_procedures/zx_rewrites/zx_remove_h_edges.sql',
-            
+
+            # Fault-equivalent ZX rewrites
+            'generic_procedures/zx_rewrites/zx_fusen_fe.sql',
+            'generic_procedures/zx_rewrites/zx_fuse4_fe.sql',
+            'generic_procedures/zx_rewrites/zx_pi_copy_simp.sql',
+
             'generic_procedures/zx_basic_simp.sql',
             'generic_procedures/zx_full_reduce.sql',
 

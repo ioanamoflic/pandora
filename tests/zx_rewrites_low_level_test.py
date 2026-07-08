@@ -643,3 +643,259 @@ async def test_zx_supplementarity_simp_does_not_fire_without_matching_neighbors_
     assert await _count(zx_conn, "zx_vertex") == 5
     assert await _count(zx_conn, "zx_edge") == 4
     await _assert_no_parallel_edges(zx_conn)
+
+
+# ---------------------------------------------------------------------------
+# Fault-equivalent rewrites
+# ---------------------------------------------------------------------------
+
+
+async def _neighbors(conn, vertex_id: int) -> set[int]:
+    rows = await conn.fetch(
+        """
+        SELECT get_id_from_link(target) AS other FROM zx_edge WHERE get_id_from_link(source) = $1
+        UNION ALL
+        SELECT get_id_from_link(source) AS other FROM zx_edge WHERE get_id_from_link(target) = $1
+        """,
+        vertex_id,
+    )
+    return {row["other"] for row in rows}
+
+
+async def _spider_ids(conn) -> list[int]:
+    rows = await conn.fetch(
+        "SELECT id FROM zx_vertex WHERE type IN ($1, $2) ORDER BY id", Z, X
+    )
+    return [row["id"] for row in rows]
+
+
+# --- Fuse-4_fe -------------------------------------------------------------
+
+async def _degree4_spider_with_boundaries(conn, colour: int) -> tuple[int, list[int]]:
+    v = await _add_vertex(conn, colour)
+    legs = [await _add_vertex(conn, IN if i // 2 == 0 else OUT, row=0 if i // 2 == 0 else 2) for i in range(4)]
+    for leg in legs:
+        await _add_edge(conn, v, leg, SIMPLE)
+    return v, legs
+
+@pytest.mark.asyncio
+async def test_zx_fuse4_fe_expand_builds_ring(zx_conn):
+    v, legs = await _degree4_spider_with_boundaries(zx_conn, Z)
+
+    await _call_rewrite(zx_conn, "zx_fuse4_fe_expand")
+
+    # Original spider gone; four degree-3 ring spiders, four boundaries.
+    assert not await _vertex_exists(zx_conn, v)
+    assert await _count(zx_conn, "zx_vertex") == 8
+    # 4 ring edges + 4 external legs.
+    assert await _count(zx_conn, "zx_edge") == 8
+    ring = await _spider_ids(zx_conn)
+    assert len(ring) == 4
+    for r in ring:
+        assert await _degree(zx_conn, r) == 3
+    for leg in legs:
+        assert await _degree(zx_conn, leg) == 1
+    await _assert_no_parallel_edges(zx_conn)
+
+
+@pytest.mark.asyncio
+async def test_zx_fuse4_fe_roundtrip_expand_then_simp(zx_conn):
+    v, legs = await _degree4_spider_with_boundaries(zx_conn, Z)
+
+    await _call_rewrite(zx_conn, "zx_fuse4_fe_expand")
+    await _call_rewrite(zx_conn, "zx_fuse4_fe_simp")
+
+    assert await _count(zx_conn, "zx_vertex") == 5
+    spiders = await _spider_ids(zx_conn)
+    assert len(spiders) == 1
+    assert await _degree(zx_conn, spiders[0]) == 4
+    assert await _neighbors(zx_conn, spiders[0]) == set(legs)
+    await _assert_no_parallel_edges(zx_conn)
+
+
+@pytest.mark.asyncio
+async def test_zx_fuse4_fe_roundtrip_x_spider(zx_conn):
+    v, legs = await _degree4_spider_with_boundaries(zx_conn, X)
+
+    await _call_rewrite(zx_conn, "zx_fuse4_fe_expand")
+    ring = await _spider_ids(zx_conn)
+    for r in ring:
+        assert (await _vertex_type(zx_conn, r)) == X
+
+    await _call_rewrite(zx_conn, "zx_fuse4_fe_simp")
+    spiders = await _spider_ids(zx_conn)
+    assert len(spiders) == 1
+    assert await _vertex_type(zx_conn, spiders[0]) == X
+    assert await _neighbors(zx_conn, spiders[0]) == set(legs)
+
+
+# --- Fuse-n_fe -------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_zx_fusen_fe_expand_builds_hub_gadget(zx_conn):
+    # 2n = 6 (n = 3).
+    v = await _add_vertex(zx_conn, Z)
+    legs = [await _add_vertex(zx_conn, IN if i % 2 == 0 else OUT, row=0 if i % 2 == 0 else 2) for i in range(6)]
+    for leg in legs:
+        await _add_edge(zx_conn, v, leg, SIMPLE)
+
+    await _call_rewrite(zx_conn, "zx_fusen_fe_expand")
+
+    assert not await _vertex_exists(zx_conn, v)
+    # 2 hubs + 2n column spiders = 8 spiders, + 6 boundaries = 14 vertices.
+    assert await _count(zx_conn, "zx_vertex") == 14
+    # 3n internal + 2n external = 9 + 6 = 15 edges.
+    assert await _count(zx_conn, "zx_edge") == 15
+    spiders = await _spider_ids(zx_conn)
+    assert len(spiders) == 8
+    hubs = [s for s in spiders if await _degree(zx_conn, s) == 3 and not (await _neighbors(zx_conn, s) & set(legs))]
+    # Two hubs are the only spiders with no boundary neighbour.
+    assert len(hubs) == 2
+    await _assert_no_parallel_edges(zx_conn)
+
+
+@pytest.mark.asyncio
+async def test_zx_fusen_fe_roundtrip_expand_then_simp(zx_conn):
+    v = await _add_vertex(zx_conn, Z)
+    legs = [await _add_vertex(zx_conn, IN if i % 2 == 0 else OUT, row=0 if i % 2 == 0 else 2) for i in range(6)]
+    for leg in legs:
+        await _add_edge(zx_conn, v, leg, SIMPLE)
+
+    await _call_rewrite(zx_conn, "zx_fusen_fe_expand")
+    await _call_rewrite(zx_conn, "zx_fusen_fe_simp")
+
+    assert await _count(zx_conn, "zx_vertex") == 7
+    spiders = await _spider_ids(zx_conn)
+    assert len(spiders) == 1
+    assert await _degree(zx_conn, spiders[0]) == 6
+    assert await _neighbors(zx_conn, spiders[0]) == set(legs)
+    await _assert_no_parallel_edges(zx_conn)
+
+# --- Pi-Copy_fe -------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_zx_pi_copy_simp_degree2_regular_edge_preserves_edge_types(zx_conn):
+    center = await _add_vertex(zx_conn, Z, phase=0.5)
+    pi = await _add_vertex(zx_conn, X, phase=1.0)
+    outside = await _add_vertex(zx_conn, IN, row=0)
+    simple_leg = await _add_vertex(zx_conn, OUT, row=2)
+    hadamard_leg = await _add_vertex(zx_conn, OUT, row=2)
+
+    await _add_edge(zx_conn, outside, pi, SIMPLE)
+    await _add_edge(zx_conn, pi, center, SIMPLE)
+    await _add_edge(zx_conn, center, simple_leg, SIMPLE)
+    await _add_edge(zx_conn, center, hadamard_leg, HADAMARD)
+
+    await _call_rewrite(zx_conn, "zx_pi_copy_simp")
+
+    await _assert_vertices_removed(zx_conn, pi)
+    await _assert_vertices_exist(zx_conn, center, outside, simple_leg, hadamard_leg)
+    assert await _phase(zx_conn, center) == pytest.approx(-0.5)
+
+    assert await _count(zx_conn, "zx_vertex") == 6
+    assert await _count(zx_conn, "zx_edge") == 5
+
+    await _assert_edge(zx_conn, center, outside, SIMPLE)
+
+    copied = [s for s in await _spider_ids(zx_conn) if s != center]
+    assert len(copied) == 2
+
+    outward_edges = {}
+    for copied_pi in copied:
+        assert await _vertex_type(zx_conn, copied_pi) == X
+        assert await _phase(zx_conn, copied_pi) == pytest.approx(1.0)
+        assert await _degree(zx_conn, copied_pi) == 2
+
+        await _assert_edge(zx_conn, center, copied_pi, SIMPLE)
+
+        old_leg = ((await _neighbors(zx_conn, copied_pi)) - {center}).pop()
+        outward_edges[old_leg] = await _edge_type_between(zx_conn, copied_pi, old_leg)
+
+    assert outward_edges == {
+        simple_leg: SIMPLE,
+        hadamard_leg: HADAMARD,
+    }
+
+    await _assert_no_parallel_edges(zx_conn)
+
+@pytest.mark.asyncio
+async def test_zx_pi_copy_simp_two_matches_second_invalidated_by_first_rewrite(zx_conn):
+    center = await _add_vertex(zx_conn, Z, phase=0.5)
+
+    pi_a = await _add_vertex(zx_conn, X, phase=1.0)
+    pi_b = await _add_vertex(zx_conn, X, phase=1.0)
+
+    outside_a = await _add_vertex(zx_conn, IN, row=0)
+    outside_b = await _add_vertex(zx_conn, OUT, row=2)
+
+    # Shape:
+    #
+    #   outside_a --S-- pi_a(pi) --S-- center(alpha) --S-- pi_b(pi) --S-- outside_b
+    #
+    # Both pi_a and pi_b are initially suitable degree-2 pi-copy sites.
+    # Rewriting either one splits the center edge to the other, so the second
+    # initially queued match must not be applied from a stale binding.
+    await _add_edge(zx_conn, outside_a, pi_a, SIMPLE)
+    await _add_edge(zx_conn, pi_a, center, SIMPLE)
+    await _add_edge(zx_conn, center, pi_b, SIMPLE)
+    await _add_edge(zx_conn, pi_b, outside_b, SIMPLE)
+
+    await _call_rewrite(zx_conn, "zx_pi_copy_simp")
+
+    current_spiders = set(await _spider_ids(zx_conn))
+
+    original_pis = {pi_a, pi_b}
+    surviving_original_pis = original_pis & current_spiders
+    removed_original_pis = original_pis - current_spiders
+
+    assert len(surviving_original_pis) == 1
+    assert len(removed_original_pis) == 1
+
+    surviving_pi = surviving_original_pis.pop()
+    removed_pi = removed_original_pis.pop()
+
+    removed_outside = outside_a if removed_pi == pi_a else outside_b
+    surviving_outside = outside_b if surviving_pi == pi_b else outside_a
+
+    await _assert_vertices_removed(zx_conn, removed_pi)
+    await _assert_vertices_exist(zx_conn, center, surviving_pi, outside_a, outside_b)
+
+    # Only one rewrite should have been applied. If the stale second match is
+    # also applied, this phase will usually be changed twice.
+    assert await _phase(zx_conn, center) == pytest.approx(-0.5)
+
+    # One original pi is removed and one copied pi is inserted, so the total
+    # counts stay the same.
+    assert await _count(zx_conn, "zx_vertex") == 5
+    assert await _count(zx_conn, "zx_edge") == 4
+
+    # The rewritten side is now connected directly to the center.
+    await _assert_edge(zx_conn, center, removed_outside, SIMPLE)
+
+    # The other original pi was not rewritten from a stale match. Instead, the
+    # first rewrite split its old center edge by inserting a copied pi spider.
+    copied = current_spiders - {center, surviving_pi}
+    assert len(copied) == 1
+
+    copied_pi = copied.pop()
+    assert copied_pi not in original_pis
+
+    assert await _vertex_type(zx_conn, copied_pi) == X
+    assert await _phase(zx_conn, copied_pi) == pytest.approx(1.0)
+    assert await _degree(zx_conn, copied_pi) == 2
+
+    assert await _vertex_type(zx_conn, surviving_pi) == X
+    assert await _phase(zx_conn, surviving_pi) == pytest.approx(1.0)
+    assert await _degree(zx_conn, surviving_pi) == 2
+
+    await _assert_edge(zx_conn, center, copied_pi, SIMPLE)
+    await _assert_edge(zx_conn, copied_pi, surviving_pi, SIMPLE)
+    await _assert_edge(zx_conn, surviving_pi, surviving_outside, SIMPLE)
+
+    # The old center-surviving_pi edge must have been split. This is the side
+    # effect that invalidates the second initially discovered match.
+    assert center not in await _neighbors(zx_conn, surviving_pi)
+
+    await _assert_no_parallel_edges(zx_conn)
