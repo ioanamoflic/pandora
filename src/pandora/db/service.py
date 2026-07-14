@@ -273,6 +273,7 @@ class PandoraService:
             'generic_procedures/zx_rewrites/zx_pivot_simp.sql',
             'generic_procedures/zx_rewrites/zx_remove_self_loops.sql',
             'generic_procedures/zx_rewrites/zx_spider_simp.sql',
+            'generic_procedures/zx_rewrites/zx_spider_expand.sql',
             'generic_procedures/zx_rewrites/zx_supplementarity_simp.sql',
             'generic_procedures/zx_rewrites/zx_x_to_z.sql',
             'generic_procedures/zx_rewrites/zx_remove_h_edges.sql',
