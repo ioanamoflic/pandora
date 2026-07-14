@@ -267,6 +267,7 @@ class PandoraService:
             'generic_procedures/zx_rewrites/zx_copy_simp.sql',
             'generic_procedures/zx_rewrites/zx_gadget_simp.sql',
             'generic_procedures/zx_rewrites/zx_id_simp.sql',
+            'generic_procedures/zx_rewrites/zx_id_expand.sql',
             'generic_procedures/zx_rewrites/zx_lcomp_simp.sql',
             'generic_procedures/zx_rewrites/zx_merge_edge.sql',
             'generic_procedures/zx_rewrites/zx_pivot_simp.sql',
