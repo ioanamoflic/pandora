@@ -266,17 +266,18 @@ class PandoraService:
             # ZX rewrites
             'generic_procedures/zx_rewrites/zx_copy_simp.sql',
             'generic_procedures/zx_rewrites/zx_gadget_simp.sql',
-            'generic_procedures/zx_rewrites/zx_id_simp.sql',
             'generic_procedures/zx_rewrites/zx_id_expand.sql',
+            'generic_procedures/zx_rewrites/zx_id_simp.sql',
             'generic_procedures/zx_rewrites/zx_lcomp_simp.sql',
             'generic_procedures/zx_rewrites/zx_merge_edge.sql',
             'generic_procedures/zx_rewrites/zx_pivot_simp.sql',
+            'generic_procedures/zx_rewrites/zx_remove_h_edges.sql',
+            'generic_procedures/zx_rewrites/zx_remove_isolated_spiders.sql',
             'generic_procedures/zx_rewrites/zx_remove_self_loops.sql',
-            'generic_procedures/zx_rewrites/zx_spider_simp.sql',
             'generic_procedures/zx_rewrites/zx_spider_expand.sql',
+            'generic_procedures/zx_rewrites/zx_spider_simp.sql',
             'generic_procedures/zx_rewrites/zx_supplementarity_simp.sql',
             'generic_procedures/zx_rewrites/zx_x_to_z.sql',
-            'generic_procedures/zx_rewrites/zx_remove_h_edges.sql',
 
             # Fault-equivalent ZX rewrites
             'generic_procedures/zx_rewrites/zx_fusen_fe.sql',

@@ -1,50 +1,3 @@
-CREATE OR REPLACE PROCEDURE zx_remove_isolated_vertices(inout changed boolean)
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    vertex_candidate record;
-    locked_vertex record;
-    deleted_count integer := 0;
-BEGIN
-    FOR vertex_candidate IN
-        SELECT DISTINCT v.id
-            FROM zx_vertex v
-            WHERE v.type IN (zx_const_z_spider(), zx_const_x_spider())
-                AND NOT EXISTS (
-                    SELECT 1
-                        FROM zx_edge e
-                        WHERE get_id_from_link(e.source) = v.id
-                            OR get_id_from_link(e.target) = v.id
-                )
-            ORDER BY v.id
-    LOOP
-        SELECT * INTO locked_vertex
-            FROM zx_vertex
-            WHERE id = vertex_candidate.id
-            FOR UPDATE SKIP LOCKED;
-
-        IF locked_vertex.id IS NULL
-            OR locked_vertex.type NOT IN (zx_const_z_spider(), zx_const_x_spider())
-            OR EXISTS (
-                SELECT 1
-                    FROM zx_edge e
-                    WHERE get_id_from_link(e.source) = locked_vertex.id
-                        OR get_id_from_link(e.target) = locked_vertex.id
-            ) THEN
-            COMMIT;
-            CONTINUE;
-        END IF;
-
-        DELETE FROM zx_vertex WHERE id = locked_vertex.id;
-        deleted_count := deleted_count + 1;
-        COMMIT;
-    END LOOP;
-
-    IF deleted_count > 0 THEN
-        changed := true;
-    END IF;
-END;
-$$;
 
 CREATE OR REPLACE PROCEDURE zx_interior_clifford_simp(inout changed boolean)
 LANGUAGE plpgsql
@@ -137,7 +90,7 @@ BEGIN
 
         CALL zx_pivot_gadget_simp(body_changed);
 
-        CALL zx_remove_isolated_vertices(body_changed);
+        CALL zx_remove_isolated_spiders(body_changed);
 
         IF NOT body_changed THEN
             COMMIT;
