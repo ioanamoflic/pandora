@@ -300,7 +300,11 @@ class PandoraService:
             for path in procedures:
                 full_path = BASE_DIR / path
                 sql = full_path.read_text()
-                await conn.execute(sql)
+                try:
+                    await conn.execute(sql)
+                except Exception as e:
+                    print("Failed for " + path)
+                    raise e
 
     async def _reset_sequence(
             self,
