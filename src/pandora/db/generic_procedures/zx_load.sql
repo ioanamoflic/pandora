@@ -64,7 +64,7 @@ DECLARE
     new_vertex_id bigint;
 BEGIN
     INSERT INTO zx_vertex(type, qubit, row, param)
-		VALUES (p_type, p_qubit, p_row, COALESCE(p_param, 0)::real)
+		VALUES (p_type, p_qubit, p_row, COALESCE(p_param, 0)::double precision)
 		RETURNING id INTO new_vertex_id;
 
     IF p_prev_vertex_id IS NOT NULL THEN
@@ -132,7 +132,7 @@ $$;
 CREATE OR REPLACE PROCEDURE zx_load_decompose_ry(
     p_gate_id bigint,
     p_gate_type smallint,
-    p_param real,
+    p_param double precision,
     p_qubit bigint,
     p_pred_vertex_id bigint,
     p_pred_next_row bigint
@@ -143,10 +143,10 @@ DECLARE
     v1 bigint;
     v2 bigint;
     v3 bigint;
-    phase real;
+    phase double precision;
 BEGIN
 	-- Type 10 is Pauli Y which is Ry(pi)
-    phase := CASE p_gate_type WHEN 10 THEN 1::real ELSE p_param END;
+    phase := CASE p_gate_type WHEN 10 THEN 1::double precision ELSE p_param END;
 
     v1 := zx_load_append_vertex(zx_const_z_spider(), p_qubit, p_pred_next_row,     -0.5,    p_pred_vertex_id,zx_const_regular_edge());
     v2 := zx_load_append_vertex(zx_const_x_spider(), p_qubit, p_pred_next_row + 1, phase, v1, 				zx_const_regular_edge());

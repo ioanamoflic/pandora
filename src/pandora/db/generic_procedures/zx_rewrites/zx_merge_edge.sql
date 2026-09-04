@@ -25,7 +25,7 @@ BEGIN
     IF p_source_id = p_target_id THEN
         IF p_edge_type = zx_const_hadamard_edge() AND p_source_type IN (zx_const_z_spider(), zx_const_x_spider()) THEN
             UPDATE zx_vertex
-                SET param = zx_normalize_phase(param + 1::real)
+                SET param = zx_normalize_phase(param + 1::double precision)
                 WHERE id = p_source_id;
         END IF;
         RETURN true;
@@ -72,7 +72,7 @@ BEGIN
                 WHERE id = existing_edge_id;
 
             UPDATE zx_vertex
-                SET param = zx_normalize_phase(param + 1::real)
+                SET param = zx_normalize_phase(param + 1::double precision)
                 WHERE id = source_id;
                 RETURN true;
         ELSIF p_edge_type = zx_const_hadamard_edge() AND existing_edge_type = zx_const_hadamard_edge() THEN
@@ -106,7 +106,7 @@ BEGIN
             WHERE id = existing_edge_id;
 
             UPDATE zx_vertex
-            SET param = zx_normalize_phase(param + 1::real)
+            SET param = zx_normalize_phase(param + 1::double precision)
             WHERE id = source_id;
             RETURN true;
         ELSIF p_edge_type = zx_const_regular_edge() AND existing_edge_type = zx_const_regular_edge() THEN

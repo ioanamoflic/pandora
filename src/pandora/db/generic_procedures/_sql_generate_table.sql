@@ -206,36 +206,36 @@ create table IF NOT EXISTS public.layered_cliff_t
 
 
 -- === ZX ===
-CREATE OR REPLACE FUNCTION zx_phase_is_zero(p real)
+CREATE OR REPLACE FUNCTION zx_phase_is_zero(p double precision)
 RETURNS boolean
 LANGUAGE sql
 IMMUTABLE PARALLEL SAFE
 AS $$
-    SELECT p = 0::real;
+    SELECT p = 0::double precision;
 $$;
 
-CREATE OR REPLACE FUNCTION zx_phase_is_pauli(p real)
+CREATE OR REPLACE FUNCTION zx_phase_is_pauli(p double precision)
 RETURNS boolean
 LANGUAGE sql
 IMMUTABLE PARALLEL SAFE
 AS $$
-    SELECT p IN (0::real, 1::real);
+    SELECT p IN (0::double precision, 1::double precision);
 $$;
 
-CREATE OR REPLACE FUNCTION zx_phase_is_clifford(p real)
+CREATE OR REPLACE FUNCTION zx_phase_is_clifford(p double precision)
 RETURNS boolean
 LANGUAGE sql
 IMMUTABLE PARALLEL SAFE
 AS $$
-    SELECT p IN (0::real, 0.5::real, 1::real, 1.5::real);
+    SELECT p IN (0::double precision, 0.5::double precision, 1::double precision, 1.5::double precision);
 $$;
 
-CREATE OR REPLACE FUNCTION zx_phase_is_proper_clifford(p real)
+CREATE OR REPLACE FUNCTION zx_phase_is_proper_clifford(p double precision)
 RETURNS boolean
 LANGUAGE sql
 IMMUTABLE PARALLEL SAFE
 AS $$
-    SELECT p IN (0.5::real, 1.5::real);
+    SELECT p IN (0.5::double precision, 1.5::double precision);
 $$;
 
 create table zx_vertex (
@@ -243,7 +243,7 @@ create table zx_vertex (
     type smallint not null,
     qubit bigint not null,
     row bigint not null,
-    param real not null default 0 -- used as a pi multiplier
+    param double precision not null default 0 -- used as a pi multiplier
 ) WITH (FILLFACTOR = 50);
 
 CREATE INDEX zx_vertex_type ON zx_vertex (type);

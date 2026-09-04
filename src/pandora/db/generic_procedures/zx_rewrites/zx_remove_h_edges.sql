@@ -8,7 +8,7 @@ DECLARE
 
     h_edge record;
     new_type smallint;
-    phase_add real;
+    phase_add double precision;
     w1_id bigint;
     w2_id bigint;
     w3_id bigint;
@@ -219,7 +219,7 @@ BEGIN
             END IF;
 
             UPDATE zx_vertex v
-            SET param = zx_normalize_phase((v.param + phase_add)::real)
+            SET param = zx_normalize_phase((v.param + phase_add)::double precision)
                 WHERE v.id IN (h_edge.source_id, h_edge.target_id);
 
             INSERT INTO zx_vertex(type, qubit, "row", param)

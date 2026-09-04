@@ -7,12 +7,12 @@ DECLARE
 BEGIN
     CREATE TEMP TABLE IF NOT EXISTS lcomp_remaining_candidates (
         vertex_id bigint PRIMARY KEY,
-        phase real
+        phase double precision
     ) ON COMMIT DROP;
 
     CREATE TEMP TABLE IF NOT EXISTS lcomp_chosen_neighbors (
         candidate_id bigint NOT NULL,
-        candidate_phase real,
+        candidate_phase double precision,
         neighbor_id bigint NOT NULL,
         neighbor_type smallint NOT NULL
     ) ON COMMIT DROP;
@@ -103,7 +103,7 @@ BEGIN
             FROM (
                 SELECT
                     neighbor_id,
-                    SUM(candidate_phase)::real AS delta
+                    SUM(candidate_phase)::double precision AS delta
                 FROM lcomp_chosen_neighbors
                 GROUP BY neighbor_id
             ) AS phase_updates

@@ -31,14 +31,14 @@ END;
 $$;
 
 -- Normalise a phase to [0, 2].
-CREATE OR REPLACE FUNCTION zx_normalize_phase(p_phase real)
-RETURNS real
+CREATE OR REPLACE FUNCTION zx_normalize_phase(p_phase double precision)
+RETURNS double precision
 LANGUAGE sql
 IMMUTABLE PARALLEL SAFE
 AS $$
     SELECT COALESCE(
-        mod(mod(p_phase::numeric, 2::numeric) + 2::numeric, 2::numeric)::real,
-        0::real
+        mod(mod(p_phase::numeric, 2::numeric) + 2::numeric, 2::numeric)::double precision,
+        0::double precision
     );
 $$;
 

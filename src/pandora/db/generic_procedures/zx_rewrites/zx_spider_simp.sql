@@ -85,7 +85,7 @@ BEGIN
             FROM (
                 SELECT
                         s.comp_root,
-                        zx_normalize_phase(sum(v.param)::real) AS new_param
+                        zx_normalize_phase(sum(v.param)::double precision) AS new_param
                     FROM fuseable_spiders s
                     JOIN zx_vertex v
                         ON v.id = s.vertex_id

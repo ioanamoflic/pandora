@@ -3,14 +3,14 @@ CREATE OR REPLACE PROCEDURE _zx_apply_pivot(
     p_v0_id bigint,
     p_v1_id bigint,
     p_b1_id bigint,
-    p_v0_phase real,
-    p_v1_phase real
+    p_v0_phase double precision,
+    p_v1_phase double precision
 )
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v0_phase real := p_v0_phase;
-    v1_phase real := p_v1_phase;
+    v0_phase double precision := p_v0_phase;
+    v1_phase double precision := p_v1_phase;
 
     vertices_to_remove bigint[] := ARRAY[p_v1_id]::bigint[];
     retained_edge_id bigint;
@@ -62,21 +62,21 @@ BEGIN
     FROM neighbors;
 
     WITH phase_delta AS (
-        SELECT id, sum(delta)::real AS delta
+        SELECT id, sum(delta)::double precision AS delta
         FROM (
-            SELECT id, 1::real AS delta
+            SELECT id, 1::double precision AS delta
                 FROM zx_pivot_neighbors
                 WHERE set = 2
             UNION ALL
             SELECT id, v0_phase AS delta
                 FROM zx_pivot_neighbors
                 WHERE set IN (1, 2)
-                    AND zx_normalize_phase(v0_phase) <> 0::real
+                    AND zx_normalize_phase(v0_phase) <> 0::double precision
             UNION ALL
             SELECT id, v1_phase AS delta
                 FROM zx_pivot_neighbors
                 WHERE set IN (0, 2)
-                    AND zx_normalize_phase(v1_phase) <> 0::real
+                    AND zx_normalize_phase(v1_phase) <> 0::double precision
         ) AS delta_terms
         GROUP BY id
     )
@@ -84,7 +84,7 @@ BEGIN
     SET param = zx_normalize_phase(v.param + phase_delta.delta)
         FROM phase_delta
         WHERE v.id = phase_delta.id
-            AND zx_normalize_phase(phase_delta.delta) <> 0::real;
+            AND zx_normalize_phase(phase_delta.delta) <> 0::double precision;
 
     -- The a.id < b.id join condition already orders each pair, matching the (a_id, b_id) primary key.
     INSERT INTO zx_pending_edges(a_id, a_type, b_id, b_type, n_regular, n_had)
@@ -458,11 +458,11 @@ BEGIN
         RETURNING id INTO new_phase_vertex_id;
 
         INSERT INTO zx_vertex(type, qubit, row, param)
-        VALUES (zx_const_z_spider(), -1, boundary_partner.row, 0::real)
+        VALUES (zx_const_z_spider(), -1, boundary_partner.row, 0::double precision)
         RETURNING id INTO new_connector_vertex_id;
 
         UPDATE zx_vertex
-        SET param = 0::real
+        SET param = 0::double precision
             WHERE id = boundary_partner.id;
 
         PERFORM zx_merge_edge(
@@ -486,7 +486,7 @@ BEGIN
             boundary_partner.id,
             candidate.boundary_id,
             pauli_vertex.param,
-            0::real
+            0::double precision
         );
 
         changed := true;
@@ -671,9 +671,9 @@ BEGIN
             SELECT
                 id,
                 CASE
-                    WHEN neighbor_set = 2 THEN gadget_pair.pauli_param + 1::real
+                    WHEN neighbor_set = 2 THEN gadget_pair.pauli_param + 1::double precision
                     WHEN neighbor_set = 1 THEN gadget_pair.pauli_param
-                    ELSE 0::real
+                    ELSE 0::double precision
                 END AS delta
             FROM n
         )
@@ -681,7 +681,7 @@ BEGIN
         SET param = zx_normalize_phase(v.param + phase_delta.delta)
             FROM phase_delta
             WHERE v.id = phase_delta.id
-                AND phase_delta.delta <> 0::real;
+                AND phase_delta.delta <> 0::double precision;
 
         PERFORM zx_merge_edge(
             edges_to_merge.a_id,

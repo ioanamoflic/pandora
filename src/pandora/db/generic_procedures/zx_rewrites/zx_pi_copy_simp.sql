@@ -35,7 +35,7 @@ BEGIN
             ON get_id_from_link(copy_edge.source) = pi.id
             OR get_id_from_link(copy_edge.target) = pi.id
         WHERE zx_type_is_zx_spider(pi.type)
-            AND pi.param = 1::real
+            AND pi.param = 1::double precision
             AND zx_edge_degree(pi.id) = 2
             AND copy_edge.type = zx_const_regular_edge()
     ),
@@ -153,7 +153,7 @@ BEGIN
             copied_leg.pi_type,
             copied_leg.center_qubit,
             copied_leg.center_row,
-            1::real
+            1::double precision
         )
         RETURNING id INTO new_vertex_id;
 

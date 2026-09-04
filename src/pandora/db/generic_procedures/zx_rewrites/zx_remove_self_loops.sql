@@ -25,7 +25,7 @@ BEGIN
     ),
     updated_vertices AS (
         UPDATE zx_vertex v
-        SET param = zx_normalize_phase(v.param + 1::real)
+        SET param = zx_normalize_phase(v.param + 1::double precision)
             FROM phase_updates p
             WHERE v.id = p.vertex_id
                 AND mod(p.had_count, 2) = 1

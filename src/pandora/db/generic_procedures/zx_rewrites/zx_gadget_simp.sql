@@ -55,15 +55,15 @@ BEGIN
                 mod(
                     SUM(
                         CASE
-                            WHEN zx_normalize_phase(gadget_anchor_v_phase) = 0::real
+                            WHEN zx_normalize_phase(gadget_anchor_v_phase) = 0::double precision
                                 THEN gadget_phase_v_phase
                             ELSE -gadget_phase_v_phase
                         END
                     )::numeric,
                     2::numeric
-                )::real
+                )::double precision
             ) AS total_phase,
-            bool_or(zx_normalize_phase(gadget_anchor_v_phase) = 1::real) AS single_anchor_is_pi
+            bool_or(zx_normalize_phase(gadget_anchor_v_phase) = 1::double precision) AS single_anchor_is_pi
         FROM candidates
         GROUP BY gadget_target_ids
     ),
@@ -80,7 +80,7 @@ BEGIN
     ),
     canonicalized_single_anchor AS (
         UPDATE zx_vertex anchor
-        SET param = 0::real
+        SET param = 0::double precision
             FROM candidates c
             JOIN groups g
                 ON g.gadget_target_ids = c.gadget_target_ids
@@ -99,7 +99,7 @@ BEGIN
     ),
     fused_anchor AS (
         UPDATE zx_vertex anchor
-        SET param = 0::real
+        SET param = 0::double precision
             FROM groups g
             WHERE g.group_size > 1
                 AND anchor.id = g.keep_anchor_v_id

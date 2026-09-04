@@ -8,8 +8,8 @@ BEGIN
         v_id bigint NOT NULL,
         w_id bigint NOT NULL,
         match_type smallint NOT NULL,
-        v_phase real NOT NULL,
-        w_phase real NOT NULL,
+        v_phase double precision NOT NULL,
+        w_phase double precision NOT NULL,
         neighbor_id bigint
     ) ON COMMIT DROP;
 
@@ -69,8 +69,8 @@ BEGIN
                 JOIN candidates AS w
                   ON w.id > v.id
                  AND w.nbr_key = v.nbr_key
-                WHERE zx_normalize_phase(v.phase - w.phase) = 1::real
-                   OR zx_normalize_phase(v.phase + w.phase) = 1::real
+                WHERE zx_normalize_phase(v.phase - w.phase) = 1::double precision
+                   OR zx_normalize_phase(v.phase + w.phase) = 1::double precision
 
                 UNION ALL
 
@@ -100,8 +100,8 @@ BEGIN
                         WHERE n.neighbor_id <> v.id
                       )
                   AND (
-                        zx_normalize_phase(v.phase + w.phase) = 0::real
-                     OR zx_normalize_phase(v.phase - w.phase) = 1::real
+                        zx_normalize_phase(v.phase + w.phase) = 0::double precision
+                     OR zx_normalize_phase(v.phase - w.phase) = 1::double precision
                   )
             ) AS raw_potential
         ),
@@ -138,14 +138,14 @@ BEGIN
         END IF;
 
         UPDATE zx_vertex AS z
-        SET param = zx_normalize_phase(z.param + 1::real)
+        SET param = zx_normalize_phase(z.param + 1::double precision)
         FROM (
             SELECT DISTINCT neighbor_id
             FROM zx_supp_chosen
             WHERE neighbor_id IS NOT NULL
               AND (
-                    (match_type = 1 AND zx_normalize_phase(v_phase + w_phase) = 1::real)
-                 OR (match_type = 2 AND zx_normalize_phase(v_phase + w_phase) = 0::real)
+                    (match_type = 1 AND zx_normalize_phase(v_phase + w_phase) = 1::double precision)
+                 OR (match_type = 2 AND zx_normalize_phase(v_phase + w_phase) = 0::double precision)
               )
         ) AS phase_updates
         WHERE z.id = phase_updates.neighbor_id;
