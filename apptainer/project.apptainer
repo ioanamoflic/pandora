@@ -2,7 +2,6 @@ Bootstrap: docker
 From: postgres:latest
 
 %files
-#    ../requirements.txt requirements.txt
     ../pyproject.toml pyproject.toml
 
 %post
@@ -10,6 +9,3 @@ From: postgres:latest
     apt-get -y install python3 git
     apt install python3-pip -y
     pip3 install --break-system-packages -e '.[rsa]'
-
-#%runscript
-#    julia --project="/opt/." "/opt/src/cli.jl" "$@"
