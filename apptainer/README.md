@@ -33,6 +33,11 @@ belong in your job submission or allocation command.
 
 ## Running on LUMI
 
+For PRoot builds, keep `--no-install-recommends` in the recipe's `apt-get install`
+command. Otherwise Git pulls in `openssh-client`, whose configuration can fail
+while creating the `_ssh` group (`failure while writing changes to /etc/group`).
+Rebuild from the original PostgreSQL base image after updating the recipe.
+
 LUMI uses `singularity`. Build the image using LUMI's PRoot procedure or transfer
 a Linux x86-64 image built elsewhere. Inside a single-node Slurm allocation,
 run from the repository root:
