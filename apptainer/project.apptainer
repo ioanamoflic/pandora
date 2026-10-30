@@ -1,5 +1,5 @@
 Bootstrap: localimage
-From: images/postgres:latest.sif
+From: images/postgres:17-bookworm.sif
 
 %files
     .. /pandora
@@ -17,4 +17,6 @@ From: images/postgres:latest.sif
     test -d /pandora/src
 
     # base package + RSA optional dependencies from pyproject.toml
-    python3 -m pip install --break-system-packages "/pandora[rsa]"
+    # Bookworm provides Python 3.11, compatible with NumPy 1.26.x.
+    # Fail clearly rather than attempting an unsupported NumPy source build.
+    python3 -m pip install --break-system-packages --only-binary=numpy "/pandora[rsa]"

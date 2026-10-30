@@ -14,6 +14,10 @@ resolve consistently. Docker is not needed. The resulting image is
 The build needs network access to download the base image and Python dependencies.
 Use a machine or node where your cluster permits container builds.
 
+The recipe uses `postgres:17-bookworm` to provide Python 3.11. Do not substitute
+`postgres:latest`: its Python 3.13 is incompatible with NumPy 1.26.x selected by
+the RSA dependency stack. NumPy is installed from a binary wheel.
+
 ## Running on Toubkal
 
 Load the cluster's Apptainer module if needed, and build the image using the
@@ -36,7 +40,16 @@ belong in your job submission or allocation command.
 For PRoot builds, keep `--no-install-recommends` in the recipe's `apt-get install`
 command. Otherwise Git pulls in `openssh-client`, whose configuration can fail
 while creating the `_ssh` group (`failure while writing changes to /etc/group`).
-Rebuild from the original PostgreSQL base image after updating the recipe.
+Rebuild from the PostgreSQL 17 Bookworm base image after updating the recipe:
+
+```bash
+module load CrayEnv
+module load PRoot
+cd apptainer
+mkdir -p images
+singularity pull images/postgres:17-bookworm.sif docker://postgres:17-bookworm
+singularity build images/pandora.sif project.apptainer
+```
 
 LUMI uses `singularity`. Build the image using LUMI's PRoot procedure or transfer
 a Linux x86-64 image built elsewhere. Inside a single-node Slurm allocation,

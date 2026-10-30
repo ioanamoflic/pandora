@@ -6,10 +6,15 @@ cd "$SCRIPT_DIR"
 IMAGES_DIR="images"
 
 # the name of the docker image to start from
-BASE_IMAGE="postgres:latest"
+BASE_IMAGE="postgres:17-bookworm"
 
 # the name of the project
 APP_NAME="pandora"
+
+base() {
+    mkdir -p "$IMAGES_DIR"
+    apptainer pull "$IMAGES_DIR/$BASE_IMAGE.sif" "docker://$BASE_IMAGE"
+}
 
 build() {
     mkdir -p "$IMAGES_DIR"
@@ -22,6 +27,9 @@ run() {
 
 # Pass arguments to the script
 case $1 in
+    (base)
+        base
+        ;;
     (build)
         build
         ;;
