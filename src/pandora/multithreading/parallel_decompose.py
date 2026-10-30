@@ -60,7 +60,12 @@ async def _worker_main(
 
     try:
         repo = GateRepository(db)
-        builder = PandoraWindowedBuilder(window_size=window_size, label=str(worker_id))
+        builder = PandoraWindowedBuilder(
+            window_size=window_size,
+            label=str(worker_id),
+            id_start=worker_id,
+            id_step=nprocs,
+        )
 
         for i, high_level_op in enumerate(container_op_list):
             if not (proc_start <= i < proc_end):
@@ -145,6 +150,8 @@ async def _worker_main_verbose(
         builder = PandoraWindowedBuilder(
             window_size=window_size,
             label=worker_label,
+            id_start=worker_id,
+            id_step=nprocs,
         )
 
         for op_idx, high_level_op in enumerate(worker_op_list):

@@ -29,15 +29,24 @@ For running on HPC hardware, this is highly encouraged. Apptainer does not requi
 
 * The database storage location can be configured in `run_apptainer.sh`. As a rule of thumb, each billion of Clifford+T 
 gates in the Pandora format takes about 100GB of storage.
-* A command example for starting the container and decomposing an 64-bit RSA instance (nproc = 1 & container id = 0) is
+* A command example for starting the container and decomposing a 64-bit RSA instance on one node with one process is
 ```
-bash run_apptainer.sh main.py rsa --n 64 --nproc 1 --container_id 0
+bash run_apptainer.sh main.py rsa --n 64 --nproc 1 --nodes 1
 ```
+On LUMI, submit one job to decompose the circuit across multiple nodes:
+
+```bash
+bash run_apptainer_lumi.sh main.py rsa --n 64 --nodes 3 --nproc 4
+```
+
+This starts one container on each of three nodes, with four decomposition workers
+per node. Node IDs and circuit chunks are assigned automatically. Each node keeps
+its own PostgreSQL database. See `apptainer/README.md` for resource and storage options.
 Note that for all benchmarks that do not need postgres, one can use ```run_apptainer_no_postgres.sh```.
 
 ## Without Apptainer
 * Install PostgreSQL and get a server running. For example, on MacOS you can use [this tutorial](https://www.atlassian.com/data/sql/how-to-start-a-postgresql-server-on-mac-os-x).
-* `python3.10 main.py rsa --n 64 --nproc 1 --container_id 0` for building and decomposing an 64-bit RSA instance into Pandora.
+* `python3.10 main.py rsa --n 64 --nproc 1 --nodes 1` for building and decomposing an 64-bit RSA instance into Pandora.
 
 ## Widgetization
 This is an example of a widgetised Fermi-Hubbard instance (N=2) decomposed into Clifford+T with around 58K gates.

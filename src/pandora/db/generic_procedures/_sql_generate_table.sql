@@ -45,7 +45,7 @@ create table IF NOT EXISTS public.linked_circuit
     next_q3 bigint,
 --     visited boolean,
     visited int default -1 ,
-    label   char,
+    label   text,
     cl_ctrl boolean,
     meas_key smallint
 ) WITH (FILLFACTOR = 100);

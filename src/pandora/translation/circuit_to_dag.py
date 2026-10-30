@@ -31,14 +31,25 @@ class PandoraWindowedBuilder:
     It maintains state across calls and can emit gates in windows.
     """
 
-    def __init__(self, label=None, window_size: int = 1000):
+    def __init__(
+        self,
+        label=None,
+        window_size: int = 1000,
+        id_start: int = 0,
+        id_step: int = 1,
+    ):
         if window_size <= 1:
             raise WindowSizeError
+        if id_start < 0 or id_step < 1:
+            raise ValueError("id_start must be nonnegative and id_step must be positive")
 
         self.label = label
         self.window_size = window_size
 
-        self.last_id = 0
+        # Parallel builders use disjoint residue classes to avoid primary-key
+        # collisions while retaining the existing gate/link representation.
+        self.last_id = id_start
+        self.id_step = id_step
         self.gates: dict[int, PandoraGate] = {}
         self.latest = {}
 
@@ -192,5 +203,5 @@ class PandoraWindowedBuilder:
 
     def _new_id(self) -> int:
         gid = self.last_id
-        self.last_id += 1
+        self.last_id += self.id_step
         return gid

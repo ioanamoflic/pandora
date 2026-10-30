@@ -1,4 +1,5 @@
 import json
+import os
 
 import asyncpg
 from typing import Optional
@@ -19,11 +20,11 @@ class PandoraDB:
 
     async def connect(self):
         """
-        If anything is missing in configs or the config is not specified, Postgres should use defaults.
+        Use config settings, with PGPORT available for launcher-assigned ports.
         """
         self.pool = await asyncpg.create_pool(
             host=self.config.get("host") or "localhost",
-            port=self.config.get("port") or 5432,
+            port=int(self.config.get("port") or os.environ.get("PGPORT") or 5432),
             user=self.config.get("user") or None,
             password=self.config.get("password") or None,
             database=self.config.get("database") or "postgres",

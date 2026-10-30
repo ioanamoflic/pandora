@@ -101,6 +101,18 @@ class PandoraService:
         for p in processes:
             p.join()
 
+        failures = [
+            (worker_id, p.exitcode)
+            for worker_id, p in enumerate(processes)
+            if p.exitcode != 0
+        ]
+        if failures:
+            details = ", ".join(
+                f"worker {worker_id}: exit code {exitcode}"
+                for worker_id, exitcode in failures
+            )
+            raise RuntimeError(f"RSA decomposition failed ({details})")
+
     async def load_circuit(self, circuit_type, label: int | None = None):
         if label is None:
             gates = await self.repo.fetch_all()
