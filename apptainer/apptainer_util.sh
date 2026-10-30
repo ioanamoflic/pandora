@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -eu
+# Resolve the recipe, base image, and %files sources relative to this script.
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+cd "$SCRIPT_DIR"
 IMAGES_DIR="images"
 
 # the name of the docker image to start from
