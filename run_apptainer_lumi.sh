@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run inside a Slurm allocation: bash run_apptainer_lumi.sh main.py [arguments...]
+# Request an allocation when needed: bash run_apptainer_lumi.sh main.py [arguments...]
 set -euo pipefail
 
 REPO_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
@@ -15,8 +15,36 @@ fi
 command -v singularity >/dev/null
 command -v srun >/dev/null
 if [[ -z ${SLURM_JOB_ID:-} ]]; then
-    echo "Run this launcher inside an sbatch job or salloc allocation." >&2
-    exit 1
+    if [[ ${PANDORA_ALLOCATION_REQUESTED:-} == 1 ]]; then
+        echo "salloc did not provide SLURM_JOB_ID; cannot start Pandora." >&2
+        exit 1
+    fi
+    command -v salloc >/dev/null
+    # Default account matches run_lumi.sh; override for another LUMI project.
+    ACCOUNT="${PANDORA_ACCOUNT:-${SLURM_ACCOUNT:-project_462001731}}"
+    WORKERS=1
+    ARGS=("$@")
+    for ((i=1; i<${#ARGS[@]}; i++)); do
+        case "${ARGS[i]}" in
+            --nproc)
+                WORKERS="${ARGS[i+1]:-}"
+                ;;
+            --nproc=*)
+                WORKERS="${ARGS[i]#--nproc=}"
+                ;;
+        esac
+    done
+    if [[ ! "$WORKERS" =~ ^[1-9][0-9]*$ ]]; then
+        echo "--nproc must be a positive integer." >&2
+        exit 2
+    fi
+    export PANDORA_DATA_ROOT="${PANDORA_DATA_ROOT:-${SCRATCH:-/scratch/$ACCOUNT/$USER/pandora-db}}"
+    export PANDORA_ALLOCATION_REQUESTED=1
+    echo "Requesting a Slurm allocation for account $ACCOUNT; waiting for resources..."
+    exec salloc --account="$ACCOUNT" --partition="${PANDORA_PARTITION:-small}" \
+        --nodes=1 --ntasks=1 --cpus-per-task="${PANDORA_CPUS:-$WORKERS}" \
+        --mem="${PANDORA_MEM:-8G}" --time="${PANDORA_TIME:-00:30:00}" \
+        bash "$REPO_DIR/run_apptainer_lumi.sh" "$@"
 fi
 
 # Use the user's LUMI scratch directory, or an explicitly chosen writable path.

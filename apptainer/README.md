@@ -52,8 +52,7 @@ singularity build images/pandora.sif project.apptainer
 ```
 
 LUMI uses `singularity`. Build the image using LUMI's PRoot procedure or transfer
-a Linux x86-64 image built elsewhere. Inside a single-node Slurm allocation,
-run from the repository root:
+a Linux x86-64 image built elsewhere. Run from the repository root:
 
 ```bash
 export PANDORA_DATA_ROOT=/scratch/project_YOUR_PROJECT/$USER/pandora-db
@@ -63,6 +62,15 @@ bash run_apptainer_lumi.sh main.py rsa --n 64 --nproc 1 --container_id 0
 Replace the scratch path with a directory you can write to. The launcher also
 accepts `$SCRATCH` as the default storage root and `PANDORA_IMAGE` as an alternate
 image path. Match `--nproc` to the CPUs allocated to your job.
+
+When run outside an allocation, the launcher requests one with `salloc`, waits
+for resources, and runs the command automatically. It defaults to the account
+`project_462000921` used in `run_lumi.sh`, the `small` partition, 8G memory,
+30 minutes, and one CPU per `--nproc` worker. Set `PANDORA_ACCOUNT` (or
+`SLURM_ACCOUNT`) for your own project. Other overrides are `PANDORA_PARTITION`,
+`PANDORA_CPUS`, `PANDORA_MEM`, and `PANDORA_TIME`. Without a storage override,
+automatic allocation uses `/scratch/<account>/$USER/pandora-db`. Existing Slurm
+allocations are reused, and their resources are not changed.
 
 For custom local database settings, pass `main.py --config config.json rsa ...`.
 The launcher reads the JSON port, user, and database, initializes that user and
