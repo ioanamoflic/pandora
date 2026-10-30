@@ -18,31 +18,314 @@ Pandora is HPC friendly and can be used for:
 * Google Cirq
 * Qiskit
 
-## Apptainer Setup
-Installation instructions can be found in the `README.md` of the `apptainer` folder. In a nutshell, you need to have
-Apptainer installed on your computer, a Docker image of Postgres available locally, and then to follow the 
-steps from the README. At the end you will see a `pandora.sif` file in the `apptainer\images` folder. This is the
-Apptainer image that will be used by `run_apptainer.sh` (see following section).
+## Containers on Toubkal and LUMI
 
-## With Apptainer 
-For running on HPC hardware, this is highly encouraged. Apptainer does not require sudo rights and is also light-weight and open-source.
+The container includes PostgreSQL, Python, Pandora, and the RSA dependencies from
+`.[rsa]`. Docker does **not** need to be installed: Apptainer/Singularity downloads
+and converts the PostgreSQL image directly from Docker Hub. Build the image once,
+then use it for subsequent jobs.
 
-* The database storage location can be configured in `run_apptainer.sh`. As a rule of thumb, each billion of Clifford+T 
-gates in the Pandora format takes about 100GB of storage.
-* A command example for starting the container and decomposing a 64-bit RSA instance on one node with one process is
+### Prepare the repository
+
+Clone the repository onto storage accessible from the cluster's compute nodes:
+
+```bash
+git clone https://github.com/ioanamoflic/pandora.git
+cd pandora
 ```
-bash run_apptainer.sh main.py rsa --n 64 --nproc 1 --nodes 1
+
+If you already have a clone, update that checkout instead. The commands below
+start from the repository root unless stated otherwise. Keep the whole checkout
+on the cluster, including `main.py`, `src/`, the cluster launchers, and these
+helper files:
+
+```text
+apptainer/project.apptainer
+apptainer/apptainer_util.sh
+apptainer/cluster_util.sh
+apptainer/slurm_node.sh
+apptainer/run_node.sh
 ```
-On LUMI, submit one job to decompose the circuit across multiple nodes:
+
+Copying only `run_apptainer_lumi.sh` or `run_apptainer_toubkal.sh` is insufficient.
+When transferring changes with Git, include newly added files in the commit.
+Choose a writable scratch directory for the databases; each billion of gates in
+Pandora format takes approximately 100 GB of storage.
+
+### Prepare Singularity on the cluster
+
+Both Toubkal and LUMI provide Singularity, so the image pull and build commands
+below are the same on both clusters. The setup needed to permit an unprivileged
+build depends on the cluster.
+
+On **Toubkal**, make `singularity` available in your shell, loading the site's
+module if needed, and check it with `singularity --version`. Use the build mode
+supported by the site's Singularity installation; the LUMI module names below
+are specific to LUMI.
+
+On **LUMI**, enable its unprivileged PRoot build procedure before building:
+
+```bash
+module load CrayEnv
+module load PRoot
+```
+
+LUMI disables ordinary root/fakeroot builds. See its
+[container guide](https://docs.lumi-supercomputer.eu/software/containers/singularity/)
+for the supported PRoot procedure. The same `singularity build` command is used
+once the build environment is ready.
+
+### Build the image on either cluster
+
+From the repository root, after preparing Singularity as above:
+
+```bash
+# Keep download/build caches out of your home directory.
+mkdir -p "/tmp/$USER/pandora-build/tmp" "/tmp/$USER/pandora-build/cache"
+export SINGULARITY_TMPDIR="/tmp/$USER/pandora-build/tmp"
+export SINGULARITY_CACHEDIR="/tmp/$USER/pandora-build/cache"
+
+cd apptainer
+mkdir -p images
+singularity pull images/postgres:17-bookworm.sif docker://postgres:17-bookworm
+singularity build images/pandora.sif project.apptainer
+cd ..
+
+# Check the completed image and installed packages.
+singularity exec apptainer/images/pandora.sif python3 -m pip show pandora numpy
+```
+
+The pull creates `apptainer/images/postgres:17-bookworm.sif`; it does not require
+an existing PostgreSQL image or a Docker installation. If that base image already
+exists, skip the pull. The build creates `apptainer/images/pandora.sif`.
+
+Run the direct build command from `apptainer/`: both the base-image path and the
+recipe's source-copy path are relative to that directory. Building requires
+internet access and must run on a node where your cluster permits container
+builds. Use a build/cache directory with enough free space if `/tmp` is too small.
+
+Use the recipe's `postgres:17-bookworm` base image, which provides Python 3.11.
+Do not substitute `postgres:latest`: it can change the Debian and Python versions
+and cause incompatible dependency selections or unsupported NumPy source builds.
+
+Alternatively, transfer a completed Linux x86-64 `pandora.sif` from a compatible
+build machine into `apptainer/images/`. The PostgreSQL base image alone is not
+the completed Pandora image.
+
+For machines exposing the runtime as `apptainer`, the equivalent helper commands
+from the repository root are `bash apptainer/apptainer_util.sh base` and
+`bash apptainer/apptainer_util.sh build`. That helper currently calls `apptainer`
+explicitly; use the direct Singularity commands above on Singularity-only systems.
+
+### Run RSA decomposition on LUMI
+
+Set your own LUMI account and scratch directory. Replace `project_YOUR_PROJECT`
+in both values:
+
+```bash
+export PANDORA_ACCOUNT=project_YOUR_PROJECT
+export PANDORA_DATA_ROOT="/scratch/$PANDORA_ACCOUNT/$USER/pandora-db"
+
+# One node, four decomposition workers.
+bash run_apptainer_lumi.sh main.py rsa --n 64 --nodes 1 --nproc 4
+```
+
+You can run this command from the login node. Outside an allocation, the launcher
+submits one batch job with `sbatch` and returns its job ID; Python runs on the
+allocated compute nodes. There is no separate `salloc` step. Inside an existing
+allocation, the launcher uses that allocation instead.
+
+For decomposition across three nodes, with four workers on each node:
 
 ```bash
 bash run_apptainer_lumi.sh main.py rsa --n 64 --nodes 3 --nproc 4
 ```
 
-This starts one container on each of three nodes, with four decomposition workers
-per node. Node IDs and circuit chunks are assigned automatically. Each node keeps
-its own PostgreSQL database. See `apptainer/README.md` for resource and storage options.
-Note that for all benchmarks that do not need postgres, one can use ```run_apptainer_no_postgres.sh```.
+Submission defaults are 30 minutes, 8 GB of memory per node, and `--nproc` CPUs per
+node. The launcher selects `small` for up to four nodes and `standard` for larger
+jobs. The `standard` partition allocates and bills full nodes; consult
+[LUMI's partition limits](https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/partitions/)
+when sizing your job. Override resources before submission, for example:
+
+```bash
+export PANDORA_TIME=02:00:00
+export PANDORA_MEM=32G
+export PANDORA_CPUS=8
+```
+
+`PANDORA_CPUS` must be at least `--nproc`. `PANDORA_PARTITION` overrides the automatic
+partition choice. Resource overrides do not resize an existing allocation.
+Always set `PANDORA_ACCOUNT` for your own project: the current fallback account
+in the script is `project_462001731`.
+
+### Run RSA decomposition on Toubkal
+
+The Toubkal launcher expects an existing Slurm allocation. For a batch job, create
+`pandora-toubkal.sbatch` in the repository root:
+
+```bash
+#!/usr/bin/env bash
+#SBATCH --job-name=pandora
+#SBATCH --account=YOUR_PROJECT_ACCOUNT
+#SBATCH --partition=compute
+#SBATCH --nodes=3
+#SBATCH --ntasks=3
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=8G
+#SBATCH --time=00:30:00
+#SBATCH --output=pandora-%j.out
+#SBATCH --error=pandora-%j.err
+
+set -euo pipefail
+cd /path/to/pandora
+# Load the site's Singularity module here if it is not already available.
+export PANDORA_DATA_ROOT=/path/to/your/scratch/pandora-db
+bash run_apptainer_toubkal.sh main.py rsa --n 64 --nodes 3 --nproc 4
+```
+
+Replace the account, repository path, and scratch path, then submit from the
+repository root:
+
+```bash
+sbatch pandora-toubkal.sbatch
+```
+
+The example uses Toubkal's `compute` CPU partition; use the partition and account
+authorized for your project. See the
+[Toubkal job-submission guide](https://toubkal.gitlab.io/docs/user-guide/job-submission.html)
+for site-specific account and QoS requirements. The launcher prefers `apptainer`
+and falls back to `singularity` if that is the available runtime.
+
+For one-node decomposition, change the batch script's `--nodes` and `--ntasks`
+to `1`, and change the Python command to `--nodes 1`. Keep `--cpus-per-task` at
+least as large as `--nproc`. Do not add another `srun` around the launcher; it
+already starts one container task per node.
+
+For an interactive allocation, the equivalent three-node example is:
+
+```bash
+salloc --account=YOUR_PROJECT_ACCOUNT --partition=compute \
+  --nodes=3 --ntasks=3 --ntasks-per-node=1 --cpus-per-task=4 \
+  --mem=8G --time=00:30:00
+
+# Once Slurm grants the allocation, from the repository root:
+export PANDORA_DATA_ROOT=/path/to/your/scratch/pandora-db
+bash run_apptainer_toubkal.sh main.py rsa --n 64 --nodes 3 --nproc 4
+# Run exit when finished to release the interactive allocation.
+```
+
+### How multi-node decomposition works
+
+The same RSA arguments apply to both cluster launchers:
+
+| Argument | Meaning |
+| --- | --- |
+| `--n 64` | Select the 64-bit RSA instance. |
+| `--nodes 3` | Split decomposition across three compute nodes; defaults to one. |
+| `--nproc 4` | Start four decomposition worker processes on each node. |
+
+`--nodes 3 --nproc 4` starts **12 decomposition workers in total**, with one
+container and one PostgreSQL instance per node. The launcher assigns node IDs
+`0`, `1`, and `2` automatically. Each node receives a distinct contiguous chunk
+of the high-level circuit and splits that chunk among its local workers. The
+former `--container_id` option has been replaced by `--nodes`; do not submit a
+separate command for each chunk.
+
+Each node stores its output in its own database. The databases are **not merged**
+into a single circuit database. A failed worker causes the job to report failure.
+Use a cluster launcher for multiple nodes: running `python main.py ... --nodes 3`
+directly does not create Slurm tasks.
+
+### Logs, results, and job monitoring
+
+On LUMI, batch output is written to:
+
+```text
+container_outputs/pandora-<jobid>.out
+container_outputs/pandora-<jobid>.err
+```
+
+Set `PANDORA_LOG_DIR` to change this directory. The Toubkal batch example above
+writes `pandora-<jobid>.out` and `.err` in the submission directory. Monitor or
+cancel either cluster's job with:
+
+```bash
+squeue -u "$USER"
+sacct -j JOB_ID --format=JobID,State,ExitCode,Elapsed
+scancel JOB_ID
+```
+
+The launcher prints the database location. Under `PANDORA_DATA_ROOT`, each run has
+this layout:
+
+```text
+pandora-<jobid>.<unique-suffix>/
+  node-0/
+    pgdata/
+    pgrun/
+    postgres.log
+    db-settings
+  node-1/
+    ...
+```
+
+PostgreSQL stops when the node's command exits, but the data, selected connection
+settings, and logs are retained. Every invocation initializes fresh databases;
+retained databases are not automatically reopened or resumed. If
+`PANDORA_DATA_ROOT` is unset, the launchers use `$SCRATCH` when available; LUMI's
+automatic submission otherwise defaults to `/scratch/<account>/$USER/pandora-db`.
+Toubkal requires `PANDORA_DATA_ROOT` or `$SCRATCH`.
+
+Set `PANDORA_IMAGE` to an absolute path to use a SIF outside
+`apptainer/images/pandora.sif`. Repository source changes are read through a bind
+mount and do not require rebuilding the image; dependency or recipe changes do.
+
+### Optional PostgreSQL settings
+
+A database configuration is optional. Without one, the launcher creates a local
+PostgreSQL instance with the submitting user's database role, the `postgres`
+database, and an automatically selected available port. For a custom role or
+database, create `config.json` in the repository root:
+
+```json
+{
+  "host": "localhost",
+  "user": "pandora",
+  "database": "pandora"
+}
+```
+
+Place `--config` **before** `rsa`, for example on LUMI:
+
+```bash
+bash run_apptainer_lumi.sh main.py --config config.json rsa \
+  --n 64 --nodes 3 --nproc 4
+```
+
+The same placement works with `run_apptainer_toubkal.sh`. The launcher creates the
+configured role and database on every node. Its database must be local, so use
+`localhost`, `127.0.0.1`, or `::1` for `host`. You may specify a `port`, but leaving
+it unset lets the launcher select an available port. These instances use trust
+authentication for local connections on the compute node.
+
+### Troubleshooting container setup
+
+| Error | What to check |
+| --- | --- |
+| Missing `apptainer/cluster_util.sh`, `slurm_node.sh`, or `run_node.sh` | Update the entire checkout, including the three helper scripts. |
+| Helper lookup starts with `/var/spool/slurmd/...` | Update `run_apptainer_lumi.sh` and resubmit. It preserves the checkout path through `sbatch` and can recover it from `SLURM_SUBMIT_DIR`. For a checkout outside the submission directory, export `PANDORA_REPO_DIR` with its absolute path before submission. Already queued jobs retain their submitted script. |
+| `Container image not found` | Build the final `pandora.sif`, or set `PANDORA_IMAGE` to its absolute path. |
+| `open images/tmp-copy-...: no such file or directory` | Run `mkdir -p images` inside `apptainer/` before pulling the base image. |
+| `Obtaining file:///` and missing `src` | Use the current recipe, which copies the checkout into `/pandora` and installs `/pandora[rsa]`. |
+| `openssh-client` fails while creating `_ssh` under PRoot | Keep `--no-install-recommends` in the recipe's `apt-get install` command. |
+| NumPy 1.26.x downloads as source and fails to build | Use the Bookworm base and its Python 3.11, rather than `postgres:latest`. |
+| `Run this launcher inside an sbatch job or salloc allocation` | On Toubkal, use the batch or interactive allocation example above. |
+| Allocation has too few nodes or CPUs | Match the Slurm request to `--nodes` and `--nproc`; resource overrides cannot enlarge an existing allocation. |
+
+For benchmarks that do not require PostgreSQL, the existing
+`run_apptainer_no_postgres.sh` launcher is also available. Additional recipe notes
+are in [apptainer/README.md](apptainer/README.md).
 
 ## Without Apptainer
 * Install PostgreSQL and get a server running. For example, on MacOS you can use [this tutorial](https://www.atlassian.com/data/sql/how-to-start-a-postgresql-server-on-mac-os-x).

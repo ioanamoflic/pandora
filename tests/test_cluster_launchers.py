@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import tempfile
 import unittest
 
@@ -13,7 +14,8 @@ from pathlib import Path
 name = Path(sys.argv[0]).name
 args = sys.argv[1:]
 with open(os.environ['TOOL_LOG'], 'a') as stream:
-    stream.write(json.dumps({'tool': name, 'args': args}) + '\\n')
+    stream.write(json.dumps({'tool': name, 'args': args,
+                            'repo': os.environ.get('PANDORA_REPO_DIR')}) + '\\n')
 if name == 'sbatch':
     print('Submitted batch job 123')
 elif name == 'srun':
@@ -145,6 +147,45 @@ class ClusterLauncherTests(unittest.TestCase):
         self.assertIn(str(ROOT / 'apptainer/slurm_node.sh'), step)
         for container in self.calls('singularity'):
             self.assertIn(str(ROOT) + ':/pandora', container)
+
+    def test_submission_exports_repository_path(self):
+        result = self.run_launcher()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        batch = next(json.loads(line) for line in self.log.read_text().splitlines()
+                     if json.loads(line)['tool'] == 'sbatch')
+        self.assertEqual(batch['repo'], str(ROOT))
+
+    def test_spooled_script_finds_checkout_without_exported_path(self):
+        spooled = self.root / 'slurm_script'
+        shutil.copyfile(ROOT / 'run_apptainer_lumi.sh', spooled)
+        self.env.update(SLURM_JOB_ID='123', SLURM_SUBMIT_DIR=str(ROOT))
+        result = subprocess.run(['bash', str(spooled), *self.args], cwd=self.root,
+                                env=self.env, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        step, = self.calls('srun')
+        self.assertIn(str(ROOT / 'apptainer/slurm_node.sh'), step)
+
+    def test_toubkal_spooled_script_finds_original_checkout(self):
+        spooled = self.root / 'slurm_script'
+        shutil.copyfile(ROOT / 'run_apptainer_toubkal.sh', spooled)
+        self.env.update(SLURM_JOB_ID='123', SLURM_SUBMIT_DIR=str(ROOT))
+        result = subprocess.run(['bash', str(spooled), *self.args], cwd=self.root,
+                                env=self.env, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        step, = self.calls('srun')
+        self.assertIn(str(ROOT / 'apptainer/slurm_node.sh'), step)
+        for container in self.calls('apptainer'):
+            self.assertIn(str(ROOT) + ':/pandora', container)
+
+    def test_incomplete_checkout_reports_missing_helper(self):
+        checkout = self.root / 'incomplete-checkout'
+        checkout.mkdir()
+        self.env['PANDORA_REPO_DIR'] = str(checkout)
+        result = self.run_launcher()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Missing launcher helper:', result.stderr)
+        self.assertIn('cluster_util.sh', result.stderr)
+        self.assertFalse(self.log.exists())
 
 
 if __name__ == '__main__':

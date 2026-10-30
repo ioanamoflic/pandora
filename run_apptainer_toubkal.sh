@@ -2,7 +2,23 @@
 # Run inside a Slurm allocation: bash run_apptainer_toubkal.sh main.py [arguments...]
 set -euo pipefail
 
-REPO_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+# Slurm may execute a spooled copy; resolve the original checkout.
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+REPO_DIR="${PANDORA_REPO_DIR:-}"
+if [[ -z "$REPO_DIR" ]]; then
+    for candidate in "$SCRIPT_DIR" "${SLURM_SUBMIT_DIR:-}" "$PWD"; do
+        if [[ -n "$candidate" && -f "$candidate/main.py" && -d "$candidate/src/pandora" ]]; then
+            REPO_DIR="$candidate"
+            break
+        fi
+    done
+fi
+if [[ -z "$REPO_DIR" || ! -d "$REPO_DIR" ]]; then
+    echo "Cannot locate the Pandora checkout. Set PANDORA_REPO_DIR to its absolute path before submission." >&2
+    exit 1
+fi
+REPO_DIR="$(CDPATH= cd -- "$REPO_DIR" && pwd)"
+export PANDORA_REPO_DIR="$REPO_DIR"
 IMAGE="${PANDORA_IMAGE:-$REPO_DIR/apptainer/images/pandora.sif}"
 if [[ $# -eq 0 ]]; then
     echo "Usage: $0 script.py [arguments...]" >&2

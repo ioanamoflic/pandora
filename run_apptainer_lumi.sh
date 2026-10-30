@@ -2,7 +2,24 @@
 # Submit a batch job when needed: bash run_apptainer_lumi.sh main.py [arguments...]
 set -euo pipefail
 
-REPO_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+# Slurm executes a spooled copy. Export the checkout path for automatic
+# submission, and also support direct sbatch calls from the checkout.
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+REPO_DIR="${PANDORA_REPO_DIR:-}"
+if [[ -z "$REPO_DIR" ]]; then
+    for candidate in "$SCRIPT_DIR" "${SLURM_SUBMIT_DIR:-}" "$PWD"; do
+        if [[ -n "$candidate" && -f "$candidate/main.py" && -d "$candidate/src/pandora" ]]; then
+            REPO_DIR="$candidate"
+            break
+        fi
+    done
+fi
+if [[ -z "$REPO_DIR" || ! -d "$REPO_DIR" ]]; then
+    echo "Cannot locate the Pandora checkout. Set PANDORA_REPO_DIR to its absolute path before submission." >&2
+    exit 1
+fi
+REPO_DIR="$(CDPATH= cd -- "$REPO_DIR" && pwd)"
+export PANDORA_REPO_DIR="$REPO_DIR"
 IMAGE="${PANDORA_IMAGE:-$REPO_DIR/apptainer/images/pandora.sif}"
 if [[ $# -eq 0 ]]; then
     echo "Usage: $0 script.py [arguments...]" >&2
@@ -12,6 +29,13 @@ if [[ ! -f "$IMAGE" ]]; then
     echo "Container image not found: $IMAGE (override with PANDORA_IMAGE)" >&2
     exit 1
 fi
+for helper in cluster_util.sh slurm_node.sh run_node.sh; do
+    if [[ ! -r "$REPO_DIR/apptainer/$helper" ]]; then
+        echo "Missing launcher helper: $REPO_DIR/apptainer/$helper" >&2
+        echo "Copy all three helper scripts from the updated repository into $REPO_DIR/apptainer/." >&2
+        exit 1
+    fi
+done
 command -v singularity >/dev/null
 command -v srun >/dev/null
 source "$REPO_DIR/apptainer/cluster_util.sh"
