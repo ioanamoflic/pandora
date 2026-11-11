@@ -2,10 +2,13 @@ CREATE OR REPLACE PROCEDURE zx_pi_copy_simp(INOUT changed boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    rewrite_started_at timestamptz;
+    rewrite_execution_count bigint := 0;
     overlapping_candidate_id bigint;
     copied_leg record;
     new_vertex_id bigint;
 BEGIN
+    rewrite_started_at := clock_timestamp();
     CREATE TEMP TABLE IF NOT EXISTS pi_copy_gadget (
         cand_id bigint,
         pi_id bigint,
@@ -91,10 +94,15 @@ BEGIN
         AND center_edge.id <> c.source_edge_id;
 
     IF NOT EXISTS (SELECT 1 FROM pi_copy_gadget) THEN
+        INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+        VALUES ('zx_pi_copy_simp', rewrite_started_at, rewrite_execution_count,
+                EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
         RETURN;
     END IF;
 
     changed := true;
+
+    rewrite_execution_count := rewrite_execution_count + 1;
 
     -- Remove candidates that overlap.
     LOOP
@@ -227,5 +235,8 @@ BEGIN
     DELETE FROM zx_vertex v
     USING (SELECT DISTINCT pi_id FROM pi_copy_gadget) old_pi
     WHERE v.id = old_pi.pi_id;
+    INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+    VALUES ('zx_pi_copy_simp', rewrite_started_at, rewrite_execution_count,
+            EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
 END;
 $$;

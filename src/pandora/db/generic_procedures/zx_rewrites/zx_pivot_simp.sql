@@ -171,9 +171,12 @@ CREATE OR REPLACE PROCEDURE zx_pivot_simp(INOUT changed boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    rewrite_started_at timestamptz;
+    rewrite_execution_count bigint := 0;
     candidate record;
     vertex_pair record;
 BEGIN
+    rewrite_started_at := clock_timestamp();
     FOR candidate IN
         WITH edge_endpoints AS (
             SELECT
@@ -299,7 +302,12 @@ BEGIN
         END IF;
 
         changed := true;
+
+        rewrite_execution_count := rewrite_execution_count + 1;
     END LOOP;
+    INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+    VALUES ('zx_pivot_simp', rewrite_started_at, rewrite_execution_count,
+            EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
 END;
 $$;
 
@@ -308,12 +316,15 @@ CREATE OR REPLACE PROCEDURE zx_pivot_boundary_simp(INOUT changed boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    rewrite_started_at timestamptz;
+    rewrite_execution_count bigint := 0;
     candidate record;
     pauli_vertex record;
     boundary_partner record;
     new_phase_vertex_id bigint;
     new_connector_vertex_id bigint;
 BEGIN
+    rewrite_started_at := clock_timestamp();
     -- Find ids for a vertex connected to another vertex connected to a boundary
     FOR candidate IN
         WITH incident AS (
@@ -490,7 +501,12 @@ BEGIN
         );
 
         changed := true;
+
+        rewrite_execution_count := rewrite_execution_count + 1;
     END LOOP;
+    INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+    VALUES ('zx_pivot_boundary_simp', rewrite_started_at, rewrite_execution_count,
+            EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
 END;
 $$;
 
@@ -499,6 +515,8 @@ CREATE OR REPLACE PROCEDURE zx_pivot_gadget_simp(INOUT changed boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    rewrite_started_at timestamptz;
+    rewrite_execution_count bigint := 0;
     candidate record;
     gadget_pair record;
     new_gadget_vertex_id bigint;
@@ -507,6 +525,7 @@ DECLARE
     neighbor_sets smallint[];
     neighbor_pauli_edge_ids bigint[];
 BEGIN
+    rewrite_started_at := clock_timestamp();
     FOR candidate IN
         WITH raw_edges AS (
             SELECT
@@ -719,6 +738,11 @@ BEGIN
         WHERE id = gadget_pair.non_pauli_id;
 
         changed := true;
+
+        rewrite_execution_count := rewrite_execution_count + 1;
     END LOOP;
+    INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+    VALUES ('zx_pivot_gadget_simp', rewrite_started_at, rewrite_execution_count,
+            EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
 END;
 $$;

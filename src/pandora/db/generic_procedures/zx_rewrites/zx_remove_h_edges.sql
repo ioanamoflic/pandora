@@ -3,6 +3,8 @@ CREATE OR REPLACE PROCEDURE zx_remove_h_edges(INOUT changed boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    rewrite_started_at timestamptz;
+    rewrite_execution_count bigint := 0;
     toggled_count integer := 0;
     recoloured_edges integer := 0;
 
@@ -13,7 +15,11 @@ DECLARE
     w2_id bigint;
     w3_id bigint;
 BEGIN
+    rewrite_started_at := clock_timestamp();
     IF NOT EXISTS(SELECT 1 FROM zx_edge WHERE type = zx_const_hadamard_edge()) THEN
+        INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+        VALUES ('zx_remove_h_edges', rewrite_started_at, rewrite_execution_count,
+                EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
         RETURN;
     END IF;
 
@@ -177,6 +183,7 @@ BEGIN
 
     IF toggled_count > 0 THEN
         changed := true;
+        rewrite_execution_count := rewrite_execution_count + 1;
     END IF;
 
     -- Expand remaining Hadamard edges using Euler decomposition
@@ -289,11 +296,16 @@ BEGIN
         END IF;
 
         changed := true;
+
+        rewrite_execution_count := rewrite_execution_count + 1;
     END LOOP;
 
     -- We might have created parallel same-color spriders, so merge those
     IF changed THEN
         CALL zx_spider_simp(changed);
     END IF;
+    INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+    VALUES ('zx_remove_h_edges', rewrite_started_at, rewrite_execution_count,
+            EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
 END;
 $$;

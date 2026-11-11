@@ -3,6 +3,8 @@ CREATE OR REPLACE PROCEDURE zx_x_to_z(inout changed boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    rewrite_started_at timestamptz;
+    rewrite_execution_count bigint := 0;
     vertex_candidate record;
     locked_vertex record;
     incident_edge_ids bigint[];
@@ -11,6 +13,7 @@ DECLARE
     round_changed boolean;
     converted_count integer;
 BEGIN
+    rewrite_started_at := clock_timestamp();
     WITH x_vertices AS (
         SELECT v.id
             FROM zx_vertex v
@@ -71,6 +74,10 @@ BEGIN
 
     IF converted_count > 0 THEN
         changed := true;
+        rewrite_execution_count := rewrite_execution_count + 1;
     END IF;
+    INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+    VALUES ('zx_x_to_z', rewrite_started_at, rewrite_execution_count,
+            EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
 END;
 $$;

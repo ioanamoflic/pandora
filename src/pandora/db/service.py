@@ -223,6 +223,7 @@ class PandoraService:
             'edge_list',
             'mem_cx',
             'rewrite_count',
+            'zx_rewrite_runs',
             'max_missed_rounds',
             'benchmark_results',
             'optimization_results',

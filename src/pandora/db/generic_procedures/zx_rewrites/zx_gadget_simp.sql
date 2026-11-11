@@ -3,8 +3,11 @@ CREATE OR REPLACE PROCEDURE zx_gadget_simp(INOUT changed boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    rewrite_started_at timestamptz;
+    rewrite_execution_count bigint := 0;
     affected_count integer := 0;
 BEGIN
+    rewrite_started_at := clock_timestamp();
     WITH candidates AS (
         SELECT
                 targets.target_ids AS gadget_target_ids,
@@ -143,6 +146,10 @@ BEGIN
 
     IF affected_count > 0 THEN
         changed := true;
+        rewrite_execution_count := rewrite_execution_count + 1;
     END IF;
+    INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+    VALUES ('zx_gadget_simp', rewrite_started_at, rewrite_execution_count,
+            EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
 END;
 $$;

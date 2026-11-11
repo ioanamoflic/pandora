@@ -3,11 +3,14 @@ CREATE OR REPLACE PROCEDURE zx_copy_simp(INOUT changed boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    rewrite_started_at timestamptz;
+    rewrite_execution_count bigint := 0;
     candidate record;
     replacement record;
     new_vertex_id bigint;
     round_changed boolean;
 BEGIN
+    rewrite_started_at := clock_timestamp();
     LOOP
         round_changed := false;
         FOR candidate IN
@@ -200,6 +203,11 @@ BEGIN
         END IF;
 
         changed := true;
+
+        rewrite_execution_count := rewrite_execution_count + 1;
     END LOOP;
+    INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+    VALUES ('zx_copy_simp', rewrite_started_at, rewrite_execution_count,
+            EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
 END;
 $$;

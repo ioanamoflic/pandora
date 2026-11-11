@@ -3,9 +3,12 @@ CREATE OR REPLACE PROCEDURE zx_fuse4_fe_simp(INOUT changed boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    rewrite_started_at timestamptz;
+    rewrite_execution_count bigint := 0;
     overlapping_square_id bigint;
     rewired_edge record;
 BEGIN
+    rewrite_started_at := clock_timestamp();
     CREATE TEMP TABLE IF NOT EXISTS fuse4_fe_gadget (
         square_id bigint,
         comp_root bigint,
@@ -199,7 +202,12 @@ BEGIN
             AND v.id = s.vertex_id;
 
         changed := true;
+
+        rewrite_execution_count := rewrite_execution_count + 1;
     END LOOP;
+    INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+    VALUES ('zx_fuse4_fe_simp', rewrite_started_at, rewrite_execution_count,
+            EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
 END;
 $$;
 
@@ -208,6 +216,8 @@ CREATE OR REPLACE PROCEDURE zx_fuse4_fe_expand(INOUT changed boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    rewrite_started_at timestamptz;
+    rewrite_execution_count bigint := 0;
     v record;
     w_ids bigint[];
     w_types smallint[];
@@ -216,6 +226,7 @@ DECLARE
     new_id bigint;
     i integer;
 BEGIN
+    rewrite_started_at := clock_timestamp();
     FOR v IN
         SELECT id, type, qubit, "row"
             FROM zx_vertex
@@ -255,6 +266,11 @@ BEGIN
         DELETE FROM zx_vertex WHERE id = v.id;
 
         changed := true;
+
+        rewrite_execution_count := rewrite_execution_count + 1;
     END LOOP;
+    INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+    VALUES ('zx_fuse4_fe_expand', rewrite_started_at, rewrite_execution_count,
+            EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
 END;
 $$;

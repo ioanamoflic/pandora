@@ -3,8 +3,11 @@ CREATE OR REPLACE PROCEDURE zx_lcomp_simp(INOUT changed boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    rewrite_started_at timestamptz;
+    rewrite_execution_count bigint := 0;
     batch_count integer;
 BEGIN
+    rewrite_started_at := clock_timestamp();
     CREATE TEMP TABLE IF NOT EXISTS lcomp_remaining_candidates (
         vertex_id bigint PRIMARY KEY,
         phase double precision
@@ -139,6 +142,11 @@ BEGIN
         ) AS toggles;
 
         changed := true;
+
+        rewrite_execution_count := rewrite_execution_count + 1;
     END LOOP;
+    INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+    VALUES ('zx_lcomp_simp', rewrite_started_at, rewrite_execution_count,
+            EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
 END;
 $$;

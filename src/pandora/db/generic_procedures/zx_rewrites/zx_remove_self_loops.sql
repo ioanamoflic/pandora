@@ -3,8 +3,11 @@ CREATE OR REPLACE PROCEDURE zx_remove_self_loops(inout changed boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    rewrite_started_at timestamptz;
+    rewrite_execution_count bigint := 0;
     deleted_count integer;
 BEGIN
+    rewrite_started_at := clock_timestamp();
     WITH self_loops AS (
         SELECT
             v.id AS vertex_id,
@@ -43,6 +46,10 @@ BEGIN
 
     IF deleted_count > 0 THEN
         changed := true;
+        rewrite_execution_count := rewrite_execution_count + 1;
     END IF;
+    INSERT INTO public.zx_rewrite_runs (procedure_name, started_at, execution_count, elapsed_seconds)
+    VALUES ('zx_remove_self_loops', rewrite_started_at, rewrite_execution_count,
+            EXTRACT(EPOCH FROM clock_timestamp() - rewrite_started_at));
 END;
 $$;

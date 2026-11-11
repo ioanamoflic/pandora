@@ -182,6 +182,15 @@ create table if not exists public.rewrite_count
     count int default 0
 );
 
+create table if not exists public.zx_rewrite_runs
+(
+    id bigserial primary key,
+    procedure_name text not null,
+    started_at timestamptz not null,
+    execution_count bigint not null,
+    elapsed_seconds double precision not null
+);
+
 create table if not exists public.edge_list
 (
     source bigint,
