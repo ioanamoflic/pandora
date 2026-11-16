@@ -10,7 +10,8 @@ from pandora.db.repository import (
 )
 from pandora.multithreading.parallel_decompose import worker_entry
 from pandora.translation.circuit_to_dag import PandoraWindowedBuilder
-from pandora.translation.translator import GLOBAL_IN_ID
+from pandora.translation.translator import GLOBAL_IN_ID, PandoraGateTranslator
+from pandora.translation.pyzx import read_to_pyzx_graph, write_from_pyzx_graph
 from pandora.widgetization.union_find import UnionFindWidgetizer
 
 BASE_DIR = Path(__file__).resolve().parent  # pandora/db/
@@ -121,6 +122,83 @@ class PandoraService:
 
         from pandora.translation.dag_to_circuit import pandora_to_circuit
         return pandora_to_circuit(gates, circuit_type)
+        
+    async def load_from_pyzx(self, graph: Any):
+        start = time.time()
+        async with self.db.acquire() as conn:
+            return await write_from_pyzx_graph(conn, graph)
+        print(f"ZX graph loading took {time.time() - start:.2f}s")
+
+    async def export_to_pyzx(self, from_circuit: bool = False):
+        if (from_circuit):
+            await self.convert_linked_circuit_to_zx()
+        start = time.time()
+        async with self.db.acquire() as conn:
+            return await read_to_pyzx_graph(conn)
+        print(f"ZX graph extraction took {time.time() - start:.2f}s")
+
+    async def convert_linked_circuit_to_zx(self) -> None:
+        start = time.time()
+        async with self.db.acquire() as conn:
+            await conn.execute("CALL linked_circuit_to_zx()")
+        print(f"Circuit to ZX conversion took {time.time() - start:.2f}s")
+
+    async def simplify_zx_basic(self) -> None:
+        start = time.time()
+        async with self.db.acquire() as conn:
+            await conn.execute(f"CALL zx_basic_simp()")
+        print(f"ZX basic simplification took {time.time() - start:.2f}s")
+
+    async def simplify_zx_full(self) -> None:
+        start = time.time()
+        async with self.db.acquire() as conn:
+            await conn.execute(f"CALL zx_full_reduce()")
+        print(f"ZX full simplification took {time.time() - start:.2f}s")
+
+    async def zx_remove_h_edges(self) -> None:
+        start = time.time()
+        async with self.db.acquire() as conn:
+            await conn.execute(f"CALL zx_remove_h_edges(false)")
+        print(f"ZX RG conversion took {time.time() - start:.2f}s")
+
+    async def zx_is_identity(self) -> bool:
+        async with self.db.acquire() as conn:
+            return await conn.fetchval("SELECT zx_is_identity()")
+
+    async def zx_is_bipartite(self) -> bool:
+        async with self.db.acquire() as conn:
+            return await conn.fetchval("SELECT zx_is_bipartite()")
+
+    async def zx_bp_get_check_values(self) -> list:
+        """Read the per-check aggregated values (sum of incoming variable messages)"""
+        async with self.db.acquire() as conn:
+            return await conn.fetch("SELECT vertex_id, value FROM zx_bp_check_value ORDER BY vertex_id")
+
+    async def zx_bp_min_sum(
+            self,
+            iters,
+            variable_type: int = PandoraGateTranslator.X_SPIDER.value,
+    ):
+        """Run in-DB min-sum message passing on a bipartite ZX graph.
+        """
+        start = time.time()
+        async with self.db.acquire() as conn:
+            await conn.execute(
+                "CALL zx_bp_min_sum($1::int, $2::smallint)",
+                iters, variable_type,
+            )
+        print(f"ZX min-sum BP took {time.time() - start:.2f}s")
+
+    async def load_circuit_into_layered(self):
+        gates = await self.repo.fetch_all()  # will have to stream these in batches later
+
+        from pandora.translation.dag_to_circuit import pandora_to_circuit
+        layered_gates = pandora_to_circuit(gates, "lscom")
+
+        await self.repo_layered.insert_copy(layered_gates)
+
+    async def load_circuit_from_layered(self):
+        return await self.repo_layered.fetch_all()  # will have to stream these later
 
     async def load_circuit_into_layered(self):
         gates = await self.repo.fetch_all()  # will have to stream these in batches later
@@ -186,10 +264,14 @@ class PandoraService:
             'edge_list',
             'mem_cx',
             'rewrite_count',
+            'zx_rewrite_runs',
             'max_missed_rounds',
             'benchmark_results',
             'optimization_results',
             'gate_types',
+            'zx_bp_check_value',
+            'zx_vertex',
+            'zx_edge',
             'layered_lscom'
         ]
         async with self.db.pool.acquire() as conn:
@@ -220,6 +302,40 @@ class PandoraService:
             # worker procedures
             'generic_procedures/generate_edge_list.sql',
 
+            # ZX
+            'generic_procedures/zx_helpers.sql',
+            'generic_procedures/zx_load.sql',
+            
+            # ZX rewrites
+            'generic_procedures/zx_rewrites/zx_copy_simp.sql',
+            'generic_procedures/zx_rewrites/zx_gadget_simp.sql',
+            'generic_procedures/zx_rewrites/zx_id_expand.sql',
+            'generic_procedures/zx_rewrites/zx_id_simp.sql',
+            'generic_procedures/zx_rewrites/zx_lcomp_simp.sql',
+            'generic_procedures/zx_rewrites/zx_merge_edge.sql',
+            'generic_procedures/zx_rewrites/zx_pivot_simp.sql',
+            'generic_procedures/zx_rewrites/zx_remove_h_edges.sql',
+            'generic_procedures/zx_rewrites/zx_remove_isolated_spiders.sql',
+            'generic_procedures/zx_rewrites/zx_remove_self_loops.sql',
+            'generic_procedures/zx_rewrites/zx_spider_expand.sql',
+            'generic_procedures/zx_rewrites/zx_spider_simp.sql',
+            'generic_procedures/zx_rewrites/zx_supplementarity_simp.sql',
+            'generic_procedures/zx_rewrites/zx_x_to_z.sql',
+
+            # Fault-equivalent ZX rewrites
+            'generic_procedures/zx_rewrites/zx_fusen_fe.sql',
+            'generic_procedures/zx_rewrites/zx_fuse4_fe.sql',
+            'generic_procedures/zx_rewrites/zx_pi_copy_simp.sql',
+
+            'generic_procedures/zx_basic_simp.sql',
+            'generic_procedures/zx_full_reduce.sql',
+
+            'generic_procedures/zx_is_identity.sql',
+            'generic_procedures/zx_is_bipartite.sql',
+
+            # ZX belief propagation
+            'generic_procedures/zx_bp_min_sum.sql',
+
             # benchmarking only
             'generic_procedures/hhcxhh_to_cx_seq.sql',
             'generic_procedures/_generate_optimisation_stats.sql',
@@ -228,7 +344,11 @@ class PandoraService:
             for path in procedures:
                 full_path = BASE_DIR / path
                 sql = full_path.read_text()
-                await conn.execute(sql)
+                try:
+                    await conn.execute(sql)
+                except Exception as e:
+                    print("Failed for " + path)
+                    raise e
 
     async def _reset_sequence(
             self,

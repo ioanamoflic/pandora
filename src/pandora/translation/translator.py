@@ -90,6 +90,10 @@ class PandoraGateTranslator(Enum):
     T = 29
     T_dag = 30
     Swap = 31
+    Z_SPIDER = 32
+    X_SPIDER = 33
+    EDGE = 34
+    HBOX = 35
 
 
 MAX_QUBITS_PER_GATE = 3

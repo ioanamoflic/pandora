@@ -13,3 +13,4 @@ venv
 *.qasm
 *.pyc
 *.csv
+*.egg-info
