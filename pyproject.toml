@@ -2,31 +2,6 @@
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[project]
-name = "pandora"
-version = "0.1.0"
-description = "Pandora quantum circuit tooling"
-readme = "README.md"
-requires-python = "==3.12.*"
-dependencies = [
-    "asyncpg>=0.31.0",
-    "color-code-stim>=1.1.1",
-    "gmpy2>=2.3.1",
-    "mqt-qcec>=3.9.0",
-    "numpy>=1.26.4",
-    "psycopg2-binary>=2.9.12",
-    "pytest>=9.1.1",
-    "pytest-asyncio>=1.4.0",
-    "pytket>=2.18.1",
-    "pyzx==0.10.4",
-    "qiskit==1.4.4",
-    "qiskit-qasm3-import>=0.6.0",
-    "qualtran==0.6.1",
-    "quizx==0.4.0",
-    "requests>=2.34.2",
-    "stimcirq>=1.16.0",
-]
-
 [tool.setuptools.packages.find]
 where = ["src", "."]
 include = ["pandora*", "pyLIQTR*"]
@@ -46,16 +21,22 @@ requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [ { name = "ioanamoflic" } ]
 dependencies = [
-	"asyncpg",
-	"psycopg2-binary",
-	"requests",
-	"gmpy2",
-	"mqt.qcec",
-	"qiskit_qasm3_import",
-	"pytket",
-    "qiskit==1.4.4", # benchmarks
-    "pytest",
-    "pytest-asyncio",
+    "asyncpg>=0.31.0",
+    "color-code-stim>=1.1.1",
+    "gmpy2>=2.3.1",
+    "mqt-qcec>=3.9.0",
+    "numpy>=1.26.4",
+    "psycopg2-binary>=2.9.12",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytket>=2.18.1",
+    "pyzx==0.10.4",
+    "qiskit==1.4.4",
+    "qiskit-qasm3-import>=0.6.0",
+    "qualtran==0.6.1",
+    "quizx==0.4.0",
+    "requests>=2.34.2",
+    "stimcirq>=1.16.0",
 ]
 
 # TODO: set RSA as default optional dependency when PEP 771 implemented:
