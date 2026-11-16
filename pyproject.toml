@@ -8,9 +8,6 @@ include = ["pandora*", "pyLIQTR*"]
 
 [tool.setuptools.package-data]
 mypackage = ["src/pandora/db/generic_procedures/**.sql"]
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
 
 [project]
 name = "pandora"
@@ -49,7 +46,4 @@ rsa = ["qualtran==0.6.1"]
 
 # Fermi-Hubbard mode: pyliqtr currently depends on an older qualtran incompatible with RSA mode
 fh = ["pyliqtr==1.4.1", "qualtran==0.4"]
-
-[tool.setuptools.packages.find]
-where = ["src"]
 
