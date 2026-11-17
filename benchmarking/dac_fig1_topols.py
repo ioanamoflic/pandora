@@ -52,54 +52,97 @@ def pipe_diagram(bgraph: Path) -> dict:
     return {"nodes": nodes, "pipes": pipes}
 
 
+def load_block_graph(bgraph: Path):
+    """Rebuild the tqec BlockGraph from a TopoLS .bgraph file.
+
+    Like topols.tools.pipe_sim.load_block_graph, but S and T gate sites (stored
+    by TopoLS as the strings "S"/"T") become tqec ports, i.e. open boundaries
+    where the gate's resource state is injected.
+    """
+    from tqec import BlockGraph
+    from tqec.computation.cube import Cube, Port, ZXCube
+    from tqec.computation.pipe import Pipe
+    from tqec.utils.position import Position3D
+
+    data = pickle.loads(bgraph.read_bytes())
+    graph = BlockGraph(bgraph.stem)
+    port_kind = {}
+    for node_id, node in data["bgraph_metadata"].items():
+        position = Position3D(*node["position"])
+        if position in graph:
+            continue
+        other = node["other"]
+        if isinstance(other, dict):
+            graph.add_cube(position, Port(), f"{other['type']}_{other['qubit']}")
+            if node["tqec"]:
+                port_kind[position] = ZXCube.from_str(node["tqec"])
+        elif isinstance(other, str):
+            graph.add_cube(position, Port(), f"{other}_{node_id}")
+        else:
+            graph.add_cube(position, node["tqec"])
+    for a, b in data["edge_metadata"].values():
+        a, b = Position3D(*a), Position3D(*b)
+        if graph.has_pipe_between(a, b):
+            continue
+        kind = None
+        if a in port_kind or b in port_kind:
+            ends = [Cube(q, port_kind.get(q, graph[q].kind)) for q in (a, b)]
+            kind = Pipe.from_cubes(*ends).kind
+        graph.add_pipe(a, b, kind)
+    return graph
+
+
 def surface_code_slice(bgraph: Path, distance_k: int = 1) -> dict:
-    """Qubits and stabilizers of the busiest measurement round of the circuit."""
-    import stim
+    """Stabilizers of the measurement round with the most active plaquettes.
+
+    tqec prepares and measures every syndrome qubit in the X basis; a CX from the
+    syndrome qubit measures an X stabilizer, a CZ a Z stabilizer.
+    """
     from tqec import compile_block_graph
-    from topols.tools.pipe_sim import load_block_graph
 
     block_graph = load_block_graph(bgraph)
     filled = block_graph.fill_ports_for_minimal_simulation()[0]
     compiled = compile_block_graph(filled.graph, observables=filled.observables)
-    circuit = compiled.generate_stim_circuit(k=distance_k, manhattan_radius=2)
+    circuit = compiled.generate_stim_circuit(k=distance_k, manhattan_radius=2,
+                                             do_not_use_database=True)
+    coords = circuit.get_final_qubit_coordinates()
 
-    coords = {q: c for q, c in circuit.get_final_qubit_coordinates().items()}
-    flat = circuit.flattened()
-    # Split into rounds at every measurement layer; keep the round in which the
-    # most measurement qubits are measured (a full layer of stabilizers).
-    rounds, current = [], {"reset_x": set(), "reset_z": set(), "measured": set(), "h": set()}
-    for inst in flat:
-        name = inst.name
+    rounds, gates = [], {}   # gates: qubit -> [(gate, partner, is_control)] since its last reset
+    for inst in circuit.flattened():
         targets = [t.value for t in inst.targets_copy() if t.is_qubit_target]
-        if name in ("RX",):
-            current["reset_x"].update(targets)
-        elif name in ("R", "RZ"):
-            current["reset_z"].update(targets)
-        elif name == "H":
-            current["h"].update(targets)
-        elif name in ("M", "MZ", "MR", "MX", "MRX"):
-            current["measured"].update(targets)
-            current["measure_basis_x"] = current.get("measure_basis_x", set())
-            if name in ("MX", "MRX"):
-                current["measure_basis_x"].update(targets)
-            rounds.append(current)
-            current = {"reset_x": set(), "reset_z": set(), "measured": set(), "h": set()}
-    best = max(rounds, key=lambda r: len(r["measured"]))
-    ancillas = sorted(best["measured"])
-    x_type = sorted(q for q in ancillas
-                    if q in best["reset_x"] or q in best.get("measure_basis_x", set()) or q in best["h"])
-    used = set()
-    for inst in flat:
-        used.update(t.value for t in inst.targets_copy() if t.is_qubit_target)
-    data_qubits = sorted(q for q in used if q not in set(ancillas) and q in coords)
+        if inst.name in ("R", "RX", "RY"):
+            for q in targets:
+                gates[q] = []
+        elif inst.name in ("CX", "CZ"):
+            for c, t in zip(targets[::2], targets[1::2]):
+                gates.setdefault(c, []).append((inst.name, t, True))
+                gates.setdefault(t, []).append((inst.name, c, False))
+        elif inst.name in ("M", "MX", "MY"):
+            rounds.append({q: list(gates.get(q, [])) for q in targets})
+    # Syndrome qubits are measured in every round, data qubits once at the end.
+    measured = {}
+    for r in rounds:
+        for q in r:
+            measured[q] = measured.get(q, 0) + 1
+    syndrome = {q for q, n in measured.items() if n > 2}
+    best = max(rounds, key=lambda r: sum(1 for q in r if q in syndrome))
+    plaquettes = []
+    for q, ops in best.items():
+        if q not in syndrome or not ops:
+            continue
+        x_type = any(g == "CX" and is_control for g, _p, is_control in ops)
+        plaquettes.append({"ancilla": q, "type": "X" if x_type else "Z",
+                           "data": sorted({p for _g, p, _c in ops})})
+    data_qubits = sorted({d for pl in plaquettes for d in pl["data"]})
+    used = data_qubits + [pl["ancilla"] for pl in plaquettes]
     return {
-        "qubits": {str(q): list(coords[q]) for q in used if q in coords},
-        "ancillas": ancillas,
-        "x_ancillas": x_type,
+        "qubits": {str(q): list(coords[q]) for q in used},
+        "plaquettes": plaquettes,
         "data": data_qubits,
         "num_qubits": circuit.num_qubits,
         "num_detectors": circuit.num_detectors,
-        "num_rounds": len(rounds),
+        "num_ticks": circuit.num_ticks,
+        "distance": 2 * distance_k + 1,
     }
 
 
@@ -114,11 +157,13 @@ def main():
 
     bgraph = run_topols(args.qasm.resolve(), args.topols.resolve(), args.work.resolve(), args.name)
     result = {"pipe_diagram": pipe_diagram(bgraph)}
+    args.out.write_text(json.dumps(result, indent=1))      # keep panel (c) even if tqec fails
     result["surface_code"] = surface_code_slice(bgraph)
     args.out.write_text(json.dumps(result, indent=1))
     sc = result["surface_code"]
     print(f"{len(result['pipe_diagram']['nodes'])} nodes, {len(result['pipe_diagram']['pipes'])} pipes; "
-          f"stim: {sc['num_qubits']} qubits, {sc['num_detectors']} detectors")
+          f"stim (d={sc['distance']}): {sc['num_qubits']} qubits, {sc['num_detectors']} detectors, "
+          f"{sc['num_ticks']} ticks; drawn round: {len(sc['plaquettes'])} stabilizers")
 
 
 if __name__ == "__main__":

@@ -207,26 +207,39 @@ def draw_pipe_diagram(ax, diagram, cube=0.4):
             continue
         for axis, face in box_faces(pos, (half, half, half)).items():
             items.append(((-(pos[0] + pos[1]), pos[2]), face, colors[axis]))
+    def basis_colors(kind):
+        return {a: BASIS_COLOR[kind[i]] for i, a in enumerate("xyz")}
+
+    def add_box(center, dims, colors, lift=0.0):
+        for face_axis, face in box_faces(center, dims).items():
+            items.append(((-(center[0] + center[1]), center[2] + lift), face, colors[face_axis]))
+
     for a, b in diagram["pipes"]:
         a, b = tuple(a), tuple(b)
-        na, nb = nodes.get(a), nodes.get(b)
-        ca = node_colors(na) if na else None
-        cb = node_colors(nb) if nb else None
-        colors = ca or cb
-        if colors is None:
+        ta = nodes[a].get("tqec") if a in nodes else None
+        tb = nodes[b].get("tqec") if b in nodes else None
+        if not (ta or tb):
             continue
         axis = next(i for i in range(3) if a[i] != b[i])
+        perpendicular = [k for i, k in enumerate("xyz") if i != axis]
         mid = tuple((a[i] + b[i]) / 2 for i in range(3))
-        dims = [half, half, half]
-        dims[axis] = (1 - cube) / 2
-        transition = ca and cb and any(ca[k] != cb[k] for k in "xyz" if k != "xyz"[axis])
-        for face_axis, face in box_faces(mid, dims).items():
-            color = colors[face_axis]
-            items.append(((-(mid[0] + mid[1]), mid[2]), face, color))
-        if transition:
-            band = list(dims); band[axis] = 0.05
-            for face_axis, face in box_faces(mid, band).items():
-                items.append(((-(mid[0] + mid[1]), mid[2] + 1e-3), face, COLLAR))
+        length = (1 - cube) / 2
+        if ta and tb and any(ta["xyz".index(k)] != tb["xyz".index(k)] for k in perpendicular):
+            # Hadamard on the pipe (TopoLS rule): two half pipes and a yellow collar.
+            for end, kind in ((a, ta), (b, tb)):
+                # each half spans from the cube face of `end` to the pipe midpoint
+                face = end[axis] + (half if mid[axis] > end[axis] else -half)
+                center = tuple((face + mid[axis]) / 2 if i == axis else mid[i] for i in range(3))
+                dims = [half] * 3
+                dims[axis] = length / 2
+                add_box(center, dims, basis_colors(kind))
+            band = [half * 1.08] * 3
+            band[axis] = 0.04
+            add_box(mid, band, {k: COLLAR for k in "xyz"}, lift=1e-3)
+        else:
+            dims = [half] * 3
+            dims[axis] = length
+            add_box(mid, dims, basis_colors(ta or tb))
     for _key, face, color in sorted(items, key=lambda t: t[0]):
         pts = [iso(*p) for p in face]
         ax.fill([p[0] for p in pts], [p[1] for p in pts], fc=color, ec=INK, lw=0.3)
@@ -234,25 +247,19 @@ def draw_pipe_diagram(ax, diagram, cube=0.4):
 
 
 def draw_surface_code(ax, sc):
+    """Stabilizer plaquettes of one measurement round, coloured by type."""
+    import math
     pos = {int(q): tuple(c) for q, c in sc["qubits"].items()}
-    data = [q for q in sc["data"] if q in pos]
-    ancillas = [q for q in sc["ancillas"] if q in pos]
-    x_type = set(sc["x_ancillas"])
-    if data and ancillas:
-        d0 = min(((pos[a][0] - pos[d][0]) ** 2 + (pos[a][1] - pos[d][1]) ** 2) ** 0.5
-                 for a in ancillas[:50] for d in data)
-    for a in ancillas:
-        ax0, ay0 = pos[a]
-        nbrs = [pos[d] for d in data
-                if ((pos[d][0] - ax0) ** 2 + (pos[d][1] - ay0) ** 2) ** 0.5 <= d0 * 1.05]
-        if len(nbrs) < 2:
-            continue
-        import math
-        nbrs.sort(key=lambda p: math.atan2(p[1] - ay0, p[0] - ax0))
-        poly = nbrs if len(nbrs) > 2 else nbrs + [(ax0, ay0)]
-        ax.fill([p[0] for p in poly], [-p[1] for p in poly],
-                fc=BASIS_COLOR["X" if a in x_type else "Z"], ec="white", lw=0.4)
-    ax.scatter([pos[d][0] for d in data], [-pos[d][1] for d in data], s=1.5, c=INK, zorder=3)
+    for pl in sc["plaquettes"]:
+        ax0, ay0 = pos[pl["ancilla"]]
+        corners = sorted((pos[d] for d in pl["data"]),
+                         key=lambda c: math.atan2(c[1] - ay0, c[0] - ax0))
+        if len(corners) == 2:                     # boundary stabilizer: half disc
+            corners = corners + [(ax0, ay0)]
+        ax.fill([c[0] for c in corners], [-c[1] for c in corners],
+                fc=BASIS_COLOR[pl["type"]], ec="white", lw=0.25)
+    ax.scatter([pos[d][0] for d in sc["data"]], [-pos[d][1] for d in sc["data"]],
+               s=0.4, c=INK, lw=0, zorder=3)
     ax.autoscale_view()
 
 
