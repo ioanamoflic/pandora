@@ -175,7 +175,7 @@ def quality_sizes(data, n=6):
 
 
 def quality_figure(df, out: Path):
-    """Share of spiders removed (top) and edge change (bottom) after full_reduce, as bars."""
+    """Share of spiders remaining (top) and edge change (bottom) after full_reduce, as bars."""
     from matplotlib.patches import Patch
 
     fig, axes = plt.subplots(2, 4, figsize=(TEXT_WIDTH_IN, 3.0))
@@ -192,7 +192,7 @@ def quality_figure(df, out: Path):
             d = data[data.backend == b].set_index("gates")
             xs = [j + (i - 1) * width for j, g in enumerate(sizes) if g in d.index]
             gs = [g for g in sizes if g in d.index]
-            top.bar(xs, [-d.spider_pct[g] for g in gs], width=width, color=COLOR[b], linewidth=0)
+            top.bar(xs, [100 + d.spider_pct[g] for g in gs], width=width, color=COLOR[b], linewidth=0)
             ratios = [d.edge_ratio[g] for g in gs]
             bottom.bar(xs, [r - 1 for r in ratios], bottom=1, width=width, color=COLOR[b], linewidth=0)
         for ax in (top, bottom):
@@ -203,8 +203,8 @@ def quality_figure(df, out: Path):
             ax.tick_params(axis="x", length=0)
         top.axhline(0, color=MUTED, linewidth=0.7)
         top.set_title(title)
-        top.set_ylim(0, 100)
-        top.yaxis.set_major_locator(MultipleLocator(25))
+        top.set_ylim(0, 50)
+        top.yaxis.set_major_locator(MultipleLocator(10))
 
         bottom.axhline(1.0, color=MUTED, linewidth=0.7)
         bottom.set_yscale("log")
@@ -213,7 +213,7 @@ def quality_figure(df, out: Path):
         bottom.yaxis.set_major_formatter(FuncFormatter(pct_from_ratio))
         bottom.yaxis.set_minor_locator(NullLocator())
         bottom.set_xlabel("Gates")
-    axes[0, 0].set_ylabel("Spider improvement (%)")
+    axes[0, 0].set_ylabel("Spiders remaining (%)")
     axes[1, 0].set_ylabel("Edge change (%)")
     handles = [Patch(color=COLOR[b], label=LABEL[b]) for b in BACKENDS]
     fig.legend(handles=handles, loc="upper center", ncol=3, frameon=False,
