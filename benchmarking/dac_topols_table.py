@@ -50,16 +50,18 @@ def tex_name(n):
     return n.replace("_", r"\_")
 
 
-lines = [r"\begin{tabular}{@{}lrrrrrrr@{}}", r"\toprule",
-         r" & & \multicolumn{2}{c}{CNOTs} & \multicolumn{3}{c}{TopoLS volume} & \\",
-         r"\cmidrule(lr){3-4}\cmidrule(lr){5-7}",
-         r"Circuit & $n$ & PyZX & PZX & Orig. & PyZX & PZX & $\Delta$ \\", r"\midrule"]
+lines = [r"\begin{tabular}{@{}lrrrrrrrrrrr@{}}", r"\toprule",
+         r" & & \multicolumn{2}{c}{Spiders} & \multicolumn{2}{c}{Edges} & \multicolumn{2}{c}{CNOTs}"
+         r" & \multicolumn{3}{c}{TopoLS volume} & \\",
+         r"\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-11}",
+         r"Circuit & $n$ & PyZX & PZX & PyZX & PZX & PyZX & PZX & Orig. & PyZX & PZX & $\Delta$ \\", r"\midrule"]
 for r in rows:
     vols = {v: r[f"volume_{v}"] for v in VERSIONS}
     best = min(vols.values())
     cell = {v: (rf"\textbf{{{vols[v]:,.0f}}}" if vols[v] == best else f"{vols[v]:,.0f}").replace(",", "{,}")
             for v in VERSIONS}
-    lines.append(f"{tex_name(r['circuit'])} & {r['qubits']} & {r['cnot_pyzx']} & {r['cnot_pandora']} & "
+    lines.append(f"{tex_name(r['circuit'])} & {r['qubits']} & {r['spiders_pyzx']} & {r['spiders_pandora']} & "
+                 f"{r['edges_pyzx']} & {r['edges_pandora']} & {r['cnot_pyzx']} & {r['cnot_pandora']} & "
                  f"{cell['orig']} & {cell['pyzx']} & {cell['pandora']} & ${r['delta_pct']:+.0f}\\%$ \\\\")
 lines += [r"\bottomrule", r"\end{tabular}"]
 print("\n".join(lines))
