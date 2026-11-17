@@ -5,8 +5,8 @@ Usage:
 
 Reads the CSV written by zx_benchmarks.ipynb and writes
     dac_runtime.pdf   full_reduce runtime per family (1 x 4 panels)
-    dac_quality.pdf   spider and edge change per family (2 x 4 panels)
-    dac_basic.pdf     basic_simp speedup over PyZX per family (2 x 2 bar panels)
+    dac_quality.pdf   spider and edge change per family (2 x 4 bar panels)
+    dac_basic.pdf     basic_simp runtime per family (2 x 2 panels, one column)
 and prints the numbers used in the paper text and in Table I.
 
 All measured points are plotted; the sweep stopping rule is applied by the
@@ -135,45 +135,24 @@ def runtime_figure(df, limit, out: Path):
     plt.close(fig)
 
 
-def basic_figure(df, out: Path):
-    """basic_simp speedup of PandoraZX over PyZX, as bars diverging from 1x."""
-    from matplotlib.patches import Patch
-
-    fig, axes = plt.subplots(2, 2, figsize=(COLUMN_WIDTH_IN, 2.75))
-    pivot = df.pivot_table(index=["family", "gates"], columns="backend", values="time")
-    both = pivot.dropna(subset=["pandora", "pyzx"]).reset_index()
-    both["speedup"] = both.pyzx / both.pandora
+def basic_figure(df, limit, out: Path):
+    fig, axes = plt.subplots(2, 2, figsize=(COLUMN_WIDTH_IN, 2.9))
+    lo = df.time[df.time > 0].min()
+    hi = df.time.max()
     for ax, (fam, title) in zip(axes.flat, FAMILIES):
-        d = both[both.family == fam].sort_values("gates")
-        x = np.log10(d.gates.to_numpy())
-        width = 0.7 * (np.diff(x).min() if len(x) > 1 else 0.3)
-        sp = d.speedup.to_numpy()
-        colors = [COLOR["pandora"] if v >= 1 else COLOR["pyzx"] for v in sp]
-        ax.bar(x, sp - 1, bottom=1, width=width, color=colors, linewidth=0)
-        ax.axhline(1, color=MUTED, linewidth=0.7)
+        ax.axhline(limit, color=MUTED, linestyle=(0, (3, 2)), linewidth=0.7)
+        series(ax, df[df.family == fam], "time")
+        gate_axis(ax)
         ax.set_yscale("log")
-        ax.set_ylim(0.01, 300)
-        ax.yaxis.set_major_locator(FixedLocator([0.01, 0.1, 1, 10, 100]))
-        ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _p: f"{v:g}" + r"$\times$"))
+        ax.set_ylim(lo / 2, hi * 3)
+        ax.yaxis.set_major_locator(LogLocator(base=100, numticks=12))
         ax.yaxis.set_minor_locator(NullLocator())
-        lo, hi = np.floor(x.min()), np.ceil(x.max())
-        ax.set_xlim(x.min() - width, x.max() + width)
-        ticks = np.arange(lo, hi + 1)
-        ax.set_xticks(ticks, [f"$10^{{{int(t)}}}$" for t in ticks])
-        ax.grid(True, axis="y", color=GRID, linewidth=0.5)
-        ax.set_axisbelow(True)
         ax.set_title(title)
-        ax.annotate((f"{sp[-1]:.0f}" if sp[-1] >= 20 else f"{sp[-1]:.1f}") + r"$\times$",
-                    (x[-1], sp[-1]), xytext=(0, 1.5), textcoords="offset points",
-                    ha="center", va="bottom", fontsize=6.5, color=INK)
     for ax in axes[1]:
         ax.set_xlabel("Gates")
     for ax in axes[:, 0]:
-        ax.set_ylabel("Speedup")
-    handles = [Patch(color=COLOR["pandora"], label="PandoraZX faster"),
-               Patch(color=COLOR["pyzx"], label="PyZX faster")]
-    fig.legend(handles=handles, loc="upper center", ncol=2, frameon=False,
-               bbox_to_anchor=(0.5, 1.02), handlelength=1.2, columnspacing=2.0)
+        ax.set_ylabel("basic_simp time (s)")
+    legend(fig, axes)
     fig.tight_layout(rect=(0, 0, 1, 0.93), w_pad=0.6, h_pad=0.5)
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
@@ -184,25 +163,50 @@ def pct_from_ratio(r, _pos=None):
     return "0" if abs(p) < 1e-9 else f"{p:+.0f}"
 
 
+def gates_label(g):
+    return f"{g:.0f}" if g < 1000 else (f"{g / 1000:.1f}k" if g < 10000 else f"{g / 1000:.0f}k")
+
+
+def quality_sizes(data, n=6):
+    """Up to n log-spaced sizes completed by PandoraZX and QuiZX, incl. both ends."""
+    sizes = sorted(set(data[data.backend == "pandora"].gates) & set(data[data.backend == "quizx"].gates))
+    idx = sorted(set(np.round(np.linspace(0, len(sizes) - 1, min(n, len(sizes)))).astype(int)))
+    return [sizes[i] for i in idx]
+
+
 def quality_figure(df, out: Path):
-    fig, axes = plt.subplots(2, 4, figsize=(TEXT_WIDTH_IN, 3.1), sharex="col")
+    """Spider and edge change after full_reduce, as bars diverging from the input size."""
+    from matplotlib.patches import Patch
+
+    fig, axes = plt.subplots(2, 4, figsize=(TEXT_WIDTH_IN, 3.0))
     # Ticks at round percentages, placed on a log scale of edges_after / edges_before.
     ratio_ticks = [1 + p / 100 for p in (-80, -50, 0, 100, 500, 1000, 5000)]
     rmin = df.edge_ratio.min() / 1.3
     rmax = df.edge_ratio.max() * 1.3
+    width = 0.27
     for col, (fam, title) in enumerate(FAMILIES):
         data = df[df.family == fam]
+        sizes = quality_sizes(data)
         top, bottom = axes[0, col], axes[1, col]
-
-        series(top, data, "spider_pct")
-        gate_axis(top)
+        for i, b in enumerate(BACKENDS):
+            d = data[data.backend == b].set_index("gates")
+            xs = [j + (i - 1) * width for j, g in enumerate(sizes) if g in d.index]
+            gs = [g for g in sizes if g in d.index]
+            top.bar(xs, [d.spider_pct[g] for g in gs], width=width, color=COLOR[b], linewidth=0)
+            ratios = [d.edge_ratio[g] for g in gs]
+            bottom.bar(xs, [r - 1 for r in ratios], bottom=1, width=width, color=COLOR[b], linewidth=0)
+        for ax in (top, bottom):
+            ax.set_xticks(range(len(sizes)), [gates_label(g) for g in sizes], fontsize=6)
+            ax.set_xlim(-0.6, len(sizes) - 0.4)
+            ax.grid(True, axis="y", color=GRID, linewidth=0.5)
+            ax.set_axisbelow(True)
+            ax.tick_params(axis="x", length=0)
+        top.axhline(0, color=MUTED, linewidth=0.7)
         top.set_title(title)
-        top.set_ylim(-95, -50)
-        top.yaxis.set_major_locator(MultipleLocator(10))
+        top.set_ylim(-100, 0)
+        top.yaxis.set_major_locator(MultipleLocator(25))
 
         bottom.axhline(1.0, color=MUTED, linewidth=0.7)
-        series(bottom, data, "edge_ratio")
-        gate_axis(bottom)
         bottom.set_yscale("log")
         bottom.set_ylim(rmin, rmax)
         bottom.yaxis.set_major_locator(FixedLocator(ratio_ticks))
@@ -211,7 +215,9 @@ def quality_figure(df, out: Path):
         bottom.set_xlabel("Gates")
     axes[0, 0].set_ylabel("Spider change (%)")
     axes[1, 0].set_ylabel("Edge change (%)")
-    legend(fig, axes)
+    handles = [Patch(color=COLOR[b], label=LABEL[b]) for b in BACKENDS]
+    fig.legend(handles=handles, loc="upper center", ncol=3, frameon=False,
+               bbox_to_anchor=(0.5, 1.02), handlelength=1.2, columnspacing=2.0)
     fig.tight_layout(rect=(0, 0, 1, 0.94), w_pad=0.8, h_pad=0.6)
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
@@ -261,7 +267,7 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     runtime_figure(df, args.limit, args.out / "dac_runtime.pdf")
     quality_figure(df, args.out / "dac_quality.pdf")
-    basic_figure(load(args.csv, "basic"), args.out / "dac_basic.pdf")
+    basic_figure(load(args.csv, "basic"), args.limit, args.out / "dac_basic.pdf")
     report(df)
     print(f"\nWrote dac_runtime.pdf, dac_quality.pdf and dac_basic.pdf to {args.out}")
 
