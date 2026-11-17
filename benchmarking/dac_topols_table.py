@@ -60,8 +60,11 @@ for r in rows:
     best = min(vols.values())
     cell = {v: (rf"\textbf{{{vols[v]:,.0f}}}" if vols[v] == best else f"{vols[v]:,.0f}").replace(",", "{,}")
             for v in VERSIONS}
+    least_cx = min(r["cnot_pyzx"], r["cnot_pandora"])
+    cx = {v: (rf"\textcolor{{red}}{{{r[f'cnot_{v}']}}}" if r[f"cnot_{v}"] == least_cx else str(r[f"cnot_{v}"]))
+          for v in ("pyzx", "pandora")}
     lines.append(f"{tex_name(r['circuit'])} & {r['qubits']} & {r['spiders_pyzx']} & {r['spiders_pandora']} & "
-                 f"{r['edges_pyzx']} & {r['edges_pandora']} & {r['cnot_pyzx']} & {r['cnot_pandora']} & "
+                 f"{r['edges_pyzx']} & {r['edges_pandora']} & {cx['pyzx']} & {cx['pandora']} & "
                  f"{cell['orig']} & {cell['pyzx']} & {cell['pandora']} & ${r['delta_pct']:+.0f}\\%$ \\\\")
 lines += [r"\bottomrule", r"\end{tabular}"]
 print("\n".join(lines))
