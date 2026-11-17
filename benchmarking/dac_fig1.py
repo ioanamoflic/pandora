@@ -130,10 +130,14 @@ def phase_label(phase) -> str:
 SPIDER_POS = {4: (0.9, 0.0), 6: (2.1, 0.0), 3: (0.9, -1.0), 7: (2.1, -1.0), 5: (1.5, -2.0)}
 
 
+ZX_ROW = 0.72     # vertical distance between qubit rows in panel (b)
+LABEL_BELOW = {5, 7}   # spiders whose phase label goes below them (keeps the rows apart)
+
+
 def zx_layout(g):
-    pos = {v: (0.0, -g.qubit(v)) for v in g.inputs()}
-    pos.update({v: (3.0, -g.qubit(v)) for v in g.outputs()})
-    pos.update(SPIDER_POS)
+    pos = {v: (0.0, -g.qubit(v) * ZX_ROW) for v in g.inputs()}
+    pos.update({v: (3.0, -g.qubit(v) * ZX_ROW) for v in g.outputs()})
+    pos.update({v: (x, y * ZX_ROW) for v, (x, y) in SPIDER_POS.items()})
     return pos
 
 
@@ -155,10 +159,12 @@ def draw_zx(ax, g):
         fill = Z_FILL if ty == zx.VertexType.Z else X_FILL
         ax.add_patch(Circle((x, y), 0.17, fc=fill, ec=INK, lw=0.7, zorder=3))
         label = phase_label(g.phase(v))
-        if label:
-            ax.text(x, y + 0.25, label, ha="center", va="bottom", fontsize=6.5, zorder=4)
+        if label and v in LABEL_BELOW:
+            ax.text(x, y - 0.22, label, ha="center", va="top", fontsize=6.5, zorder=4)
+        elif label:
+            ax.text(x, y + 0.22, label, ha="center", va="bottom", fontsize=6.5, zorder=4)
     ax.set_xlim(-0.4, 3.4)
-    ax.set_ylim(-2.6, 0.75)
+    ax.set_ylim(-2 * ZX_ROW - 0.58, 0.58)
 
 
 # --------------------------------------------------------------- (c), (d)
@@ -292,15 +298,20 @@ def build_figure(g, out: Path, topols=None):
         boxes = {"a": (0.0, 0.0, bw, 1.0), "b": (bw + gap_x, 0.0, bw, 1.0)}
         arrows = [((bw + 0.008, 0.5), (bw + gap_x - 0.008, 0.5))]
     else:
-        # U-shaped flow: (a) top left -> (b) top right -> (c) bottom right -> (d) bottom left
-        fig_h = 2.95
-        bh = (1 - gap_y) / 2
-        top = bh + gap_y
-        boxes = {"a": (0.0, top, bw, bh), "b": (bw + gap_x, top, bw, bh),
+        # U-shaped flow: (a) top left -> (b) top right -> (c) bottom right -> (d) bottom left.
+        # Row heights in inches, fitted to the content: the top row holds the flat
+        # circuit and ZX diagram, the bottom row the taller 3D pipe diagram.
+        top_in, gap_in, bottom_in = 0.95, 0.2, 1.25
+        fig_h = top_in + gap_in + bottom_in
+        gap_x = 0.07
+        bw = (1 - gap_x) / 2
+        th, bh, top = top_in / fig_h, bottom_in / fig_h, (bottom_in + gap_in) / fig_h
+        boxes = {"a": (0.0, top, bw, th), "b": (bw + gap_x, top, bw, th),
                  "c": (bw + gap_x, 0.0, bw, bh), "d": (0.0, 0.0, bw, bh)}
         right_mid = bw + gap_x + bw / 2
-        arrows = [((bw + 0.008, top + bh / 2), (bw + gap_x - 0.008, top + bh / 2)),   # a -> b
-                  ((right_mid, top - 0.01), (right_mid, bh + 0.01)),                   # b -> c
+        inset = 0.03 / fig_h
+        arrows = [((bw + 0.008, top + th / 2), (bw + gap_x - 0.008, top + th / 2)),   # a -> b
+                  ((right_mid, top - inset), (right_mid, bh + inset)),                 # b -> c
                   ((bw + gap_x - 0.008, bh / 2), (bw + 0.008, bh / 2))]               # c -> d
     fig = plt.figure(figsize=(COLUMN_WIDTH_IN, fig_h))
     title_h = 0.105 / fig_h          # room for the title inside the box (inches -> figure units)
