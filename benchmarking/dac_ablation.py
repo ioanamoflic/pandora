@@ -49,6 +49,10 @@ COST_TERMS = [
 ]
 
 
+def case_name(path: Path) -> str:
+    return path.name.removesuffix("_before").removesuffix(".qasm")
+
+
 def id_ordered_pivot_sql() -> str:
     sql = PIVOT_SQL.read_text()
     for term in COST_TERMS:
@@ -104,7 +108,7 @@ def main():
             for path in paths:
                 for run in range(1, args.repeats + 1):
                     for variant in ("cost", "id"):     # interleaved, so drift affects both
-                        row = {"family": family, "circuit": path.name.removesuffix("_before"),
+                        row = {"family": family, "circuit": case_name(path),
                                "variant": variant, "run": run,
                                **asyncio.run(run_case(config, path, variant))}
                         if writer is None:
