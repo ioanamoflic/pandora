@@ -35,9 +35,12 @@ FAMILIES = [
 ]
 BACKENDS = ["pandora", "pyzx", "quizx"]
 LABEL = {"pandora": "PandoraZX", "pyzx": "PyZX", "quizx": "QuiZX"}
-# First three slots of the reference categorical palette (all-pairs CVD safe);
-# markers give a second, colour-free cue for print.
-COLOR = {"pandora": "#2a78d6", "pyzx": "#eb6834", "quizx": "#1baf7a"}
+# PandoraZX in the dark purple that highlights it in Fig. 1; PyZX light red and
+# QuiZX light green. The red and green differ in lightness, so they stay apart
+# under red-green colour blindness (OKLab dE 10); markers add a colour-free cue.
+# STROKE is a deeper shade of each hue for marker and bar outlines.
+COLOR = {"pandora": "#6b4fbb", "pyzx": "#e57373", "quizx": "#8fd18f"}
+STROKE = {"pandora": "#6b4fbb", "pyzx": "#c94f4f", "quizx": "#4f9a4f"}
 MARKER = {"pandora": "o", "pyzx": "D", "quizx": "s"}
 INK, MUTED, GRID = "#0b0b0b", "#52514e", "#e4e3df"
 
@@ -101,7 +104,7 @@ def series(ax, data, y):
         d = data[data.backend == b].sort_values("gates")
         if not d.empty:
             ax.plot(d.gates, d[y], color=COLOR[b], marker=MARKER[b],
-                    label=LABEL[b], markeredgecolor="white", markeredgewidth=0.4)
+                    label=LABEL[b], markeredgecolor=STROKE[b], markeredgewidth=0.5)
 
 
 def legend(fig, axes):
@@ -192,9 +195,11 @@ def quality_figure(df, out: Path):
             d = data[data.backend == b].set_index("gates")
             xs = [j + (i - 1) * width for j, g in enumerate(sizes) if g in d.index]
             gs = [g for g in sizes if g in d.index]
-            top.bar(xs, [100 + d.spider_pct[g] for g in gs], width=width, color=COLOR[b], linewidth=0)
+            top.bar(xs, [100 + d.spider_pct[g] for g in gs], width=width, color=COLOR[b],
+                    edgecolor=STROKE[b], linewidth=0.4)
             ratios = [d.edge_ratio[g] for g in gs]
-            bottom.bar(xs, [r - 1 for r in ratios], bottom=1, width=width, color=COLOR[b], linewidth=0)
+            bottom.bar(xs, [r - 1 for r in ratios], bottom=1, width=width, color=COLOR[b],
+                       edgecolor=STROKE[b], linewidth=0.4)
         for ax in (top, bottom):
             ax.set_xticks(range(len(sizes)), [gates_label(g) for g in sizes], fontsize=6)
             ax.set_xlim(-0.6, len(sizes) - 0.4)
@@ -215,7 +220,8 @@ def quality_figure(df, out: Path):
         bottom.set_xlabel("Gates")
     axes[0, 0].set_ylabel("Spiders remaining (%)")
     axes[1, 0].set_ylabel("Edge change (%)")
-    handles = [Patch(color=COLOR[b], label=LABEL[b]) for b in BACKENDS]
+    handles = [Patch(facecolor=COLOR[b], edgecolor=STROKE[b], linewidth=0.4, label=LABEL[b])
+               for b in BACKENDS]
     fig.legend(handles=handles, loc="upper center", ncol=3, frameon=False,
                bbox_to_anchor=(0.5, 1.02), handlelength=1.2, columnspacing=2.0)
     fig.tight_layout(rect=(0, 0, 1, 0.94), w_pad=0.8, h_pad=0.6)
