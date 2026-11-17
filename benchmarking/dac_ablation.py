@@ -99,6 +99,9 @@ def main():
     args = parser.parse_args()
 
     config = json.loads((ROOT / "default_config.json").read_text())
+    if args.database == config.get("database", "postgres"):
+        raise SystemExit(f"Refusing to use '{args.database}': it is the benchmark database of "
+                         "default_config.json, and build_pandora would drop its tables.")
     config["database"] = args.database
     cases = QUICK if args.quick else CASES
     new_file = not args.out.exists()
