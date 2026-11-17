@@ -267,6 +267,10 @@ def draw_surface_code(ax, sc):
 PANEL_FILL = dict.fromkeys("abcd", "#f7f3fc")
 PANEL_EDGE = "#c9b9e4"
 ARROW = "#52514e"
+# The panel this paper is about: strong border, shadow, bold title, "this work" tab.
+FOCUS = "b"
+FOCUS_EDGE = "#6b4fbb"
+FOCUS_SHADOW = "#d6cdea"
 
 
 def build_figure(g, out: Path, topols=None):
@@ -302,12 +306,23 @@ def build_figure(g, out: Path, topols=None):
     title_h = 0.105 / fig_h          # room for the title inside the box (inches -> figure units)
     pad_x, pad_y = 0.02, 0.05 / fig_h
     axes = {}
+    box_style = dict(boxstyle="round,pad=0,rounding_size=0.025",
+                     mutation_aspect=COLUMN_WIDTH_IN / fig_h, transform=fig.transFigure)
     for k, (x0, y0, w, h) in boxes.items():
+        focus = k == FOCUS
+        if focus:
+            dx, dy = 0.012, 0.012 * COLUMN_WIDTH_IN / fig_h
+            fig.patches.append(FancyBboxPatch((x0 + dx, y0 - dy), w, h, fc=FOCUS_SHADOW,
+                                              ec="none", zorder=-2, **box_style))
         fig.patches.append(FancyBboxPatch(
-            (x0, y0), w, h, boxstyle="round,pad=0,rounding_size=0.025",
-            mutation_aspect=COLUMN_WIDTH_IN / fig_h, transform=fig.transFigure,
-            fc=PANEL_FILL[k], ec=PANEL_EDGE, lw=0.5, zorder=-1))
-        fig.text(x0 + w / 2, y0 + h - pad_y * 0.8, titles[k], ha="center", va="top", fontsize=7.5)
+            (x0, y0), w, h, fc=PANEL_FILL[k], ec=FOCUS_EDGE if focus else PANEL_EDGE,
+            lw=1.6 if focus else 0.5, zorder=-1, **box_style))
+        fig.text(x0 + w / 2, y0 + h - pad_y * 0.8, titles[k], ha="center", va="top",
+                 fontsize=7.5, fontweight="bold" if focus else "normal")
+        if focus:
+            fig.text(x0 + w - 0.03, y0, "this work", ha="right", va="center", fontsize=6.5,
+                     color="white", fontweight="bold", zorder=5,
+                     bbox=dict(boxstyle="round,pad=0.25,rounding_size=0.5", fc=FOCUS_EDGE, ec="none"))
         ax = fig.add_axes((x0 + pad_x, y0 + pad_y, w - 2 * pad_x, h - 2 * pad_y - title_h))
         ax.set_aspect("equal")
         ax.set_facecolor("none")
