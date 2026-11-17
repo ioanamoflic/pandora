@@ -125,7 +125,7 @@ def runtime_figure(df, limit, out: Path):
         ax.yaxis.set_minor_locator(NullLocator())
         ax.set_title(title)
         ax.set_xlabel("Gates")
-    axes[0].set_ylabel("full_reduce time (s)")
+    axes[0].set_ylabel("Simplification time (s)")
     lo = df.time[df.time > 0].min()
     hi = df.time.max()
     for ax in axes:
