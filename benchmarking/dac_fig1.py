@@ -263,7 +263,16 @@ def draw_surface_code(ax, sc):
     ax.autoscale_view()
 
 
+# Panel backgrounds: a light purple ramp, from (a) lightest to (d) darkest,
+# light enough for every mark to keep its contrast.
+PANEL_FILL = {"a": "#f7f3fc", "b": "#efe8fa", "c": "#e7ddf6", "d": "#dfd2f2"}
+PANEL_EDGE = "#c9b9e4"
+ARROW = "#52514e"
+
+
 def build_figure(g, out: Path, topols=None):
+    from matplotlib.patches import FancyBboxPatch
+
     plt.rcParams.update({
         "font.family": "serif",
         "font.serif": ["Times New Roman", "Nimbus Roman", "STIXGeneral", "DejaVu Serif"],
@@ -272,33 +281,46 @@ def build_figure(g, out: Path, topols=None):
     })
     titles = {"a": "(a) Circuit, 12 gates", "b": "(b) After PandoraZX",
               "c": "(c) TopoLS pipe diagram", "d": "(d) tqec surface code"}
+    gap_x, gap_y = 0.08, 0.08
+    bw = (1 - gap_x) / 2
     if topols is None:
         # Two panels until the TopoLS/tqec output is available.
-        fig = plt.figure(figsize=(COLUMN_WIDTH_IN, 1.25))
-        boxes = {"a": (0.0, 0.0, 0.47, 0.82), "b": (0.53, 0.0, 0.47, 0.82)}
-        arrows = [((0.465, 0.41), (0.535, 0.41))]
+        fig_h = 1.45
+        boxes = {"a": (0.0, 0.0, bw, 1.0), "b": (bw + gap_x, 0.0, bw, 1.0)}
+        arrows = [((bw + 0.008, 0.5), (bw + gap_x - 0.008, 0.5))]
     else:
         # U-shaped flow: (a) top left -> (b) top right -> (c) bottom right -> (d) bottom left
-        fig = plt.figure(figsize=(COLUMN_WIDTH_IN, 2.75))
-        boxes = {"a": (0.0, 0.55, 0.47, 0.38), "b": (0.53, 0.55, 0.47, 0.38),
-                 "c": (0.53, 0.0, 0.47, 0.42), "d": (0.0, 0.0, 0.47, 0.42)}
-        arrows = [((0.465, 0.74), (0.535, 0.74)),   # a -> b
-                  ((0.765, 0.545), (0.765, 0.49)),  # b -> c
-                  ((0.535, 0.21), (0.465, 0.21))]   # c -> d
+        fig_h = 2.95
+        bh = (1 - gap_y) / 2
+        top = bh + gap_y
+        boxes = {"a": (0.0, top, bw, bh), "b": (bw + gap_x, top, bw, bh),
+                 "c": (bw + gap_x, 0.0, bw, bh), "d": (0.0, 0.0, bw, bh)}
+        right_mid = bw + gap_x + bw / 2
+        arrows = [((bw + 0.008, top + bh / 2), (bw + gap_x - 0.008, top + bh / 2)),   # a -> b
+                  ((right_mid, top - 0.01), (right_mid, bh + 0.01)),                   # b -> c
+                  ((bw + gap_x - 0.008, bh / 2), (bw + 0.008, bh / 2))]               # c -> d
+    fig = plt.figure(figsize=(COLUMN_WIDTH_IN, fig_h))
+    title_h = 0.105 / fig_h          # room for the title inside the box (inches -> figure units)
+    pad_x, pad_y = 0.02, 0.05 / fig_h
     axes = {}
-    for k, rect in boxes.items():
-        ax = fig.add_axes(rect)
+    for k, (x0, y0, w, h) in boxes.items():
+        fig.patches.append(FancyBboxPatch(
+            (x0, y0), w, h, boxstyle="round,pad=0,rounding_size=0.025",
+            mutation_aspect=COLUMN_WIDTH_IN / fig_h, transform=fig.transFigure,
+            fc=PANEL_FILL[k], ec=PANEL_EDGE, lw=0.5, zorder=-1))
+        fig.text(x0 + w / 2, y0 + h - pad_y * 0.8, titles[k], ha="center", va="top", fontsize=7.5)
+        ax = fig.add_axes((x0 + pad_x, y0 + pad_y, w - 2 * pad_x, h - 2 * pad_y - title_h))
         ax.set_aspect("equal")
+        ax.set_facecolor("none")
         ax.axis("off")
-        x0, y0, w, h = rect
-        fig.text(x0 + w / 2, y0 + h + 0.015, titles[k], ha="center", va="bottom", fontsize=7.5)
         axes[k] = ax
     draw_circuit(axes["a"])
     draw_zx(axes["b"], g)
     if topols is not None:
         draw_pipe_diagram(axes["c"], topols["pipe_diagram"])
         draw_surface_code(axes["d"], topols["surface_code"])
-    arrow = dict(arrowstyle="-|>,head_length=3,head_width=1.6", color=MUTED, lw=0.8)
+    arrow = dict(arrowstyle="-|>,head_length=5,head_width=2.8", color=ARROW, lw=1.4,
+                 shrinkA=0, shrinkB=0)
     for start, end in arrows:
         fig.patches.append(FancyArrowPatch(start, end, transform=fig.transFigure, **arrow))
     fig.savefig(out, bbox_inches="tight", pad_inches=0.01)
