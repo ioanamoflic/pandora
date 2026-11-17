@@ -263,9 +263,8 @@ def draw_surface_code(ax, sc):
     ax.autoscale_view()
 
 
-# Panel backgrounds: a light purple ramp, from (a) lightest to (d) darkest,
-# light enough for every mark to keep its contrast.
-PANEL_FILL = {"a": "#f7f3fc", "b": "#efe8fa", "c": "#e7ddf6", "d": "#dfd2f2"}
+# Panel backgrounds: one very light purple, so every mark keeps its contrast.
+PANEL_FILL = dict.fromkeys("abcd", "#f7f3fc")
 PANEL_EDGE = "#c9b9e4"
 ARROW = "#52514e"
 
