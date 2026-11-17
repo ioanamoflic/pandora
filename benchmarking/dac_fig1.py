@@ -257,7 +257,7 @@ def draw_surface_code(ax, sc):
         if len(corners) == 2:                     # boundary stabilizer: half disc
             corners = corners + [(ax0, ay0)]
         ax.fill([c[0] for c in corners], [-c[1] for c in corners],
-                fc=BASIS_COLOR[pl["type"]], ec="white", lw=0.25)
+                fc=BASIS_COLOR[pl["type"]], ec=INK, lw=0.2)
     ax.scatter([pos[d][0] for d in sc["data"]], [-pos[d][1] for d in sc["data"]],
                s=0.4, c=INK, lw=0, zorder=3)
     ax.autoscale_view()
