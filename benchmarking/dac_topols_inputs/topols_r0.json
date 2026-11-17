@@ -1,0 +1,398 @@
+{
+ "barenco_tof_3__orig": {
+  "volume": 2250.0,
+  "time": 50.0,
+  "space": 45.0,
+  "compile_s": 47.29540967941284,
+  "dims": [
+   9.0,
+   5.0,
+   50.0
+  ]
+ },
+ "barenco_tof_3__pandora": {
+  "volume": 1530.0,
+  "time": 34.0,
+  "space": 45.0,
+  "compile_s": 29.04127264022827,
+  "dims": [
+   9.0,
+   5.0,
+   34.0
+  ]
+ },
+ "barenco_tof_3__pyzx": {
+  "volume": 1890.0,
+  "time": 42.0,
+  "space": 45.0,
+  "compile_s": 40.724809885025024,
+  "dims": [
+   9.0,
+   5.0,
+   42.0
+  ]
+ },
+ "barenco_tof_4__orig": {
+  "volume": 4365.0,
+  "time": 97.0,
+  "space": 45.0,
+  "compile_s": 81.75877404212952,
+  "dims": [
+   9.0,
+   5.0,
+   97.0
+  ]
+ },
+ "barenco_tof_4__pandora": {
+  "volume": 3465.0,
+  "time": 77.0,
+  "space": 45.0,
+  "compile_s": 73.8552086353302,
+  "dims": [
+   9.0,
+   5.0,
+   77.0
+  ]
+ },
+ "barenco_tof_4__pyzx": {
+  "volume": 3735.0,
+  "time": 83.0,
+  "space": 45.0,
+  "compile_s": 98.25926661491394,
+  "dims": [
+   9.0,
+   5.0,
+   83.0
+  ]
+ },
+ "barenco_tof_5__orig": {
+  "volume": 8757.0,
+  "time": 139.0,
+  "space": 63.0,
+  "compile_s": 209.07963705062866,
+  "dims": [
+   9.0,
+   7.0,
+   139.0
+  ]
+ },
+ "barenco_tof_5__pandora": {
+  "volume": 6552.0,
+  "time": 104.0,
+  "space": 63.0,
+  "compile_s": 98.93055701255798,
+  "dims": [
+   9.0,
+   7.0,
+   104.0
+  ]
+ },
+ "barenco_tof_5__pyzx": {
+  "volume": 5922.0,
+  "time": 94.0,
+  "space": 63.0,
+  "compile_s": 124.90998768806458,
+  "dims": [
+   9.0,
+   7.0,
+   94.0
+  ]
+ },
+ "gf2^E4_mult__orig": {
+  "volume": 11781.0,
+  "time": 187.0,
+  "space": 63.0,
+  "compile_s": 220.17210960388184,
+  "dims": [
+   9.0,
+   7.0,
+   187.0
+  ]
+ },
+ "gf2^E4_mult__pandora": {
+  "volume": 16443.0,
+  "time": 261.0,
+  "space": 63.0,
+  "compile_s": 532.0998044013977,
+  "dims": [
+   9.0,
+   7.0,
+   261.0
+  ]
+ },
+ "gf2^E4_mult__pyzx": {
+  "volume": 17325.0,
+  "time": 275.0,
+  "space": 63.0,
+  "compile_s": 587.6499733924866,
+  "dims": [
+   9.0,
+   7.0,
+   275.0
+  ]
+ },
+ "mod5_4__orig": {
+  "volume": 2295.0,
+  "time": 51.0,
+  "space": 45.0,
+  "compile_s": 55.40742635726929,
+  "dims": [
+   9.0,
+   5.0,
+   51.0
+  ]
+ },
+ "mod5_4__pandora": {
+  "volume": 1035.0,
+  "time": 23.0,
+  "space": 45.0,
+  "compile_s": 62.00644588470459,
+  "dims": [
+   9.0,
+   5.0,
+   23.0
+  ]
+ },
+ "mod5_4__pyzx": {
+  "volume": 810.0,
+  "time": 18.0,
+  "space": 45.0,
+  "compile_s": 22.472646236419678,
+  "dims": [
+   9.0,
+   5.0,
+   18.0
+  ]
+ },
+ "mod_mult_55__orig": {
+  "volume": 4410.0,
+  "time": 70.0,
+  "space": 63.0,
+  "compile_s": 104.34855055809021,
+  "dims": [
+   9.0,
+   7.0,
+   70.0
+  ]
+ },
+ "mod_mult_55__pandora": {
+  "volume": 5607.0,
+  "time": 89.0,
+  "space": 63.0,
+  "compile_s": 119.02274322509766,
+  "dims": [
+   9.0,
+   7.0,
+   89.0
+  ]
+ },
+ "mod_mult_55__pyzx": {
+  "volume": 5796.0,
+  "time": 92.0,
+  "space": 63.0,
+  "compile_s": 125.55660057067871,
+  "dims": [
+   9.0,
+   7.0,
+   92.0
+  ]
+ },
+ "mod_red_21__orig": {
+  "volume": 11403.0,
+  "time": 181.0,
+  "space": 63.0,
+  "compile_s": 216.5530652999878,
+  "dims": [
+   9.0,
+   7.0,
+   181.0
+  ]
+ },
+ "mod_red_21__pandora": {
+  "volume": 9261.0,
+  "time": 147.0,
+  "space": 63.0,
+  "compile_s": 252.7596173286438,
+  "dims": [
+   9.0,
+   7.0,
+   147.0
+  ]
+ },
+ "mod_red_21__pyzx": {
+  "volume": 11151.0,
+  "time": 177.0,
+  "space": 63.0,
+  "compile_s": 316.6282572746277,
+  "dims": [
+   9.0,
+   7.0,
+   177.0
+  ]
+ },
+ "rc_adder_6__orig": {
+  "volume": 10368.0,
+  "time": 128.0,
+  "space": 81.0,
+  "compile_s": 191.20309495925903,
+  "dims": [
+   9.0,
+   9.0,
+   128.0
+  ]
+ },
+ "rc_adder_6__pandora": {
+  "volume": 8181.0,
+  "time": 101.0,
+  "space": 81.0,
+  "compile_s": 167.1169445514679,
+  "dims": [
+   9.0,
+   9.0,
+   101.0
+  ]
+ },
+ "rc_adder_6__pyzx": {
+  "volume": 9153.0,
+  "time": 113.0,
+  "space": 81.0,
+  "compile_s": 244.50357460975647,
+  "dims": [
+   9.0,
+   9.0,
+   113.0
+  ]
+ },
+ "tof_3__orig": {
+  "volume": 1530.0,
+  "time": 34.0,
+  "space": 45.0,
+  "compile_s": 46.18264842033386,
+  "dims": [
+   9.0,
+   5.0,
+   34.0
+  ]
+ },
+ "tof_3__pandora": {
+  "volume": 1260.0,
+  "time": 28.0,
+  "space": 45.0,
+  "compile_s": 33.81941080093384,
+  "dims": [
+   9.0,
+   5.0,
+   28.0
+  ]
+ },
+ "tof_3__pyzx": {
+  "volume": 1485.0,
+  "time": 33.0,
+  "space": 45.0,
+  "compile_s": 35.18204736709595,
+  "dims": [
+   9.0,
+   5.0,
+   33.0
+  ]
+ },
+ "tof_4__orig": {
+  "volume": 2565.0,
+  "time": 57.0,
+  "space": 45.0,
+  "compile_s": 53.12870717048645,
+  "dims": [
+   9.0,
+   5.0,
+   57.0
+  ]
+ },
+ "tof_4__pandora": {
+  "volume": 2160.0,
+  "time": 48.0,
+  "space": 45.0,
+  "compile_s": 48.285009145736694,
+  "dims": [
+   9.0,
+   5.0,
+   48.0
+  ]
+ },
+ "tof_4__pyzx": {
+  "volume": 2610.0,
+  "time": 58.0,
+  "space": 45.0,
+  "compile_s": 70.43059539794922,
+  "dims": [
+   9.0,
+   5.0,
+   58.0
+  ]
+ },
+ "tof_5__orig": {
+  "volume": 5229.0,
+  "time": 83.0,
+  "space": 63.0,
+  "compile_s": 89.22100329399109,
+  "dims": [
+   9.0,
+   7.0,
+   83.0
+  ]
+ },
+ "tof_5__pandora": {
+  "volume": 3906.0,
+  "time": 62.0,
+  "space": 63.0,
+  "compile_s": 82.30251955986023,
+  "dims": [
+   9.0,
+   7.0,
+   62.0
+  ]
+ },
+ "tof_5__pyzx": {
+  "volume": 5040.0,
+  "time": 80.0,
+  "space": 63.0,
+  "compile_s": 101.12815809249878,
+  "dims": [
+   9.0,
+   7.0,
+   80.0
+  ]
+ },
+ "vbe_adder_3__orig": {
+  "volume": 6237.0,
+  "time": 99.0,
+  "space": 63.0,
+  "compile_s": 183.75747776031494,
+  "dims": [
+   9.0,
+   7.0,
+   99.0
+  ]
+ },
+ "vbe_adder_3__pandora": {
+  "volume": 6300.0,
+  "time": 100.0,
+  "space": 63.0,
+  "compile_s": 108.39355278015137,
+  "dims": [
+   9.0,
+   7.0,
+   100.0
+  ]
+ },
+ "vbe_adder_3__pyzx": {
+  "volume": 4473.0,
+  "time": 71.0,
+  "space": 63.0,
+  "compile_s": 147.21765732765198,
+  "dims": [
+   9.0,
+   7.0,
+   71.0
+  ]
+ }
+}

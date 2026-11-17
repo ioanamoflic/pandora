@@ -1,0 +1,398 @@
+{
+ "tof_3": {
+  "qubits": 5,
+  "diagram": {
+   "pyzx": [
+    31,
+    58
+   ],
+   "pandora": [
+    27,
+    46
+   ]
+  },
+  "orig": {
+   "gates": 45,
+   "twoq": 18,
+   "t": 21
+  },
+  "pyzx": {
+   "gates": 50,
+   "twoq": 26,
+   "t": 15
+  },
+  "pandora": {
+   "gates": 44,
+   "twoq": 23,
+   "t": 15
+  },
+  "tensor_ok": {
+   "orig": true,
+   "pyzx": true,
+   "pandora": true
+  }
+ },
+ "tof_4": {
+  "qubits": 7,
+  "diagram": {
+   "pyzx": [
+    47,
+    98
+   ],
+   "pandora": [
+    41,
+    74
+   ]
+  },
+  "orig": {
+   "gates": 75,
+   "twoq": 30,
+   "t": 35
+  },
+  "pyzx": {
+   "gates": 77,
+   "twoq": 42,
+   "t": 23
+  },
+  "pandora": {
+   "gates": 69,
+   "twoq": 34,
+   "t": 23
+  },
+  "tensor_ok": {
+   "orig": true,
+   "pyzx": true,
+   "pandora": true
+  }
+ },
+ "tof_5": {
+  "qubits": 9,
+  "diagram": {
+   "pyzx": [
+    61,
+    129
+   ],
+   "pandora": [
+    55,
+    102
+   ]
+  },
+  "orig": {
+   "gates": 105,
+   "twoq": 42,
+   "t": 49
+  },
+  "pyzx": {
+   "gates": 108,
+   "twoq": 59,
+   "t": 31
+  },
+  "pandora": {
+   "gates": 95,
+   "twoq": 45,
+   "t": 31
+  },
+  "tensor_ok": {
+   "orig": true,
+   "pyzx": true,
+   "pandora": true
+  }
+ },
+ "barenco_tof_3": {
+  "qubits": 5,
+  "diagram": {
+   "pyzx": [
+    34,
+    69
+   ],
+   "pandora": [
+    32,
+    55
+   ]
+  },
+  "orig": {
+   "gates": 58,
+   "twoq": 24,
+   "t": 28
+  },
+  "pyzx": {
+   "gates": 67,
+   "twoq": 34,
+   "t": 16
+  },
+  "pandora": {
+   "gates": 40,
+   "twoq": 18,
+   "t": 16
+  },
+  "tensor_ok": {
+   "orig": true,
+   "pyzx": true,
+   "pandora": true
+  }
+ },
+ "barenco_tof_4": {
+  "qubits": 7,
+  "diagram": {
+   "pyzx": [
+    56,
+    130
+   ],
+   "pandora": [
+    53,
+    103
+   ]
+  },
+  "orig": {
+   "gates": 114,
+   "twoq": 48,
+   "t": 56
+  },
+  "pyzx": {
+   "gates": 98,
+   "twoq": 52,
+   "t": 28
+  },
+  "pandora": {
+   "gates": 94,
+   "twoq": 50,
+   "t": 28
+  },
+  "tensor_ok": {
+   "orig": true,
+   "pyzx": true,
+   "pandora": true
+  }
+ },
+ "barenco_tof_5": {
+  "qubits": 9,
+  "diagram": {
+   "pyzx": [
+    77,
+    180
+   ],
+   "pandora": [
+    73,
+    154
+   ]
+  },
+  "orig": {
+   "gates": 170,
+   "twoq": 72,
+   "t": 84
+  },
+  "pyzx": {
+   "gates": 128,
+   "twoq": 68,
+   "t": 40
+  },
+  "pandora": {
+   "gates": 130,
+   "twoq": 72,
+   "t": 40
+  },
+  "tensor_ok": {
+   "orig": true,
+   "pyzx": true,
+   "pandora": true
+  }
+ },
+ "mod5_4": {
+  "qubits": 5,
+  "diagram": {
+   "pyzx": [
+    21,
+    46
+   ],
+   "pandora": [
+    21,
+    38
+   ]
+  },
+  "orig": {
+   "gates": 63,
+   "twoq": 28,
+   "t": 28
+  },
+  "pyzx": {
+   "gates": 30,
+   "twoq": 20,
+   "t": 8
+  },
+  "pandora": {
+   "gates": 36,
+   "twoq": 26,
+   "t": 8
+  },
+  "tensor_ok": {
+   "orig": true,
+   "pyzx": true,
+   "pandora": true
+  }
+ },
+ "vbe_adder_3": {
+  "qubits": 10,
+  "diagram": {
+   "pyzx": [
+    56,
+    139
+   ],
+   "pandora": [
+    53,
+    122
+   ]
+  },
+  "orig": {
+   "gates": 150,
+   "twoq": 70,
+   "t": 70
+  },
+  "pyzx": {
+   "gates": 117,
+   "twoq": 71,
+   "t": 24
+  },
+  "pandora": {
+   "gates": 127,
+   "twoq": 77,
+   "t": 24
+  },
+  "tensor_ok": {
+   "orig": true,
+   "pyzx": true,
+   "pandora": true
+  }
+ },
+ "rc_adder_6": {
+  "qubits": 14,
+  "diagram": {
+   "pyzx": [
+    98,
+    247
+   ],
+   "pandora": [
+    94,
+    240
+   ]
+  },
+  "orig": {
+   "gates": 200,
+   "twoq": 93,
+   "t": 77
+  },
+  "pyzx": {
+   "gates": 193,
+   "twoq": 103,
+   "t": 47
+  },
+  "pandora": {
+   "gates": 162,
+   "twoq": 79,
+   "t": 47
+  },
+  "tensor_ok": {
+   "orig": null,
+   "pyzx": null,
+   "pandora": null
+  }
+ },
+ "mod_mult_55": {
+  "qubits": 9,
+  "diagram": {
+   "pyzx": [
+    73,
+    180
+   ],
+   "pandora": [
+    69,
+    133
+   ]
+  },
+  "orig": {
+   "gates": 119,
+   "twoq": 48,
+   "t": 49
+  },
+  "pyzx": {
+   "gates": 138,
+   "twoq": 89,
+   "t": 35
+  },
+  "pandora": {
+   "gates": 124,
+   "twoq": 74,
+   "t": 35
+  },
+  "tensor_ok": {
+   "orig": true,
+   "pyzx": true,
+   "pandora": true
+  }
+ },
+ "gf2^E4_mult": {
+  "qubits": 12,
+  "diagram": {
+   "pyzx": [
+    148,
+    391
+   ],
+   "pandora": [
+    145,
+    281
+   ]
+  },
+  "orig": {
+   "gates": 243,
+   "twoq": 99,
+   "t": 112
+  },
+  "pyzx": {
+   "gates": 392,
+   "twoq": 296,
+   "t": 68
+  },
+  "pandora": {
+   "gates": 352,
+   "twoq": 264,
+   "t": 68
+  },
+  "tensor_ok": {
+   "orig": null,
+   "pyzx": null,
+   "pandora": null
+  }
+ },
+ "mod_red_21": {
+  "qubits": 11,
+  "diagram": {
+   "pyzx": [
+    137,
+    393
+   ],
+   "pandora": [
+    128,
+    366
+   ]
+  },
+  "orig": {
+   "gates": 278,
+   "twoq": 105,
+   "t": 119
+  },
+  "pyzx": {
+   "gates": 263,
+   "twoq": 149,
+   "t": 73
+  },
+  "pandora": {
+   "gates": 222,
+   "twoq": 110,
+   "t": 73
+  },
+  "tensor_ok": {
+   "orig": null,
+   "pyzx": null,
+   "pandora": null
+  }
+ }
+}
